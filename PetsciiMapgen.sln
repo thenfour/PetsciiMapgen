@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.271
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PetsciiMapgen", "PetsciiMapgen.csproj", "{903632E1-F729-4DD3-AD70-47D9904DAE84}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{903632E1-F729-4DD3-AD70-47D9904DAE84}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{903632E1-F729-4DD3-AD70-47D9904DAE84}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{903632E1-F729-4DD3-AD70-47D9904DAE84}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{903632E1-F729-4DD3-AD70-47D9904DAE84}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {2110E9B3-1EE5-4D7A-804D-89C768CFAA07}
+	EndGlobalSection
+EndGlobal
