@@ -13,62 +13,6 @@ using System.Runtime.InteropServices;
 
 namespace PetsciiMapgen
 {
-  // basically a wrapper around double to ensure values are handled properly WRT
-  // comparison and distance etc.
-  public class Value : IComparable<Value>
-  {
-    private double _v;
-    public Value()
-    {
-      _v = 0;
-    }
-    public Value(double v)
-    {
-      _v = v;
-    }
-    public Value DistanceFrom(Value rhs)
-    {
-      return new Value(Math.Abs(_v - rhs._v));
-    }
-    public bool IsLessThan(Value rhs)
-    {
-      return _v < rhs._v;
-    }
-    public void Accumulate(Value rhs) // yes this is just add. again just to be extra certain of proper usage.
-    {
-      _v += rhs._v;
-    }
-    public void AccMax(Value rhs) // takes either current value or rhs, whichever is max
-    {
-      _v = Math.Max(_v, rhs._v);
-    }
-    public Value DividedBy(int c)
-    {
-      return new Value(_v / c);
-    }
-    public Value DividedBy(double c)
-    {
-      return new Value(_v / c);
-    }
-
-    public int CompareTo(Value other)
-    {
-      if (other == null)
-        return -1;
-      return _v.CompareTo(other._v);
-    }
-
-    int IComparable<Value>.CompareTo(Value other)
-    {
-      return CompareTo(other);
-    }
-
-    public override string ToString()
-    {
-      return _v.ToString("0.0000");
-    }
-  }
-
   // basically wraps List<Value>.
   // simplifies code that wants to do set operations.
   public class ValueSet : IComparable<ValueSet>, IEqualityComparer<ValueSet>
@@ -78,13 +22,13 @@ namespace PetsciiMapgen
       _id = id;
     }
 
-    List<Value> values = new List<Value>();
+    List<double> values = new List<double>();
     int _id;
 
     public int Length { get { return values.Count; } }
     public int ID { get { return _id; } }
 
-    public Value this[int i]
+    public double this[int i]
     {
       get
       {
@@ -95,7 +39,7 @@ namespace PetsciiMapgen
         // ensure we can hold this value
         if (i >= values.Count)
         {
-          values.AddRange(Enumerable.Repeat<Value>(null, 1 + (i - values.Count)));
+          values.AddRange(Enumerable.Repeat<double>(0.0, 1 + (i - values.Count)));
         }
         values[i] = value;
       }
@@ -104,16 +48,16 @@ namespace PetsciiMapgen
     // compares two sets of values and comes up with a "distance" measuring the lack of similarity between them.
     // here we just return the sum of distances and normalize so it's "per pixel avg".
     // i think there's probably a smarter way to do this.
-    public Value DistFrom(ValueSet b, int numPixels)
+    public double DistFrom(ValueSet b)
     {
       Debug.Assert(this.Length == b.Length);
-      Value acc = new Value();
+      double acc = 0.0;
       for (int i = 0; i < this.Length; ++i)
       {
-        acc.Accumulate(this[i].DistanceFrom(b[i])); // also possible: use accMax
+        acc += Math.Abs(this[i] - b[i]); // also possible: use accMax
       }
-      //return acc;
-      return acc.DividedBy(numPixels);
+      return acc;
+      //return acc.DividedBy(numPixels);
     }
 
     int IComparable<ValueSet>.CompareTo(ValueSet other)
@@ -167,9 +111,9 @@ namespace PetsciiMapgen
   {
     public struct RGBColorF
     {
-      public float r;
-      public float g;
-      public float b;
+      public double r;
+      public double g;
+      public double b;
     }
 
     [StructLayout(LayoutKind.Explicit)]
@@ -179,11 +123,11 @@ namespace PetsciiMapgen
       [FieldOffset(1)] public byte g;
       [FieldOffset(2)] public byte b;
     }
-    public static float ColorantFromByte(byte b)
+    public static double ColorantFromByte(byte b)
     {
-      return ((float)b) / 255.0f;
+      return ((double)b) / 255.0;
     }
-    public static byte ByteFromColorant(float c)
+    public static byte ByteFromColorant(double c)
     {
       int i = (int)(c * 255.0f);
       if (i < 0) i = 0;
@@ -278,9 +222,9 @@ namespace PetsciiMapgen
         {
           for (int x = 0; x < dataA.Width * 3; ++x)
           {
-            float fa = ptrA[x];
+            double fa = ptrA[x];
             fa /= 255;
-            float fb = ptrB[x];
+            double fb = ptrB[x];
             fb /= 255;
 
             fa *= fb;
@@ -298,28 +242,6 @@ namespace PetsciiMapgen
       srcB.UnlockBits(dataB);
     }
 
-
-    //public static void Pixellate(Image src, Size cellSize)
-    //{
-    //  // create a new image
-    //  var bigRect = new Rectangle(0, 0, src.Width, src.Height);
-    //  var smallRect = new Rectangle(0, 0, src.Width / cellSize.Width, src.Height / cellSize.Height);
-    //  var small = new Bitmap(smallRect.Width, smallRect.Height);
-    //  using (var g = Graphics.FromImage(small))
-    //  {
-    //    g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
-    //    g.DrawImage(src,
-    //      smallRect, 0, 0, bigRect.Width, bigRect.Height, GraphicsUnit.Pixel
-    //      );
-    //  }
-    //  using (var g = Graphics.FromImage(src))
-    //  {
-    //    g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
-    //    g.DrawImage(small,
-    //      bigRect, 0, 0, smallRect.Width, smallRect.Height, GraphicsUnit.Pixel
-    //      );
-    //  }
-    //}
 
     public static string ToString(Size s)
     {
@@ -426,20 +348,20 @@ namespace PetsciiMapgen
       int i = 0;
       for (double v = 0; v <= 1.0001; v += segSpan)
       {
-        ret[i] = new Value(v);
+        ret[i] = v;
         ++i;
       }
       return ret;
     }
 
-    public static Value FindClosestValue(ValueSet possibleValues, Value v)
+    public static double FindClosestValue(ValueSet possibleValues, double v)
     {
       int indexOfNearest = -1;
-      Value distanceToNearest = new Value();
+      double distanceToNearest = 0.0;
       for (int i = 0; i < possibleValues.Length; ++i)
       {
-        Value d = possibleValues[i].DistanceFrom(v);
-        if (indexOfNearest == -1 || d.IsLessThan(distanceToNearest))
+        double d = Math.Abs(possibleValues[i] - v);
+        if (indexOfNearest == -1 || (d < distanceToNearest))
         {
           distanceToNearest = d;
           indexOfNearest = i;

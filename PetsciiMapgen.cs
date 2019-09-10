@@ -1,4 +1,64 @@
-﻿using System;
+﻿/*
+ * 
+ * 
+ * the original method attempt was 3 stages:
+ * 1. insert characters into their best match in the map
+ *    many chars are not inserted because their best match is already occupied.
+ * 2. fill map with their best match of unused characters
+ * 3. fill map with best match of whatever character
+ * 
+ * this was no good because the map is so much bigger than the charset. so characters
+ * with great matches ended up being used only once, then the rest of the map sorta
+ * gets filled up with a few chars. lousy distribution.
+ * 
+ * second method attempt was JUST step 3 above, except with "maximum # of usages"
+ * per char. this means once a char has been used more than it should for even
+ * distribution, then it's no longer considered.
+ * 
+ * this can also have a problem because it will insert that character at the beginning
+ * of the map (whatever that even means), and it may actually be better suited
+ * elsewhere.
+ * 
+ * i want to use some method that can balance a few factors:
+ * 1) best match for the map cell
+ * 2) best match for the character
+ * 3) how versatile this map cell is
+ *    in other words, if a map cell is only matched well by 1 character, use it.
+ *    but if it fits well with many characters, then allow selecting lower priority.
+ * 4) how versatile this character is
+ *    same but reverse. if a character fits only 1 map entry well, then stick it
+ *    there. if it fits many, then let lesser-versatile chars fit these entries.
+ 
+ My feeling is that 3 and 4 can be somehow sorta naturally accounted for by
+ some kind of sorting.
+
+ TOTAL mappings are about 4 million for the 2x2x16 case which seems most practical.
+ so it's plausible to just boil all this down to 1 heuristic and sort.
+
+ "match", which is now "distance", should be normalized from 0-1.
+ so we can generate:
+ - for each character, "versatility" which is the sum of distances to map keys.
+ - for each map key, "versatility" which is the sum of distances to character.
+ - make those 2 both percentiles
+ - a single 4-million entry list of KEY => CHARACTER
+   {
+    distance %ile
+    versatility // a single versatility value. the sum of %ile.
+   }
+
+ we want to select the most specific and best matches first.
+ have to find a way to boil dist/vers into a single sortable.
+ most obvious way is to just do a weighted sum.
+
+ OK versatility does sorta help keep things better distributed but i don't think
+ it's thought through well enough. it's good enough however.
+
+ max usage seems to not be really useful either.
+
+ you really just need to have the right charset from the start.
+ */
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -18,14 +78,21 @@ namespace PetsciiMapgen
     public System.Drawing.Point srcOrigin;
     public System.Drawing.Point srcIndex;
     public ValueSet actualValues = new ValueSet(-1);// N-dimension values
-    public ValueSet closestDestPos;// = new ValueSet();
-    public Value totalDistance;
     public int usages = 0;
+
+    public int versatility; // sum of distances to all map keys. lower values = more versatile
 
     public override string ToString()
     {
       return srcIndex.ToString();
     }
+  }
+
+  public class Mapping
+  {
+    public ValueSet mapKey; // a set of tile values
+    public CharInfo charInfo;
+    public int dist;
   }
 
   public class PetsciiMap
@@ -67,7 +134,7 @@ namespace PetsciiMapgen
       double pixelsPerTileAvgY = (double)charSize.Height / numTilesPerChar.Height;
       double pixelsPerTile = pixelsPerTileAvgX * pixelsPerTileAvgY;
 
-      // process all chars finding ideal locations and values
+      // fill in char source info (actual tile values)
       var charInfo = new List<CharInfo>();
       for (int y = 0; y < numSrcChars.Height; ++y)
       {
@@ -92,79 +159,74 @@ namespace PetsciiMapgen
               Point tilePos;
               Utils.GetTileInfo(ci.size, numTilesPerChar, sx, sy, out tilePos, out tileSize);
               // process this single tile of this char.
-              Value acc = new Value();
+              double acc = 0.0;
               int count = 0;
               for (int py = 0; py < tileSize.Height; ++py)
               {
                 for (int px = 0; px < tileSize.Width; ++px)
                 {
                   var c = srcBmp.GetPixel(ci.srcOrigin.X + tilePos.X + px, ci.srcOrigin.Y + tilePos.Y + py);
-                  acc.Accumulate(new Value(Utils.ToGrayscale(c)));
+                  acc += Utils.ToGrayscale(c);
                   count++;
                 }
               }
 
-              ci.actualValues[tileIndex] = acc.DividedBy(count);// normalized to pixel
+              ci.actualValues[tileIndex] = acc / count;// normalized to pixel
 
               tileIndex++;
             }
           }
 
-          ci.closestDestPos = Utils.FindClosestDestValueSet(valuesPerTile, ci.actualValues);
-          ci.totalDistance = ci.actualValues.DistFrom(ci.closestDestPos, 1);
-
           charInfo.Add(ci);
         }
       }
 
-      // contains mapping from destvalueset => char
-      Dictionary<ValueSet, CharInfo> map = new Dictionary<ValueSet, CharInfo>();
+      // create list of all mapkeys
+      var keys = Utils.Permutate(Utils.Product(numTilesPerChar), Utils.GetDiscreteValues(valuesPerTile));
 
-      // fill in all map positions with nulls. the following code will aim to fill them in.
-      var permutations = Utils.Permutate(Utils.Product(numTilesPerChar), Utils.GetDiscreteValues(valuesPerTile));
-      foreach (var p in permutations)
+      // - generate a list of all mappings and their distances
+      // - accumulate versatility for chars
+      Console.WriteLine("Generating list of mappings (BIG = " + (Utils.Product(numSrcChars) * (int)numDestCharacters) + ")");
+      var allMappings = new List<Mapping>(Utils.Product(numSrcChars) * (int)numDestCharacters);
+      foreach (var mapKey in keys)
       {
-        map[p] = null;
-      }
-
-      // sort from best match to worst
-      charInfo.Sort((CharInfo x, CharInfo y) => x.totalDistance.CompareTo(y.totalDistance));
-
-      Console.WriteLine("Best matching distance : " + charInfo.First().totalDistance.ToString());
-      Console.WriteLine("Worst matching distance: " + charInfo.Last().totalDistance.ToString());
-
-      List<ValueSet> keys = map.Keys.ToList();
-
-      // walk through remaining empty map entries, find best char, whether used or not.
-      int inserted3 = 0;
-      foreach (var k in keys)
-      {
-        if (map[k] != null)
-          continue;
-        Value closestD = null;
-        CharInfo closestChar = null;
         foreach (var ci in charInfo)
         {
-          if (ci.usages >= maxUsages)
-            continue;
-          // here you could consider that more-used chars have less priority, to make the output map more varied.
-          var d = ci.actualValues.DistFrom(k, 1);
-          if (closestD == null || d.IsLessThan(closestD))
+          Mapping mapping = new Mapping
           {
-            closestD = d;
-            closestChar = ci;
-          }
+            charInfo = ci,
+            mapKey = mapKey
+          };
+          mapping.dist = (int)(mapKey.DistFrom(ci.actualValues) * 100.0);
+          ci.versatility += mapping.dist;
+          allMappings.Add(mapping);
         }
-        Debug.Assert(closestChar != null);
-        map[k] = closestChar;
-        closestChar.usages++;
-        inserted3++;
       }
 
-      Console.WriteLine("Characters inserted: " + inserted3);
+      Console.WriteLine("sort");
+      allMappings.Sort((x, y) =>
+      {
+        var d = x.dist.CompareTo(y.dist);
+        if (d == 0)
+        {
+          d = x.charInfo.versatility.CompareTo(y.charInfo.versatility);
+        }
+        return d;
+      });
 
+      // now walk through and fill in mappings from top to bottom.
+      Dictionary<ValueSet, CharInfo> map = new Dictionary<ValueSet, CharInfo>();
 
-
+      Console.WriteLine("insert into map");
+      foreach (var mapping in allMappings)
+      {
+        if (map.ContainsKey(mapping.mapKey))
+          continue; // already mapped.
+        map[mapping.mapKey] = mapping.charInfo;
+        mapping.charInfo.usages++;
+        if (map.Count == numDestCharacters)
+          break;
+      }
 
       int numCharsUsed = 0;
       int numCharsUsedOnce = 0;
@@ -192,7 +254,7 @@ namespace PetsciiMapgen
       // now generate the map image from the map struct. It won't be human-readable; it's going to simply
       // be a 2D wrapped row of the map keys.
 
-      int numCellsX = (int)Math.Ceiling(Math.Sqrt(keys.Count));
+      int numCellsX = (int)Math.Ceiling(Math.Sqrt(keys.Count()));
       Size mapImageSize = new Size(numCellsX * charSize.Width, numCellsX * charSize.Height);
 
       Console.WriteLine("MAP image generation...");
@@ -209,7 +271,6 @@ namespace PetsciiMapgen
           int cellX = k.ID - (numCellsX * cellY);
           Rectangle srcRect = new Rectangle(ci.srcOrigin.X, ci.srcOrigin.Y, charSize.Width, charSize.Height);
           g.DrawImage(srcBmp, cellX * charSize.Width, cellY * charSize.Height, srcRect, GraphicsUnit.Pixel);
-          //break;
         }
       }
 
@@ -270,9 +331,9 @@ namespace PetsciiMapgen
         }
       }
 
-      Func<float, float> TransformColorant = (float c) =>
+      Func<double, double> TransformColorant = (double c) =>
       {
-        return (float)Math.Floor(c / .25f) * .25f;
+        return (double)Math.Floor(c / .25f) * .25f;
       };
 
       Utils.TransformPixels(testBmp, c =>
