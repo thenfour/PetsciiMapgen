@@ -278,7 +278,7 @@ namespace PetsciiMapgen
     }
 
 
-    public void PETSCIIIZE(string srcImagePath, string destImagePath)
+    public void PETSCIIIZE(string srcImagePath, string destImagePath, bool shade)
     {
       var testImg = Image.FromFile(srcImagePath);
       Bitmap testBmp = new Bitmap(testImg);
@@ -331,20 +331,24 @@ namespace PetsciiMapgen
         }
       }
 
-      Func<double, double> TransformColorant = (double c) =>
+      if (shade)
       {
-        return (double)Math.Floor(c / .25f) * .25f;
-      };
+        Func<double, double> TransformColorant = (double c) =>
+        {
+          return (double)Math.Floor(c / .25f) * .25f;
+        };
 
-      Utils.TransformPixels(testBmp, c =>
-      {
-        c.r = TransformColorant(c.r);
-        c.g = TransformColorant(c.g);
-        c.b = TransformColorant(c.b);
-        return c;
-      });
-      Utils.Pixellate(testBmp, charSize);
-      Utils.Multiply(destImg, testBmp);
+        Utils.TransformPixels(testBmp, c =>
+        {
+          c.r = TransformColorant(c.r);
+          c.g = TransformColorant(c.g);
+          c.b = TransformColorant(c.b);
+          return c;
+        });
+        Utils.Pixellate(testBmp, charSize);
+        Utils.Multiply(destImg, testBmp);
+      }
+
 
       destImg.Save(destImagePath);
     }
