@@ -1,0 +1,322 @@
+{
+  "Name": "LoadASCIIMapImage",
+  "_id": "867e37c2-5647-4e78-a3e0-c13eb2230f1a",
+  "Namespace": "user.tenfour",
+  "Description": "Loads an image file. Click on [...] to select a file.\r\n\r\nWe support most file-types. Use the two additional outputs for Width and Height. \r\n\r\nUse a combination like this to use Image as texture:\r\n\r\n[SetTexture           ]\r\n[Rectange] [Image]\r\n",
+  "Inputs": [
+    {
+      "Name": "ImagePath",
+      "MetaInstanceID": "059ac8fd-9499-4d26-ad8a-e1c9b03298fb",
+      "DefaultValue": {
+        "Type": "Text",
+        "Value": "assets-common/image/chipmunk.jpg"
+      },
+      "MetaID": "c522a66e-3260-4692-b3e3-79fd0361fa3d",
+      "IsMultiInput": "False",
+      "Relevance": "Relevant",
+      "Description": "",
+      "Min": "-100000",
+      "Max": "100000",
+      "Scale": "1",
+      "ScaleType": "Linear",
+      "EnumValues": []
+    },
+    {
+      "Name": "CharSize.X",
+      "MetaInstanceID": "0f763652-59d2-41aa-8292-ca2b6ccab0e7",
+      "DefaultValue": {
+        "Type": "Float",
+        "Value": "8"
+      },
+      "MetaID": "3f76dee3-3897-44ac-82d6-25ce9f53a506",
+      "IsMultiInput": "False",
+      "Relevance": "Optional",
+      "Description": "",
+      "Min": "1",
+      "Max": "10000",
+      "Scale": "1",
+      "ScaleType": "Linear",
+      "EnumValues": []
+    },
+    {
+      "Name": "CharSize.Y",
+      "MetaInstanceID": "bea60c0f-c427-488c-aaa6-4bc0bc470b5d",
+      "DefaultValue": {
+        "Type": "Float",
+        "Value": "8"
+      },
+      "MetaID": "3f76dee3-3897-44ac-82d6-25ce9f53a506",
+      "IsMultiInput": "False",
+      "Relevance": "Optional",
+      "Description": "",
+      "Min": "1",
+      "Max": "10000",
+      "Scale": "1",
+      "ScaleType": "Linear",
+      "EnumValues": []
+    },
+    {
+      "Name": "TilesPerChar.X",
+      "MetaInstanceID": "f380fc68-be03-4966-ba6e-fde5b369ac6f",
+      "DefaultValue": {
+        "Type": "Float",
+        "Value": "2"
+      },
+      "MetaID": "3f76dee3-3897-44ac-82d6-25ce9f53a506",
+      "IsMultiInput": "False",
+      "Relevance": "Optional",
+      "Description": "",
+      "Min": "1",
+      "Max": "10000",
+      "Scale": "1",
+      "ScaleType": "Linear",
+      "EnumValues": []
+    },
+    {
+      "Name": "TilesPerChar.Y",
+      "MetaInstanceID": "4894038c-b0ef-4f06-ae59-5354044aa8fc",
+      "DefaultValue": {
+        "Type": "Float",
+        "Value": "2"
+      },
+      "MetaID": "3f76dee3-3897-44ac-82d6-25ce9f53a506",
+      "IsMultiInput": "False",
+      "Relevance": "Optional",
+      "Description": "",
+      "Min": "1",
+      "Max": "10000",
+      "Scale": "1",
+      "ScaleType": "Linear",
+      "EnumValues": []
+    },
+    {
+      "Name": "ValuesPerTile",
+      "MetaInstanceID": "7429798f-435d-414f-b49f-fb323bb38a56",
+      "DefaultValue": {
+        "Type": "Float",
+        "Value": "16"
+      },
+      "MetaID": "3f76dee3-3897-44ac-82d6-25ce9f53a506",
+      "IsMultiInput": "False",
+      "Relevance": "Optional",
+      "Description": "",
+      "Min": "-10000",
+      "Max": "10000",
+      "Scale": "0.1",
+      "ScaleType": "Linear",
+      "EnumValues": []
+    },
+    {
+      "Name": "MapCellCount.X",
+      "MetaInstanceID": "1bf4de62-b5aa-4f59-afe2-d2f2c790e197",
+      "DefaultValue": {
+        "Type": "Float",
+        "Value": "256"
+      },
+      "MetaID": "3f76dee3-3897-44ac-82d6-25ce9f53a506",
+      "IsMultiInput": "False",
+      "Relevance": "Optional",
+      "Description": "",
+      "Min": "-1",
+      "Max": "10000",
+      "Scale": "1",
+      "ScaleType": "Linear",
+      "EnumValues": []
+    },
+    {
+      "Name": "MapCellCount.Y",
+      "MetaInstanceID": "1b04b023-001f-4f9c-9b67-69af2ed5aa54",
+      "DefaultValue": {
+        "Type": "Float",
+        "Value": "256"
+      },
+      "MetaID": "3f76dee3-3897-44ac-82d6-25ce9f53a506",
+      "IsMultiInput": "False",
+      "Relevance": "Optional",
+      "Description": "",
+      "Min": "-1",
+      "Max": "10000",
+      "Scale": "1",
+      "ScaleType": "Linear",
+      "EnumValues": []
+    }
+  ],
+  "Outputs": [
+    {
+      "Name": "Image",
+      "MetaInstanceID": "02e3120c-e03e-4012-8d6c-7defd0fa348e",
+      "MetaID": "9701d534-b3ff-4889-a250-84aece4a7d76"
+    }
+  ],
+  "OperatorParts": [
+    {
+      "MetaInstanceID": "08f56788-6d97-4aa8-991e-3ff193ca6a8b",
+      "MetaID": "28f657a7-f62b-4963-bc70-7fdf2ea60ca2",
+      "Name": "LoadASCIIMapImageFunc",
+      "Version": "d430141c-34ca-4ec8-8c60-d5b9f71107b4",
+      "Type": "Float",
+      "IsMultiInput": "True",
+      "Script": [
+        "//>>> _using",
+        "using System;",
+        "using System.Collections.Generic;",
+        "using System.Linq;",
+        "using System.Text;",
+        "using SharpDX;",
+        "using SharpDX.Direct3D11;",
+        "using SharpDX.Windows;",
+        "//<<< _using",
+        "using System.IO;",
+        "",
+        "namespace Framefield.Core.ID28f657a7_f62b_4963_bc70_7fdf2ea60ca2",
+        "{",
+        "    public class Class_LoadASCIIMapImage : OperatorPart.Function",
+        "    {",
+        "        //>>> _inputids",
+        "        private enum InputId",
+        "        {",
+        "            ImagePath = 0,",
+        "            CharSizeX = 1,",
+        "            CharSizeY = 2,",
+        "            TilesPerCharX = 3,",
+        "            TilesPerCharY = 4,",
+        "            ValuesPerTile = 5,",
+        "            MapCellCountX = 6,",
+        "            MapCellCountY = 7",
+        "        }",
+        "        //<<< _inputids",
+        "",
+        "        //>>> _outputids",
+        "        private enum OutputId",
+        "        {",
+        "            Image = 0",
+        "        }",
+        "        //<<< _outputids",
+        "",
+        "        public override void Dispose() {",
+        "            Utilities.DisposeObj(ref _imageResource);",
+        "        }",
+        "",
+        "        public override OperatorPartContext Eval(OperatorPartContext context, List<OperatorPart> inputs, int outputIdx) ",
+        "        {",
+        "            //>>> _params",
+        "            var ImagePath = inputs[(int)InputId.ImagePath].Eval(context).Text;",
+        "            var CharSizeX = inputs[(int)InputId.CharSizeX].Eval(context).Value;",
+        "            var CharSizeY = inputs[(int)InputId.CharSizeY].Eval(context).Value;",
+        "            var CharSize = new Vector2(CharSizeX, CharSizeY);",
+        "            var TilesPerCharX = inputs[(int)InputId.TilesPerCharX].Eval(context).Value;",
+        "            var TilesPerCharY = inputs[(int)InputId.TilesPerCharY].Eval(context).Value;",
+        "            var TilesPerChar = new Vector2(TilesPerCharX, TilesPerCharY);",
+        "            var ValuesPerTile = inputs[(int)InputId.ValuesPerTile].Eval(context).Value;",
+        "            var MapCellCountX = inputs[(int)InputId.MapCellCountX].Eval(context).Value;",
+        "            var MapCellCountY = inputs[(int)InputId.MapCellCountY].Eval(context).Value;",
+        "            var MapCellCount = new Vector2(MapCellCountX, MapCellCountY);",
+        "            //<<< _params",
+        "            ",
+        "",
+        "            if (ImagePath == _lastImagePath)",
+        "                Changed = false;",
+        "",
+        "            _lastImagePath = ImagePath;",
+        "",
+        "            if (Changed)",
+        "            {",
+        "                Dispose();",
+        "                if (File.Exists(ImagePath))",
+        "                {",
+        "                    _imageResource = ResourceManager.ReadImage(ImagePath);  ",
+        "                }",
+        "                else",
+        "                {",
+        "                    Logger.Error(this,\"Imagefile not found '{0}'\", ImagePath);",
+        "                }",
+        "",
+        "                Changed = false;",
+        "            }",
+        "",
+        "            if (_imageResource != null)",
+        "            {",
+        "                //context.Image = _imageResource.Image;",
+        "                context.Dynamic = new Dictionary<string, object>();",
+        "                context.Dynamic[\"Image\"] = _imageResource.Image;",
+        "                context.Dynamic[\"CharSize\"] = CharSize;",
+        "                context.Dynamic[\"TilesPerChar\"] = TilesPerChar;",
+        "                context.Dynamic[\"ValuesPerTile\"] = ValuesPerTile;",
+        "                context.Dynamic[\"MapCellCount\"] = MapCellCount;",
+        "            }",
+        "            else",
+        "            {",
+        "                context.Dynamic = null;",
+        "            }",
+        "",
+        "            return context;",
+        "        }",
+        "",
+        "        ImageResource _imageResource;",
+        "        String _lastImagePath = String.Empty; // prevent loading",
+        "    }",
+        "}",
+        "",
+        ""
+      ],
+      "AdditionalAssemblies": []
+    }
+  ],
+  "Operators": [],
+  "Connections": [
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "059ac8fd-9499-4d26-ad8a-e1c9b03298fb",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "08f56788-6d97-4aa8-991e-3ff193ca6a8b"
+    },
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "0f763652-59d2-41aa-8292-ca2b6ccab0e7",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "08f56788-6d97-4aa8-991e-3ff193ca6a8b"
+    },
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "bea60c0f-c427-488c-aaa6-4bc0bc470b5d",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "08f56788-6d97-4aa8-991e-3ff193ca6a8b"
+    },
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "f380fc68-be03-4966-ba6e-fde5b369ac6f",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "08f56788-6d97-4aa8-991e-3ff193ca6a8b"
+    },
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "4894038c-b0ef-4f06-ae59-5354044aa8fc",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "08f56788-6d97-4aa8-991e-3ff193ca6a8b"
+    },
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "7429798f-435d-414f-b49f-fb323bb38a56",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "08f56788-6d97-4aa8-991e-3ff193ca6a8b"
+    },
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "1bf4de62-b5aa-4f59-afe2-d2f2c790e197",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "08f56788-6d97-4aa8-991e-3ff193ca6a8b"
+    },
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "1b04b023-001f-4f9c-9b67-69af2ed5aa54",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "08f56788-6d97-4aa8-991e-3ff193ca6a8b"
+    },
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "08f56788-6d97-4aa8-991e-3ff193ca6a8b",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "02e3120c-e03e-4012-8d6c-7defd0fa348e"
+    }
+  ]
+}

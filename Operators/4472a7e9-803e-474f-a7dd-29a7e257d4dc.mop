@@ -1,0 +1,269 @@
+{
+  "Name": "LoadHybridMapImage",
+  "_id": "4472a7e9-803e-474f-a7dd-29a7e257d4dc",
+  "Namespace": "user.tenfour",
+  "Description": "",
+  "Inputs": [
+    {
+      "Name": "ImagePath",
+      "MetaInstanceID": "3146b74e-001b-4a35-b739-d171c8873d6d",
+      "DefaultValue": {
+        "Type": "Text",
+        "Value": "assets-common/image/chipmunk.jpg"
+      },
+      "MetaID": "c522a66e-3260-4692-b3e3-79fd0361fa3d",
+      "IsMultiInput": "False",
+      "Relevance": "Relevant",
+      "Description": "",
+      "Min": "-100000",
+      "Max": "100000",
+      "Scale": "1",
+      "ScaleType": "Linear",
+      "EnumValues": []
+    },
+    {
+      "Name": "CharSize.X",
+      "MetaInstanceID": "1cd71065-da89-4670-8256-aecfd443a8fa",
+      "DefaultValue": {
+        "Type": "Float",
+        "Value": "8"
+      },
+      "MetaID": "3f76dee3-3897-44ac-82d6-25ce9f53a506",
+      "IsMultiInput": "False",
+      "Relevance": "Optional",
+      "Description": "",
+      "Min": "1",
+      "Max": "10000",
+      "Scale": "1",
+      "ScaleType": "Linear",
+      "EnumValues": []
+    },
+    {
+      "Name": "CharSize.Y",
+      "MetaInstanceID": "17a83588-fa33-4f12-a482-50818556b7db",
+      "DefaultValue": {
+        "Type": "Float",
+        "Value": "8"
+      },
+      "MetaID": "3f76dee3-3897-44ac-82d6-25ce9f53a506",
+      "IsMultiInput": "False",
+      "Relevance": "Optional",
+      "Description": "",
+      "Min": "1",
+      "Max": "10000",
+      "Scale": "1",
+      "ScaleType": "Linear",
+      "EnumValues": []
+    },
+    {
+      "Name": "ValuesPerTile",
+      "MetaInstanceID": "347c690c-109c-4ed0-9149-8157a67ef6f1",
+      "DefaultValue": {
+        "Type": "Float",
+        "Value": "16"
+      },
+      "MetaID": "3f76dee3-3897-44ac-82d6-25ce9f53a506",
+      "IsMultiInput": "False",
+      "Relevance": "Optional",
+      "Description": "",
+      "Min": "-10000",
+      "Max": "10000",
+      "Scale": "0.1",
+      "ScaleType": "Linear",
+      "EnumValues": []
+    },
+    {
+      "Name": "LuminanceTiles.X",
+      "MetaInstanceID": "9401e0c9-a68c-456d-b4f1-9aa9a7077c4f",
+      "DefaultValue": {
+        "Type": "Float",
+        "Value": "1"
+      },
+      "MetaID": "3f76dee3-3897-44ac-82d6-25ce9f53a506",
+      "IsMultiInput": "False",
+      "Relevance": "Optional",
+      "Description": "",
+      "Min": "0",
+      "Max": "10000",
+      "Scale": "1",
+      "ScaleType": "Linear",
+      "EnumValues": []
+    },
+    {
+      "Name": "LuminanceTiles.Y",
+      "MetaInstanceID": "1d90c569-d2cc-4572-848e-2686eb824a50",
+      "DefaultValue": {
+        "Type": "Float",
+        "Value": "1"
+      },
+      "MetaID": "3f76dee3-3897-44ac-82d6-25ce9f53a506",
+      "IsMultiInput": "False",
+      "Relevance": "Optional",
+      "Description": "",
+      "Min": "0",
+      "Max": "10000",
+      "Scale": "1",
+      "ScaleType": "Linear",
+      "EnumValues": []
+    }
+  ],
+  "Outputs": [
+    {
+      "Name": "Image",
+      "MetaInstanceID": "580172eb-8fdc-4e3b-a57b-9dc3ff4582cc",
+      "MetaID": "9701d534-b3ff-4889-a250-84aece4a7d76"
+    }
+  ],
+  "OperatorParts": [
+    {
+      "MetaInstanceID": "bf4984ae-6dda-4196-87f2-b184d9262636",
+      "MetaID": "faad5efb-4a23-496c-a2c1-c7ae3705ae3d",
+      "Name": "LoadHybridMapImageFunc",
+      "Version": "c2a1aa90-68d5-4bfd-aa96-a945569c8d14",
+      "Type": "Float",
+      "IsMultiInput": "True",
+      "Script": [
+        "//>>> _using",
+        "using System;",
+        "using System.Collections.Generic;",
+        "using System.Linq;",
+        "using System.Text;",
+        "using SharpDX;",
+        "using SharpDX.Direct3D11;",
+        "using SharpDX.Windows;",
+        "//<<< _using",
+        "using System.IO;",
+        "",
+        "namespace Framefield.Core.IDfaad5efb_4a23_496c_a2c1_c7ae3705ae3d",
+        "{",
+        "    public class Class_LoadHybridMapImage : OperatorPart.Function",
+        "    {",
+        "        //>>> _inputids",
+        "        private enum InputId",
+        "        {",
+        "            ImagePath = 0,",
+        "            CharSizeX = 1,",
+        "            CharSizeY = 2,",
+        "            ValuesPerTile = 3,",
+        "            LuminanceTilesX = 4,",
+        "            LuminanceTilesY = 5",
+        "        }",
+        "        //<<< _inputids",
+        "",
+        "        //>>> _outputids",
+        "        private enum OutputId",
+        "        {",
+        "            Image = 0",
+        "        }",
+        "        //<<< _outputids",
+        "",
+        "        public override void Dispose() {",
+        "            Utilities.DisposeObj(ref _imageResource);",
+        "        }",
+        "",
+        "        public override OperatorPartContext Eval(OperatorPartContext context, List<OperatorPart> inputs, int outputIdx) ",
+        "        {",
+        "            //>>> _params",
+        "            var ImagePath = inputs[(int)InputId.ImagePath].Eval(context).Text;",
+        "            var CharSizeX = inputs[(int)InputId.CharSizeX].Eval(context).Value;",
+        "            var CharSizeY = inputs[(int)InputId.CharSizeY].Eval(context).Value;",
+        "            var CharSize = new Vector2(CharSizeX, CharSizeY);",
+        "            var ValuesPerTile = inputs[(int)InputId.ValuesPerTile].Eval(context).Value;",
+        "            var LuminanceTilesX = inputs[(int)InputId.LuminanceTilesX].Eval(context).Value;",
+        "            var LuminanceTilesY = inputs[(int)InputId.LuminanceTilesY].Eval(context).Value;",
+        "            var LuminanceTiles = new Vector2(LuminanceTilesX, LuminanceTilesY);",
+        "            //<<< _params",
+        "            ",
+        "",
+        "            if (ImagePath == _lastImagePath)",
+        "                Changed = false;",
+        "",
+        "            _lastImagePath = ImagePath;",
+        "",
+        "            if (Changed)",
+        "            {",
+        "                Dispose();",
+        "                if (File.Exists(ImagePath))",
+        "                {",
+        "                    _imageResource = ResourceManager.ReadImage(ImagePath);  ",
+        "                }",
+        "                else",
+        "                {",
+        "                    Logger.Error(this,\"Imagefile not found '{0}'\", ImagePath);",
+        "                }",
+        "",
+        "                Changed = false;",
+        "            }",
+        "",
+        "            if (_imageResource != null)",
+        "            {",
+        "                context.Dynamic = new Dictionary<string, object>();",
+        "                context.Dynamic[\"Image\"] = _imageResource.Image;",
+        "                context.Dynamic[\"CharSize\"] = CharSize;",
+        "                context.Dynamic[\"ValuesPerTile\"] = ValuesPerTile;",
+        "                context.Dynamic[\"LuminanceTiles\"] = LuminanceTiles;",
+        "            }",
+        "            else",
+        "            {",
+        "                context.Dynamic = null;",
+        "            }",
+        "",
+        "            return context;",
+        "        }",
+        "",
+        "        ImageResource _imageResource;",
+        "        String _lastImagePath = String.Empty; // prevent loading",
+        "    }",
+        "}",
+        "",
+        ""
+      ],
+      "AdditionalAssemblies": []
+    }
+  ],
+  "Operators": [],
+  "Connections": [
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "3146b74e-001b-4a35-b739-d171c8873d6d",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "bf4984ae-6dda-4196-87f2-b184d9262636"
+    },
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "1cd71065-da89-4670-8256-aecfd443a8fa",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "bf4984ae-6dda-4196-87f2-b184d9262636"
+    },
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "17a83588-fa33-4f12-a482-50818556b7db",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "bf4984ae-6dda-4196-87f2-b184d9262636"
+    },
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "347c690c-109c-4ed0-9149-8157a67ef6f1",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "bf4984ae-6dda-4196-87f2-b184d9262636"
+    },
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "9401e0c9-a68c-456d-b4f1-9aa9a7077c4f",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "bf4984ae-6dda-4196-87f2-b184d9262636"
+    },
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "1d90c569-d2cc-4572-848e-2686eb824a50",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "bf4984ae-6dda-4196-87f2-b184d9262636"
+    },
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "bf4984ae-6dda-4196-87f2-b184d9262636",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "580172eb-8fdc-4e3b-a57b-9dc3ff4582cc"
+    }
+  ]
+}
