@@ -25,7 +25,10 @@ namespace PetsciiMapgen
       // everything i've checked, 2x2x16 is the best possible combo.
 
       //PetsciiMap map = new PetsciiMap("..\\..\\img\\fonts\\c64_uppercase_norm.png", new Size(8, 8), new Size(2, 2), 16);
-      PetsciiMap map = new PetsciiMap("..\\..\\img\\fonts\\c64_all_onlyblock.gif", new Size(8, 8), new Size(2, 2), 16);
+      //PetsciiMap map = new PetsciiMap("..\\..\\img\\fonts\\c64_all_onlyblock.gif", new Size(8, 8), new Size(2, 2), 16);
+      //PetsciiMap map = new PetsciiMap("..\\..\\img\\fonts\\emoji-unknown-dark-24.png", new Size(24, 24), new Size(1, 1), 512);
+      var map = new HSVMapgen.PetsciiMap("..\\..\\img\\fonts\\emoji-unknown-dark-12.png", new Size(12, 12), 16);
+      //var map = new HSVMapgen.PetsciiMap("..\\..\\img\\fonts\\pantoneswatches-8x8.png", new Size(8, 8), 16);
       //PetsciiMap map = new PetsciiMap("..\\..\\img\\fonts\\c64_all.gif", new Size(8, 8), new Size(1, 1), 256);
       //PetsciiMap map = new PetsciiMap("..\\..\\img\\fonts\\test-16blocks8x8.png", new Size(8, 8), new Size(2, 2), 2);
       //PetsciiMap map = new PetsciiMap("..\\..\\img\\fonts\\topaznew.gif", new Size(8, 16), new Size(2, 2), 16);

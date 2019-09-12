@@ -300,7 +300,7 @@ namespace PetsciiMapgen
               for (int tx = numTilesPerChar.Width - 1; tx >= 0; --tx)
               {
                 Point tilePos = Utils.GetTileOrigin(charSize, numTilesPerChar, tx, ty);
-                Color srcColor = testBmp.GetPixel((srcCellX * charSize.Width) + tilePos.X, (srcCellY * charSize.Height) + tilePos.Y);
+                Color srcColor = testBmp.GetPixel(((srcCellX) * charSize.Width) + tilePos.X, ((srcCellY) * charSize.Height) + tilePos.Y);
                 double val = Utils.ToGrayscale(srcColor);
                 
                 // edge detection & contrast should be applied to make the effect fit nicer

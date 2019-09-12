@@ -13,6 +13,7 @@ using System.Runtime.InteropServices;
 
 namespace PetsciiMapgen
 {
+
   // basically wraps List<Value>.
   // simplifies code that wants to do set operations.
   public class ValueSet : IComparable<ValueSet>, IEqualityComparer<ValueSet>
@@ -32,6 +33,10 @@ namespace PetsciiMapgen
     {
       get
       {
+        if (i >= values.Count)
+        {
+          values.AddRange(Enumerable.Repeat<double>(0.0, 1 + (i - values.Count)));
+        }
         return values[i];
       }
       set
@@ -58,6 +63,19 @@ namespace PetsciiMapgen
       }
       return acc;
       //return acc.DividedBy(numPixels);
+    }
+
+    // same as above but with weights
+    public double DistFrom(ValueSet b, ValueSet weights)
+    {
+      Debug.Assert(this.Length == b.Length);
+      Debug.Assert(this.Length == weights.Length);
+      double acc = 0.0;
+      for (int i = 0; i < this.Length; ++i)
+      {
+        acc += weights[i] * Math.Abs(this[i] - b[i]); // also possible: use accMax
+      }
+      return acc;
     }
 
     int IComparable<ValueSet>.CompareTo(ValueSet other)
@@ -109,6 +127,107 @@ namespace PetsciiMapgen
 
   public static class Utils
   {
+    public class ValueRangeInspector
+    {
+      public double MinValue { get; private set; } = default(double);
+      public double MaxValue { get; private set; } = default(double);
+
+      bool encountered = false;
+
+      public void Visit(double v)
+      {
+        if (!encountered)
+        {
+          MinValue = MaxValue = v;
+          encountered = true;
+          return;
+        }
+        MinValue = Utils.Min<double>(v, MinValue);
+        MaxValue = Utils.Max<double>(v, MaxValue);
+      }
+
+      // normalize a value based on min/max values seen, returning 0-1.
+      public double Normalize01(double v)
+      {
+        return (v - MinValue) / (MaxValue - MinValue);
+      }
+
+      public override string ToString()
+      {
+        return string.Format("[{0}, {1}]", MinValue, MaxValue);
+      }
+    }
+    
+    // https://stackoverflow.com/questions/359612/how-to-change-rgb-color-to-hsv
+    public static void ColorToHSV(Color color, out double hue, out double saturation, out double value)
+    {
+      int max = Math.Max(color.R, Math.Max(color.G, color.B));
+      int min = Math.Min(color.R, Math.Min(color.G, color.B));
+
+      hue = color.GetHue();
+      saturation = (max == 0) ? 0 : 1d - (1d * min / max);
+      value = max / 255d;
+    }
+
+    public static Color ColorFromHSV(double hue, double saturation, double value)
+    {
+      int hi = Convert.ToInt32(Math.Floor(hue / 60)) % 6;
+      double f = hue / 60 - Math.Floor(hue / 60);
+
+      value = value * 255;
+      int v = Convert.ToInt32(value);
+      int p = Convert.ToInt32(value * (1 - saturation));
+      int q = Convert.ToInt32(value * (1 - f * saturation));
+      int t = Convert.ToInt32(value * (1 - (1 - f) * saturation));
+
+      if (hi == 0)
+        return Color.FromArgb(255, v, t, p);
+      else if (hi == 1)
+        return Color.FromArgb(255, q, v, p);
+      else if (hi == 2)
+        return Color.FromArgb(255, p, v, t);
+      else if (hi == 3)
+        return Color.FromArgb(255, p, q, v);
+      else if (hi == 4)
+        return Color.FromArgb(255, t, p, v);
+      else
+        return Color.FromArgb(255, v, p, q);
+    }
+
+    // adapted from https://www.programmingalgorithms.com/algorithm/rgb-to-ycbcr
+    public static void RGBtoYCbCr(double fr, double fg, double fb, out double y, out double u, out double v)
+    {
+      double Y = (0.2989 * fr + 0.5866 * fg + 0.1145 * fb);
+      double Cb = (-0.1687 * fr - 0.3313 * fg + 0.5000 * fb);
+      double Cr = (0.5000 * fr - 0.4184 * fg - 0.0816 * fb);
+      y = Y;
+      u = Cb + .5;
+      v = Cr + .5;
+    }
+
+    // adapted from https://www.xaymar.com/2017/07/06/how-to-converting-rgb-to-yuv-and-yuv-to-rgb/
+    //public static void RGBtoYUV(double r, double g, double b, out double y, out double u, out double v)
+    //{
+    //  y = r * 0.2126 + 0.7152 * g + 0.0722 * b;
+    //  u = (b - y) / 1.8556;
+    //  v = (r - y) / 1.5748;
+
+    //  u += 0.5;
+    //  v += 0.5;
+    //}
+
+    public static void RGBtoYUV(Color rgb, out double y, out double u, out double v)
+    {
+      RGBtoYCbCr(
+        (double)rgb.R / 255.0,
+        (double)rgb.G / 255.0,
+        (double)rgb.B / 255.0,
+        out y,
+        out u,
+        out v
+        );
+    }
+
     public struct RGBColorF
     {
       public double r;
@@ -202,6 +321,13 @@ namespace PetsciiMapgen
       src.UnlockBits(data);
     }
 
+    public static double Clamp(double v, double m, double x)
+    {
+      if (v < m) return m;
+      if (v > x) return x;
+      return v;
+    }
+
     public static void Multiply(Bitmap srcA/* dest */, Bitmap srcB)
     {
       if (srcA.Width != srcB.Width)
@@ -266,6 +392,15 @@ namespace PetsciiMapgen
     public static Size Sub(Point end, Point begin)
     {
       return new Size(end.X - begin.X, end.Y - begin.Y);
+    }
+
+    public static T Max<T>(T x, T y)
+    {
+      return (Comparer<T>.Default.Compare(x, y) > 0) ? x : y;
+    }
+    public static T Min<T>(T x, T y)
+    {
+      return (Comparer<T>.Default.Compare(x, y) < 0) ? x : y;
     }
 
     // returns all possible combinations of tile values.
@@ -388,6 +523,14 @@ namespace PetsciiMapgen
       val *= factor;
       val += centerPoint;
       return val;
+    }
+    internal static Color AdjustContrast(Color val, double factor, double centerPoint = 0.5)
+    {
+      return Color.FromArgb(
+        (int)(Clamp(AdjustContrast((double)val.R / 255.0, factor, centerPoint), 0, 1) * 255.0),
+        (int)(Clamp(AdjustContrast((double)val.G / 255.0, factor, centerPoint), 0, 1) * 255.0),
+        (int)(Clamp(AdjustContrast((double)val.B / 255.0, factor, centerPoint), 0, 1) * 255.0)
+        );
     }
   }
 }
