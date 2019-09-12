@@ -13,7 +13,6 @@ using System.Runtime.InteropServices;
 
 namespace PetsciiMapgen
 {
-
   // basically wraps List<Value>.
   // simplifies code that wants to do set operations.
   public class ValueSet : IComparable<ValueSet>, IEqualityComparer<ValueSet>

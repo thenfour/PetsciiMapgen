@@ -1,7 +1,22 @@
 ﻿/*
 
-similar to PetsciiMapgen,
-except instead of the "value set" being NxN spacial tiles, the valueset will be 0-1 H,S,V (averaged).
+combination of the other 2 map generators.
+considers YUV components, spread over sub-char tiles.
+
+similar to video encoding, we give more detail to the Y component.
+So, Y is expressed through the spacial mapping.
+And UV are always given 1 component each (whole-char)
+
+This means more dimensions than before, which means bigger maps.
+You'll never go more than 2x2 for Y. and UV are 1
+so realistically this is ALWAYS 6 dimensions.
+
+Each dimension can theoretically have N discrete values, however for simplicity and performance I just want 
+to make them all have the same buckets.
+
+the original 2x2x16 map had 64k entries and felt reasonable. To achieve that
+with 6 dimensions, it means about 6 values per dimension. and heck that's not
+bad at all really.
 
  */
 
@@ -18,35 +33,43 @@ using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Drawing.Imaging;
 
-using ValueSet = PetsciiMapgen.ValueSet;
-using Utils = PetsciiMapgen.Utils;
-using CharInfo = PetsciiMapgen.CharInfo;
-using Mapping = PetsciiMapgen.Mapping;
-
-namespace HSVMapgen
+namespace PetsciiMapgen
 {
-  public class PetsciiMap
+  public class HybridMap
   {
-    public ValueSet weights = new ValueSet(-1);
+    public ValueSet weights = new ValueSet(-1); // weights for calculating distance.
     public Bitmap mapBmp;
     public Size charSize;
+    public Size tilesPerCell;
     public int valuesPerComponent;
+    public int componentsPerCell; // # of dimensions (UV + Y*size)
 
-    public PetsciiMap(string fontFileName, Size charSize, int valuesPerComponent)
+    private HybridMap()
     {
-      this.weights[0] = .6;
-      this.weights[1] = .2;
-      this.weights[2] = .2;
+      //
+    }
 
+    public HybridMap(string fontFileName, Size charSize, Size tilesPerCell, int valuesPerComponent, double Yweight, double UVweight)
+    {
+      // we want Y to be weighted at .6 and UV to be .4.
+      this.weights[0] = UVweight / 2;
+      this.weights[1] = UVweight / 2;
+      int numYcomponents = Utils.Product(tilesPerCell);
+      for (int i = 0; i < numYcomponents; ++ i)
+      {
+        this.weights[i + 2] = Yweight / numYcomponents;
+      }
+
+      this.tilesPerCell = tilesPerCell;
       this.charSize = charSize;
       this.valuesPerComponent = valuesPerComponent;
+      this.componentsPerCell = numYcomponents + 2;
 
       var srcImg = System.Drawing.Image.FromFile(fontFileName);
-
       var srcBmp = new Bitmap(srcImg);
-      System.Drawing.Size numSrcChars = Utils.Div(srcImg.Size, charSize);
+      Size numSrcChars = Utils.Div(srcImg.Size, charSize);
 
-      double numDestCharacters = Math.Pow(valuesPerComponent, 3);
+      double numDestCharacters = Math.Pow(valuesPerComponent, componentsPerCell);
 
       Console.WriteLine("Src character size: " + Utils.ToString(charSize));
       Console.WriteLine("Src image size: " + Utils.ToString(srcBmp.Size));
@@ -54,22 +77,18 @@ namespace HSVMapgen
       Console.WriteLine("Number of source chars (1d): " + Utils.Product(numSrcChars));
       Console.WriteLine("Chosen values per tile: " + valuesPerComponent);
       Console.WriteLine("Resulting map will have this many entries: " + numDestCharacters);
-      //int maxUsages = (int)Math.Ceiling(numDestCharacters / Utils.Product(numSrcChars));
-      //Console.WriteLine("Characters shall be re-used maximum: " + maxUsages);
-
-      //double pixelsPerTileAvgX = (double)charSize.Width / numTilesPerChar.Width;
-      //double pixelsPerTileAvgY = (double)charSize.Height / numTilesPerChar.Height;
-      //double pixelsPerTile = pixelsPerTileAvgX * pixelsPerTileAvgY;
 
       // fill in char source info (actual tile values)
       var charInfo = new List<CharInfo>();
       int pixelsPerChar = Utils.Product(charSize);
-      Utils.ValueRangeInspector indY = new Utils.ValueRangeInspector();
-      Utils.ValueRangeInspector indU = new Utils.ValueRangeInspector();
-      Utils.ValueRangeInspector indV = new Utils.ValueRangeInspector();
-      Utils.ValueRangeInspector avgY = new Utils.ValueRangeInspector();
-      Utils.ValueRangeInspector avgU = new Utils.ValueRangeInspector();
-      Utils.ValueRangeInspector avgV = new Utils.ValueRangeInspector();
+
+      // used for normalization later
+      List<Utils.ValueRangeInspector> ranges = new List<Utils.ValueRangeInspector>();
+      for (int i = 0; i < componentsPerCell; ++ i)
+      {
+        ranges.Add(new Utils.ValueRangeInspector());
+      }
+
       for (int y = 0; y < numSrcChars.Height; ++y)
       {
         for (int x = 0; x < numSrcChars.Width; ++x)
@@ -82,62 +101,36 @@ namespace HSVMapgen
             srcIndex = new Point(x, y)
           };
 
-          // process this single tile of this char.
-          for (int py = 0; py < charSize.Height; ++py)
+          ProcessCharacter(srcBmp, ci);
+
+          for (int i = 0; i < componentsPerCell; ++i)
           {
-            for (int px = 0; px < charSize.Width; ++px)
-            {
-              var c = srcBmp.GetPixel(ci.srcOrigin.X + px, ci.srcOrigin.Y + py);
-              //double hue, saturation, value;
-              //Utils.ColorToHSV(c, out hue, out saturation, out value);
-              //hue /= 360.0;
-              //hue = 0.0;
-              //ci.actualValues[0] += hue;
-              //ci.actualValues[1] += saturation;
-              //ci.actualValues[2] += value;
-              double cy, cu, cv;
-              Utils.RGBtoYUV(c, out cy, out cu, out cv);
-              ci.actualValues[0] += cy;
-              ci.actualValues[1] += cu;
-              ci.actualValues[2] += cv;
-
-              indY.Visit(cy);
-              indU.Visit(cu);
-              indV.Visit(cv);
-            }
+            ranges[i].Visit(ci.actualValues[i]);
           }
-          // divide => average. note that because we're using averages over
-          // a big area, it's less likely to reach 0.0 or 1.0. some kind of normalization might be needed.
-          ci.actualValues[0] /= pixelsPerChar;
-          ci.actualValues[1] /= pixelsPerChar;
-          ci.actualValues[2] /= pixelsPerChar;
-
-          avgY.Visit(ci.actualValues[0]);
-          avgU.Visit(ci.actualValues[1]);
-          avgV.Visit(ci.actualValues[2]);
 
           charInfo.Add(ci);
         }
       }
 
       Console.WriteLine("RANGES encountered:");
-      Console.WriteLine("  individual Y: " + indY);
-      Console.WriteLine("  individual U: " + indU);
-      Console.WriteLine("  individual V: " + indV);
-      Console.WriteLine("  avg Y       : " + avgY);
-      Console.WriteLine("  avg U       : " + avgU);
-      Console.WriteLine("  avg V       : " + avgV);
+      for (int i = 0; i < componentsPerCell; ++i)
+      {
+        Console.WriteLine("  [" + i + "]: " + ranges[i]);
+      }
 
       // normalize all YUV seen so it will correspond nicely with permutations.
+      Console.WriteLine("Normalizing values...");
       foreach (var ci in charInfo)
       {
-        ci.actualValues[0] = avgY.Normalize01(ci.actualValues[0]);
-        ci.actualValues[1] = avgU.Normalize01(ci.actualValues[1]);
-        ci.actualValues[2] = avgV.Normalize01(ci.actualValues[2]);
+        for (int i = 0; i < componentsPerCell; ++i)
+        {
+          ci.actualValues[i] = ranges[i].Normalize01(ci.actualValues[i]);
+        }
       }
 
       // create list of all mapkeys
-      var keys = Utils.Permutate(3, Utils.GetDiscreteValues(valuesPerComponent));
+      Console.WriteLine("Generating permutations...");
+      var keys = Utils.Permutate(componentsPerCell, Utils.GetDiscreteValues(valuesPerComponent));
 
       // - generate a list of all mappings and their distances
       // - accumulate versatility for chars
@@ -232,6 +225,60 @@ namespace HSVMapgen
       mapBmp.Save("..\\..\\img\\map.png");
     }
 
+    internal static HybridMap Load(string path, Size charSize, Size tilesPerCell, int valuesPerComponent)
+    {
+      HybridMap ret = new HybridMap();
+      ret.mapBmp = new Bitmap(Bitmap.FromFile(path));
+      ret.charSize = charSize;
+      ret.tilesPerCell = tilesPerCell;
+      ret.valuesPerComponent = valuesPerComponent;
+      ret.weights = null;
+      ret.componentsPerCell = 2 + Utils.Product(tilesPerCell);
+      return ret;
+    }
+
+  // fills in the actual component values for this character.
+  private void ProcessCharacter(Bitmap srcBmp, CharInfo ci)
+    {
+      int componentIndex = 0;
+      double charU = 0, charV = 0;
+      for (int sy = 0; sy < tilesPerCell.Height; ++sy)
+      {
+        for (int sx = 0; sx < tilesPerCell.Width; ++sx)
+        {
+          // process a tile
+          Size tileSize;
+          Point tilePos;
+          Utils.GetTileInfo(ci.size, tilesPerCell, sx, sy, out tilePos, out tileSize);
+          // process this single tile of this char.
+          // grab all pixels for this tile and calculate Y component for each
+          int tilePixelCount = 0;
+          double tileY = 0;
+          for (int py = 0; py < tileSize.Height; ++py)
+          {
+            for (int px = 0; px < tileSize.Width; ++px)
+            {
+              var c = srcBmp.GetPixel(ci.srcOrigin.X + tilePos.X + px, ci.srcOrigin.Y + tilePos.Y + py);
+              double pixY, pixU, pixV;
+              Utils.RGBtoYUV(c, out pixY, out pixU, out pixV);
+              tileY += pixY;
+              charU += pixU;
+              charV += pixV;
+              tilePixelCount++;
+            }
+          }
+
+          ci.actualValues[componentIndex] = tileY / tilePixelCount;// normalized to pixel
+          componentIndex++;
+        }
+      }
+
+      int pixelsPerChar = Utils.Product(ci.size);
+      ci.actualValues[componentIndex] = charU / pixelsPerChar;
+      componentIndex++;
+      ci.actualValues[componentIndex] = charV / pixelsPerChar;
+      componentIndex++;
+    }
 
     public void PETSCIIIZE(string srcImagePath, string destImagePath, bool shade)
     {
@@ -240,7 +287,7 @@ namespace HSVMapgen
       Bitmap destImg = new Bitmap(testBmp.Width, testBmp.Height, PixelFormat.Format32bppArgb);
 
       int mapCellsX = mapBmp.Width / charSize.Width;
-      int maxID = (int)Math.Pow(valuesPerComponent, 3);
+      int numDestCharacters = (int)Math.Pow(valuesPerComponent, componentsPerCell);
 
       using (var g = Graphics.FromImage(destImg))
       {
@@ -252,15 +299,29 @@ namespace HSVMapgen
           {
             // sample in the cell to determine the "key" "ID".
             int ID = 0;
-            Color srcColor = testBmp.GetPixel(srcCellX * charSize.Width + (charSize.Width/2), srcCellY * charSize.Height + (charSize.Height/2));
-            srcColor = Utils.AdjustContrast(srcColor, 1.2);
-            //srcColor = Color.Black;
+            double charU = 0, charV = 0;// accumulate Cr and Cb
 
-            double cy, cu, cv;
-            Utils.RGBtoYUV(srcColor, out cy, out cu, out cv);
-            vals[2] = Utils.Clamp(cy,0,1);// reverse order from how they're put into the map
-            vals[1] = Utils.Clamp(cu, 0, 1);
-            vals[0] = Utils.Clamp(cv, 0, 1);
+            for (int ty = tilesPerCell.Height - 1; ty >= 0; --ty)
+            {
+              for (int tx = tilesPerCell.Width - 1; tx >= 0; --tx)
+              {
+                Point tilePos = Utils.GetTileOrigin(charSize, tilesPerCell, tx, ty);
+                Color srcColor = testBmp.GetPixel(((srcCellX) * charSize.Width) + tilePos.X, ((srcCellY) * charSize.Height) + tilePos.Y);
+
+                srcColor = Utils.AdjustContrast(srcColor, 1.2);
+
+                double cy, cu, cv;
+                Utils.RGBtoYUV(srcColor, out cy, out cu, out cv);
+
+                int tileIndex = tx + (ty * tilesPerCell.Width);
+                vals[this.componentsPerCell - 1 - tileIndex] = Utils.Clamp(cy, 0, 1);
+                charU += cu;
+                charV += cv;
+              }
+            }
+            int numTiles = Utils.Product(tilesPerCell);
+            vals[1] = Utils.Clamp(charU / numTiles, 0, 1);
+            vals[0] = Utils.Clamp(charV / numTiles, 0, 1);
 
             // figure out which "ID" this value corresponds to.
             // (val - segCenter) would give us the boundary. for example between 0-1 with 2 segments, the center vals are .25 and .75.
@@ -269,10 +330,9 @@ namespace HSVMapgen
             // value regardless of scale or any rounding issues.
             double halfSegCenter = 0.25 / valuesPerComponent;
 
-            for(int i = 0; i < 3; ++ i )
+            for(int i = 0; i < this.componentsPerCell; ++ i )
             {
               double val = vals[i];
-              //val = 0.0;
               val -= halfSegCenter;
               val = Utils.Clamp(val, 0, 1);
               val *= valuesPerComponent;
@@ -280,9 +340,9 @@ namespace HSVMapgen
               ID += (int)Math.Floor(val);
             }
 
-            if (ID >= maxID)
+            if (ID >= numDestCharacters)
             {
-              ID = maxID - 1;
+              ID = numDestCharacters - 1;
             }
 
             // ID is now calculated.
