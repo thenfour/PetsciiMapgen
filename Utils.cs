@@ -22,8 +22,30 @@ namespace PetsciiMapgen
     // funny that's actually 360. no relation to angles/radians.
     public static UInt32 DistanceRange { get { return 360; } }
 
-    public static float MaxDimensionDist {  get { return .3f; } }
+    public const int PartitionsPerDimension = 1;
     public const long AllocGranularity = 30000000;
+  }
+
+  // a partition is really just a big list of map keys.
+  public struct Partition
+  {
+    public uint[] keyIdxs;
+    public uint Length;
+    public bool initialized;
+
+    static public void Init(ref Partition p, long prealloc)
+    {
+      p.initialized = true;
+      p.Length = 0;
+      p.keyIdxs = new uint[prealloc];
+    }
+
+    internal static long Add(ref Partition partition, uint i)
+    {
+      partition.keyIdxs[partition.Length] = i;
+      partition.Length++;
+      return partition.Length - 1;
+    }
   }
 
   public class MappingArray
@@ -59,13 +81,12 @@ namespace PetsciiMapgen
 
   public class CharInfo
   {
-    //public System.Drawing.Size size;
-    //public System.Drawing.Point srcOrigin;
     public System.Drawing.Point srcIndex;
     public ValueSet actualValues;// N-dimension values
     public int usages = 0;
-    public UInt32 versatility; // sum of distances to all map keys. lower values = more versatile
+    public UInt32 versatility;
     public UInt32 mapKeysVisited = 0;
+    public long partition; // which spatial partition does this character fit into?
 
     public CharInfo(int dimensionsPerCharacter)
     {
@@ -127,7 +148,7 @@ namespace PetsciiMapgen
   public unsafe struct ValueSet
   {
     public int ValuesLength;
-    public UInt64 ID;
+    public long ID;
     public bool Mapped;
     public uint MinDistFound;
 
@@ -136,6 +157,19 @@ namespace PetsciiMapgen
 
   public static class Utils
   {
+    public static IEnumerable<TSource> DistinctBy<TSource, TKey>
+         (this IEnumerable<TSource> source, Func<TSource, TKey> keySelector)
+    {
+      HashSet<TKey> knownKeys = new HashSet<TKey>();
+      foreach (TSource element in source)
+      {
+        if (knownKeys.Add(keySelector(element)))
+        {
+          yield return element;
+        }
+      }
+    }
+    
     // returns squared dist
     public unsafe static float DistFrom(ValueSet a, ValueSet b, ValueSet weights)
     {
@@ -438,20 +472,20 @@ namespace PetsciiMapgen
     {
       // we will just do this as if each value is a digit in a number. that's the analogy that drives this.
       // actually this symbolizes the # of digits in the result, PLUS the number of possible values per digit.
-      UInt64 numDigits = (UInt64)discreteValuesPerTile.ValuesLength;
-      UInt64 theoreticalBase = numDigits;
-      UInt64 totalPermutations = (UInt64)Math.Pow(numDigits, numTiles);
+      long numDigits = discreteValuesPerTile.ValuesLength;
+      long theoreticalBase = numDigits;
+      long totalPermutations = Pow(numDigits, (uint)numTiles);
 
       ValueSet[] ret = new ValueSet[totalPermutations];
-      for (UInt64 i = 0; i < totalPermutations; ++i)
+      for (long i = 0; i < totalPermutations; ++i)
       {
         // just like digits in a number, use % and divide to shave off "digits" one by one.
-        UInt64 a = i;// the value that originates from i and we shift/mod to enumerate digits
+        long a = i;// the value that originates from i and we shift/mod to enumerate digits
         InitValueSet(ref ret[i], numTiles, i);
         //ValueSet n = NewValueSet(numTiles, i);
         for (int d = 0; d < numTiles; ++d)
         {
-          UInt64 thisIndex = a % theoreticalBase;
+          long thisIndex = a % theoreticalBase;
           a /= theoreticalBase;
           ret[i].Values[d] = discreteValuesPerTile.Values[(int)thisIndex];
         }
@@ -502,13 +536,102 @@ namespace PetsciiMapgen
       }
     }
 
-    internal static ValueSet NewValueSet(int dimensionsPerCharacter, UInt64 id)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static long Pow(long x, uint pow)
+    {
+      long ret = 1;
+      while (pow != 0)
+      {
+        if ((pow & 1) == 1)
+          ret *= x;
+        x *= x;
+        pow >>= 1;
+      }
+      return ret;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static int GetPartitionCount1D(bool staggered)
+    {
+      return staggered ? Constants.PartitionsPerDimension + 1 : Constants.PartitionsPerDimension;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static long GetPartitionID1D(bool staggered, float val)
+    {
+      float partitionSize = 1.0f / Constants.PartitionsPerDimension;
+      float spaceBegin = staggered ? -0.5f : 0.0f;
+      long ret = (long)Math.Floor((val - spaceBegin) / partitionSize);
+      long maxPartition = GetPartitionCount1D(staggered) - 1;
+      if (ret >= maxPartition)
+        ret = maxPartition;
+      return ret;
+    }
+
+    //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+    //internal static float GetPartitionSizeRel1D()
+    //{
+    //  return 1.0f / Constants.PartitionsPerDimension;
+    //}
+
+    //internal static void GetPartitionInfo1D(bool staggered, int partitionID, out float begin, out float end)
+    //{
+    //  float spaceBegin = staggered ? -0.5f : 0.0f;
+    //  float partitionSize = 1.0f / Constants.PartitionsPerDimension;
+    //  begin = spaceBegin + partitionSize * partitionID;
+    //  end = begin + partitionSize;
+    //}
+
+    // maximum number of distinct map keys which fall into this partition. NOT precise, it's a maximum used for allocating.
+    internal static long GetPartitionMaxElementSize(int dimensions, int distinctValuesPerDimension)
+    {
+      // how many distinct values are within the range
+      float partitionSize = 1.0f / Constants.PartitionsPerDimension;
+      float valuesPerPartition = partitionSize * distinctValuesPerDimension;
+      return Pow((long)Math.Ceiling(valuesPerPartition), (uint)dimensions);
+    }
+
+    internal static long GetPartitionCountND(int dimensions, bool staggered = false)
+    {
+      // each dimension can have values 0-1.
+      // but we want to support "staggered" partitions in order to reduce hard partition edges.
+      // staggered partition is just shifted half a partition away in each dimension.
+      // so in 1 dimension, and 3 partitions:
+      //
+      // non-staggered:
+      //               -0.166    0.0-----0.166----0.33-----0.5-----0.66----.833-----1.0
+      // non-staggered:           |---partition0---|---partition1---|---partition2---|
+      // staggered:      |---partition0---|---partition1---|---partition2---|---partition3---|
+      // so:
+      // 1. the total count is different between staggered & non-staggered
+      // 2. total partition space includes area outside of the valid range.
+      long ret = Pow(GetPartitionCount1D(staggered), (uint)dimensions);
+      return ret;
+    }
+
+    internal unsafe static long GetPartitionIndex(ValueSet v, bool staggered)
+    {
+      long elementsPerDimension = GetPartitionCount1D(staggered); // virtual base
+      long ret = 0;
+      for (int i = 0; i < v.ValuesLength; ++ i)
+      {
+        long id1d = GetPartitionID1D(staggered, v.Values[i]);
+        ret *= elementsPerDimension;
+        ret += id1d;
+      }
+      return ret;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static ValueSet NewValueSet(int dimensionsPerCharacter, long id)
     {
       ValueSet ret = new ValueSet();
       InitValueSet(ref ret, dimensionsPerCharacter, id);
       return ret;
     }
-    internal static void InitValueSet(ref ValueSet n, int dimensionsPerCharacter, UInt64 id)
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void InitValueSet(ref ValueSet n, int dimensionsPerCharacter, long id)
     {
       //n.Values = new float[dimensionsPerCharacter];
       n.ValuesLength = dimensionsPerCharacter;

@@ -16,6 +16,8 @@ namespace PetsciiMapgen
   {
     static void Main(string[] args)
     {
+      //Utils.GetPartitionID1D(false, -1)
+
       Timings t = new Timings();
       t.EnterTask("--- MAIN PROCESSING");
 
