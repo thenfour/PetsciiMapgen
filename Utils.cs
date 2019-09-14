@@ -22,7 +22,39 @@ namespace PetsciiMapgen
     // funny that's actually 360. no relation to angles/radians.
     public static UInt32 DistanceRange { get { return 360; } }
 
-    public static float MaxDimensionDist {  get { return .7f; } }
+    public static float MaxDimensionDist {  get { return .3f; } }
+    public const long AllocGranularity = 30000000;
+  }
+
+  public class MappingArray
+  {
+    public Mapping[] Values = new Mapping[Constants.AllocGranularity]; // RESERVED values therefore don't use Values.Length!
+    public long Length { get; private set; } = 0;
+    public long Add() // returns an index
+    {
+      if (Values.Length <= Length)
+      {
+        Mapping[] t = new Mapping[Length + Constants.AllocGranularity];
+        Console.WriteLine("!!! Dynamic allocation");
+        Array.Copy(this.Values, t, this.Length);
+        this.Values = t;
+      }
+      Length++;
+      return Length - 1;
+    }
+
+    internal long PruneWhereDistGT(uint maxMinDist)
+    {
+      var prunedMappings = Values.Take((int)this.Length).Where(o => o.dist <= maxMinDist).ToArray();
+      long ret = this.Length - prunedMappings.Length;
+      this.Length = prunedMappings.LongLength;
+      this.Values = prunedMappings;
+      return ret;
+    }
+    public void SortByDist()
+    {
+      Array.Sort<Mapping>(this.Values, (a, b) => a.dist.CompareTo(b.dist));
+    }
   }
 
   public class CharInfo
@@ -482,6 +514,7 @@ namespace PetsciiMapgen
       n.ID = id;
       n.MinDistFound = UInt32.MaxValue;
     }
+
   }
 }
 

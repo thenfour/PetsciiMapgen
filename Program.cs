@@ -17,9 +17,10 @@ namespace PetsciiMapgen
     static void Main(string[] args)
     {
       Timings t = new Timings();
-      t.EnterTask("---");
+      t.EnterTask("--- MAIN PROCESSING");
 
       var map = new HybridMap2("..\\..\\img\\fonts\\emojidark12.png", new Size(12, 12), new Size(2, 2), 5, 0.65f, 0.35f, true);
+      t.EndTask();
 
       //var map = HybridMap2.Load("..\\..\\img\\maps\\mapHybrid-emoji12x12-2x2x6.png", new Size(12, 12), new Size(2, 2), 6);
       t.EnterTask("processing images");
@@ -34,7 +35,6 @@ namespace PetsciiMapgen
       map.PETSCIIIZE("..\\..\\img\\balloon600.jpg", "..\\..\\img\\testdest-balloon600.png", false);
       t.EndTask();
 
-      t.EndTask();
       Console.WriteLine("Press a key to continue...");
       Console.ReadKey();
     }

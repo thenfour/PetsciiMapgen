@@ -136,8 +136,9 @@ namespace PetsciiMapgen
       ulong theoreticalMappings = (ulong)Utils.Product(numSrcChars) * (ulong)numDestCharacters;
       Console.WriteLine("  (" + theoreticalMappings + " mappings)");
       Utils.ValueRangeInspector distanceRange = new Utils.ValueRangeInspector();
-      var allMappings = new Mapping[theoreticalMappings];
-      int imap = 0;
+      //var allMappings = new Mapping[theoreticalMappings];
+      MappingArray allMappings = new MappingArray();
+      //int imap = 0;
       UInt32 shortCircuitSavedEnd = 0;
       UInt32 shortCircuitSavedBegin = 0;
       for (UInt32 ici = 0; ici < charInfo.Count; ++ ici)
@@ -170,24 +171,25 @@ namespace PetsciiMapgen
         // walk left
         for (UInt32 ikey = iKeyOrigin; ; --ikey)
         {
-          allMappings[imap].icharInfo = ici;
-          allMappings[imap].imapKey = ikey;
-          float fdist = Utils.DistFrom(keys[ikey], ci.actualValues, this.weights);
-          allMappings[imap].dist = (UInt32)(fdist * Constants.DistanceRange);
-          distanceRange.Visit(allMappings[imap].dist);
-          keys[ikey].MinDistFound = Math.Min(keys[ikey].MinDistFound, allMappings[imap].dist);
-
-          ci.versatility += allMappings[imap].dist;
-          ci.mapKeysVisited++;
-
-          imap++;
-
           float lastDimDist = Math.Abs(lastDimensionCharValue - keys[ikey].Values[lastDimensionIndex]);
           if (lastDimDist > Constants.MaxDimensionDist)
           {
             shortCircuitSavedBegin += (uint)ikey;
             break;
           }
+
+          long imap = allMappings.Add();
+          allMappings.Values[imap].icharInfo = ici;
+          allMappings.Values[imap].imapKey = ikey;
+          float fdist = Utils.DistFrom(keys[ikey], ci.actualValues, this.weights);
+          UInt32 dist = (UInt32)(fdist * Constants.DistanceRange);
+          allMappings.Values[imap].dist = dist;
+          distanceRange.Visit(dist);
+          keys[ikey].MinDistFound = Math.Min(keys[ikey].MinDistFound, dist);
+
+          ci.versatility += dist;
+          ci.mapKeysVisited++;
+
           // uint loop exiting...
           if (ikey == 0)
             break;
@@ -196,37 +198,39 @@ namespace PetsciiMapgen
         // walk right
         for (UInt32 ikey = iKeyOrigin + 1; ikey < keys.Length; ++ ikey)
         {
-          allMappings[imap].icharInfo = ici;
-          allMappings[imap].imapKey = ikey;
-          float fdist = Utils.DistFrom(keys[ikey], ci.actualValues, this.weights);
-          allMappings[imap].dist = (UInt32)(fdist * Constants.DistanceRange);
-          distanceRange.Visit(allMappings[imap].dist);
-          keys[ikey].MinDistFound = Math.Min(keys[ikey].MinDistFound, allMappings[imap].dist);
-
-          // keys is sorted by its LAST dimension. let's figure out if the last dimension is within usable range,
-          // and short circuit if not.
-          ci.versatility += allMappings[imap].dist;
-          ci.mapKeysVisited++;
-          imap++;
-
           float lastDimDist = Math.Abs(lastDimensionCharValue - keys[ikey].Values[lastDimensionIndex]);
           if (lastDimDist > Constants.MaxDimensionDist)
           {
             shortCircuitSavedEnd += (uint)keys.Length - ikey;
             break;
           }
+
+          long imap = allMappings.Add();
+          allMappings.Values[imap].icharInfo = ici;
+          allMappings.Values[imap].imapKey = ikey;
+          float fdist = Utils.DistFrom(keys[ikey], ci.actualValues, this.weights);
+          UInt32 dist = (UInt32)(fdist * Constants.DistanceRange);
+          allMappings.Values[imap].dist = dist;
+          distanceRange.Visit(dist);
+          keys[ikey].MinDistFound = Math.Min(keys[ikey].MinDistFound, dist);
+
+          // keys is sorted by its LAST dimension. let's figure out if the last dimension is within usable range,
+          // and short circuit if not.
+          ci.versatility += dist;
+          ci.mapKeysVisited++;
         }
       }
 
       Console.WriteLine("  Short circuit saved us {0} mappings (END)", shortCircuitSavedBegin);
       Console.WriteLine("  Short circuit saved us {0} mappings (END)", shortCircuitSavedEnd);
-      Console.WriteLine("  Remaining elements: {0}", imap);
+      Console.WriteLine("  Remaining elements: {0}", allMappings.Length);
 
       // we short circuited many more map entries than we actually need. remove those.
-      var t = new Mapping[imap];
-      Array.Copy(allMappings, t, imap);
-      allMappings = t;
-      t = null;
+      //allMappings.Truncate(imap);
+      //var t = new Mapping[imap];
+      //Array.Copy(allMappings, t, imap);
+      //allMappings = t;
+      //t = null;
 
       // some versatility adjustment and normalization
       uint maxCharVersatility = 0;
@@ -250,28 +254,30 @@ namespace PetsciiMapgen
       timings.EndTask();
 
       timings.EnterTask("Pruning out mappings");
-      var prunedMappings = allMappings.Where(o => o.dist <= maxMinDist).ToArray();
+      long itemsRemoved = allMappings.PruneWhereDistGT(maxMinDist);
+      //var prunedMappings = allMappings.Where(o => o.dist <= maxMinDist).ToArray();
 
       Console.WriteLine("  calculating sort metric");
-      for (int i = 0; i < prunedMappings.Length; ++i)
+      for (int i = 0; i < allMappings.Length; ++i)
       {
-        uint dist = prunedMappings[i].dist;
-        float fv = ((float)charInfo[(int)prunedMappings[i].icharInfo].versatility) / maxCharVersatility;
+        uint dist = allMappings.Values[i].dist;
+        float fv = ((float)charInfo[(int)allMappings.Values[i].icharInfo].versatility) / maxCharVersatility;
         fv = 1.0f - fv;
         int vers = (int)(fv * Constants.DistanceRange);
 
-        prunedMappings[i].dist = (uint)(dist * Constants.DistanceRange + vers);// / 256;
+        allMappings.Values[i].dist = (uint)(dist * Constants.DistanceRange + vers);// / 256;
       }
 
-      Console.WriteLine("   {0} items removed", allMappings.Length - prunedMappings.Length);
-      Console.WriteLine("   {0} items remaining", prunedMappings.Length);
+      Console.WriteLine("   {0} items removed", itemsRemoved);
+      Console.WriteLine("   {0} items remaining", allMappings.Length);
 
-      allMappings = null;
+      //allMappings = null;
 
       timings.EndTask();
       timings.EnterTask("Sorting mappings");
 
-      Array.Sort<Mapping>(prunedMappings, (a, b) => a.dist.CompareTo(b.dist));
+      allMappings.SortByDist();
+      //Array.Sort<Mapping>(prunedMappings, (a, b) => a.dist.CompareTo(b.dist));
 
       timings.EndTask();
       timings.EnterTask("Select mappings for map");
@@ -280,7 +286,7 @@ namespace PetsciiMapgen
       // maps key index to charinfo
       Dictionary<UInt64, CharInfo> map = new Dictionary<UInt64, CharInfo>((int)numDestCharacters);
 
-      foreach (var mapping in prunedMappings)
+      foreach (var mapping in allMappings.Values)
       {
         if (keys[mapping.imapKey].Mapped)
           continue;
