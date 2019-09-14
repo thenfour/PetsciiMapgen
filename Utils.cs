@@ -13,80 +13,139 @@ using System.Runtime.InteropServices;
 
 namespace PetsciiMapgen
 {
+  public class Constants
+  {
+    public static UInt32 CharVersatilityRange { get { return 360; } }
+
+    // values are 0-1 so distances are on avg even less. (sqrt(2)/2).
+    // actual pixel values are 0-255 so i can just multiply by 255/(sqrt(2)/2) to make "real" sameness be equal here.
+    // funny that's actually 360. no relation to angles/radians.
+    public static UInt32 DistanceRange { get { return 360; } }
+
+    public static float MaxDimensionDist {  get { return .8f; } }
+  }
+
+  public class CharInfo
+  {
+    //public System.Drawing.Size size;
+    //public System.Drawing.Point srcOrigin;
+    public System.Drawing.Point srcIndex;
+    public ValueSet actualValues;// N-dimension values
+    public int usages = 0;
+    public UInt32 versatility; // sum of distances to all map keys. lower values = more versatile
+    public UInt32 mapKeysVisited = 0;
+
+    public CharInfo(int dimensionsPerCharacter)
+    {
+      actualValues = new ValueSet(dimensionsPerCharacter, -1);
+    }
+
+    public override string ToString()
+    {
+      return srcIndex.ToString();
+    }
+  }
+
+  public struct Mapping
+  {
+    public UInt32 imapKey; // a set of tile values
+    public UInt32 icharInfo;
+    public UInt32 dist;
+  }
+  public class Timings
+  {
+    public struct Task
+    {
+      public Stopwatch sw;
+      public string name;
+    }
+    Stack<Task> tasks = new Stack<Task>();
+    public void EnterTask(string s)
+    {
+      Console.WriteLine("==> Enter task {0}", s);
+      Task n;
+      if (!tasks.Any())
+      {
+        n = new Task {
+          name = "root",
+          sw = new Stopwatch()
+        };
+        n.sw.Start();
+        tasks.Push(n);
+      }
+      n = new Task
+      {
+        name = s,
+        sw = new Stopwatch()
+      };
+      n.sw.Start();
+      tasks.Push(n);
+    }
+    public void EndTask()
+    {
+      Task n = this.tasks.Pop();
+      TimeSpan ts = n.sw.Elapsed;
+      Console.WriteLine("<== {1} (end {0})", n.name, ts);
+    }
+  }
+
   // basically wraps List<Value>.
   // simplifies code that wants to do set operations.
   public class ValueSet : IComparable<ValueSet>, IEqualityComparer<ValueSet>
   {
-    public ValueSet(int id)
+    public ValueSet(int capacity, int id)
     {
+      _values = new float[capacity];
       _id = id;
     }
 
-    List<double> values = new List<double>();
+    //List<double> values = new List<double>();
+    float[] _values;
     int _id;
 
-    public int Length { get { return values.Count; } }
+    // optimizations
+    public bool Mapped { get; set; } = false;
+    public uint MinDistFound { get; set; } = uint.MaxValue;
+
+    public int Length { get { return _values.Length; } }
     public int ID { get { return _id; } }
 
-    public double this[int i]
+    public float this[int i]
     {
       get
       {
-        if (i >= values.Count)
-        {
-          values.AddRange(Enumerable.Repeat<double>(0.0, 1 + (i - values.Count)));
-        }
-        return values[i];
+        return _values[i];
       }
       set
       {
-        // ensure we can hold this value
-        if (i >= values.Count)
-        {
-          values.AddRange(Enumerable.Repeat<double>(0.0, 1 + (i - values.Count)));
-        }
-        values[i] = value;
+        _values[i] = value;
       }
     }
 
-    // compares two sets of values and comes up with a "distance" measuring the lack of similarity between them.
-    // here we just return the sum of distances and normalize so it's "per pixel avg".
-    // i think there's probably a smarter way to do this.
-    public double DistFrom(ValueSet b)
-    {
-      Debug.Assert(this.Length == b.Length);
-      double acc = 0.0;
-      for (int i = 0; i < this.Length; ++i)
-      {
-        acc += Math.Abs(this[i] - b[i]); // also possible: use accMax
-      }
-      return acc;
-      //return acc.DividedBy(numPixels);
-    }
-
-    // same as above but with weights
-    public double DistFrom(ValueSet b, ValueSet weights)
+    // returns squared dist
+    public float DistFrom(ValueSet b, ValueSet weights)
     {
       Debug.Assert(this.Length == b.Length);
       Debug.Assert(this.Length == weights.Length);
-      double acc = 0.0;
+      float acc = 0;
       for (int i = 0; i < this.Length; ++i)
       {
-        acc += weights[i] * Math.Abs(this[i] - b[i]); // also possible: use accMax
+        var m = Math.Abs(this[i] - b[i]);
+        acc += m * m * weights[i];
       }
       return acc;
     }
 
     int IComparable<ValueSet>.CompareTo(ValueSet other)
     {
-      if (other == null)
-        return -1;
-      int d = other.values.Count.CompareTo(this.values.Count);
+      //if (other == null)
+      //  return -1;
+      int d = other._values.Length.CompareTo(this._values.Length);
       if (d != 0)
         return d;
-      for (int i = 0; i < values.Count; ++i)
+      for (int i = 0; i < _values.Length; ++i)
       {
-        d = other.values[i].CompareTo(values[i]);
+        d = other._values[i].CompareTo(_values[i]);
         if (d != 0)
           return d;
       }
@@ -116,7 +175,7 @@ namespace PetsciiMapgen
     public override string ToString()
     {
       List<string> tokens = new List<string>();
-      foreach (var v in values)
+      foreach (var v in _values)
       {
         tokens.Add(v.ToString());
       }
@@ -128,12 +187,12 @@ namespace PetsciiMapgen
   {
     public class ValueRangeInspector
     {
-      public double MinValue { get; private set; } = default(double);
-      public double MaxValue { get; private set; } = default(double);
+      public float MinValue { get; private set; } = default(float);
+      public float MaxValue { get; private set; } = default(float);
 
       bool encountered = false;
 
-      public void Visit(double v)
+      public void Visit(float v)
       {
         if (!encountered)
         {
@@ -141,12 +200,12 @@ namespace PetsciiMapgen
           encountered = true;
           return;
         }
-        MinValue = Utils.Min<double>(v, MinValue);
-        MaxValue = Utils.Max<double>(v, MaxValue);
+        MinValue = Utils.Min<float>(v, MinValue);
+        MaxValue = Utils.Max<float>(v, MaxValue);
       }
 
       // normalize a value based on min/max values seen, returning 0-1.
-      public double Normalize01(double v)
+      public float Normalize01(float v)
       {
         return (v - MinValue) / (MaxValue - MinValue);
       }
@@ -156,7 +215,24 @@ namespace PetsciiMapgen
         return string.Format("[{0}, {1}]", MinValue, MaxValue);
       }
     }
-    
+
+    // returns the index of keys found where func returns 0. func should compare and return
+    // -1 to search left, 1 to search right
+    internal static uint BinarySearchAny(ValueSet[] keys, uint begin, uint end, Func<ValueSet, int> func)
+    {
+      uint ithis = (begin + end) / 2;
+      int c = func(keys[ithis]);
+      if (c == 0)
+      {
+        return ithis;
+      }
+      if (ithis == begin || ithis == end)
+        throw new Exception("no matching elements found");
+      if (c < 0)
+        return BinarySearchAny(keys, begin, ithis, func);
+      return BinarySearchAny(keys, ithis, end, func);
+    }
+
     // https://stackoverflow.com/questions/359612/how-to-change-rgb-color-to-hsv
     public static void ColorToHSV(Color color, out double hue, out double saturation, out double value)
     {
@@ -194,14 +270,14 @@ namespace PetsciiMapgen
     }
 
     // adapted from https://www.programmingalgorithms.com/algorithm/rgb-to-ycbcr
-    public static void RGBtoYCbCr(double fr, double fg, double fb, out double y, out double u, out double v)
+    public static void RGBtoYCbCr(float fr, float fg, float fb, out float y, out float u, out float v)
     {
-      double Y = (0.2989 * fr + 0.5866 * fg + 0.1145 * fb);
-      double Cb = (-0.1687 * fr - 0.3313 * fg + 0.5000 * fb);
-      double Cr = (0.5000 * fr - 0.4184 * fg - 0.0816 * fb);
+      float Y = (0.2989f * fr + 0.5866f * fg + 0.1145f * fb);
+      float Cb = (-0.1687f * fr - 0.3313f * fg + 0.5000f * fb);
+      float Cr = (0.5000f * fr - 0.4184f * fg - 0.0816f * fb);
       y = Y;
-      u = Cb + .5;
-      v = Cr + .5;
+      u = Cb + .5f;
+      v = Cr + .5f;
     }
 
     // adapted from https://www.xaymar.com/2017/07/06/how-to-converting-rgb-to-yuv-and-yuv-to-rgb/
@@ -215,12 +291,12 @@ namespace PetsciiMapgen
     //  v += 0.5;
     //}
 
-    public static void RGBtoYUV(Color rgb, out double y, out double u, out double v)
+    public static void RGBtoYUV(Color rgb, out float y, out float u, out float v)
     {
       RGBtoYCbCr(
-        (double)rgb.R / 255.0,
-        (double)rgb.G / 255.0,
-        (double)rgb.B / 255.0,
+        (float)rgb.R / 255.0f,
+        (float)rgb.G / 255.0f,
+        (float)rgb.B / 255.0f,
         out y,
         out u,
         out v
@@ -320,7 +396,7 @@ namespace PetsciiMapgen
       src.UnlockBits(data);
     }
 
-    public static double Clamp(double v, double m, double x)
+    public static float Clamp(float v, float m, float x)
     {
       if (v < m) return m;
       if (v > x) return x;
@@ -412,15 +488,13 @@ namespace PetsciiMapgen
       int numDigits = discreteValuesPerTile.Length;
       int theoreticalBase = numDigits;
       double dtp = Math.Pow(numDigits, numTiles);
-      if (dtp > 1000000)
-        throw new Exception("nope; too many permutations.");
       int totalPermutations = (int)dtp;
       List<ValueSet> ret = new List<ValueSet>();
       for (int i = 0; i < totalPermutations; ++i)
       {
         // just like digits in a number, use % and divide to shave off "digits" one by one.
         int a = i;// the value that originates from i and we shift/mod to enumerate digits
-        ValueSet n = new ValueSet(i);
+        ValueSet n = new ValueSet(numTiles, i);
         for (int d = 0; d < numTiles; ++d)
         {
           int thisIndex = a % theoreticalBase;
@@ -451,36 +525,11 @@ namespace PetsciiMapgen
     }
     public static ValueSet GetDiscreteValues(int discreteValues)
     {
-      // returns a list of possible values given the number of segments between 0-1.
-      // we want values to CENTER in the segment. so for example 2 discrete values between 0-1
-      // means we return .25 and .75.
-      //double segCenter = 0.5 / discreteValues;
-      //double segSpan = 1.0 / discreteValues;
-      //var ret = new ValueSet(-1);
-      //int i = 0;
-      //for (double v = segCenter; v < 1.0; v += segSpan)
-      //{
-      //  ret[i] = new Value(v);
-      //  ++i;
-      //}
-      //return ret;
-
-      // another approach... just go 0-1 in discreteValue steps. return 0 and .5 for 2 discrete values.
-      //double segSpan = 1.0 / discreteValues;
-      //var ret = new ValueSet(-1);
-      //int i = 0;
-      //for (double v = 0; v < 1.0; v += segSpan)
-      //{
-      //  ret[i] = new Value(v);
-      //  ++i;
-      //}
-      //return ret;
-
-      // and another, returning [0, 1] for 2 discrete values. [0,.5,1] for 3, etc.
-      double segSpan = 1.0 / (discreteValues - 1);
-      var ret = new ValueSet(-1);
+      // returning [0, 1] for 2 discrete values. [0,.5,1] for 3, etc.
+      float segSpan = 1.0f / (discreteValues - 1);
+      var ret = new ValueSet(discreteValues, - 1);
       int i = 0;
-      for (double v = 0; v <= 1.0001; v += segSpan)
+      for (float v = 0; v <= 1.0001f; v += segSpan)
       {
         ret[i] = v;
         ++i;
@@ -488,13 +537,13 @@ namespace PetsciiMapgen
       return ret;
     }
 
-    public static double FindClosestValue(ValueSet possibleValues, double v)
+    public static float FindClosestValue(ValueSet possibleValues, float v)
     {
       int indexOfNearest = -1;
-      double distanceToNearest = 0.0;
+      float distanceToNearest = 0;
       for (int i = 0; i < possibleValues.Length; ++i)
       {
-        double d = Math.Abs(possibleValues[i] - v);
+        float d = Math.Abs(possibleValues[i] - v);
         if (indexOfNearest == -1 || (d < distanceToNearest))
         {
           distanceToNearest = d;
@@ -508,7 +557,7 @@ namespace PetsciiMapgen
     public static ValueSet FindClosestDestValueSet(int discreteValues, ValueSet src)
     {
       ValueSet possibleValues = GetDiscreteValues(discreteValues);
-      ValueSet ret = new ValueSet(-1);
+      ValueSet ret = new ValueSet(discreteValues , - 1);
       for (int i = 0; i < src.Length; ++i)
       {
         ret[i] = FindClosestValue(possibleValues, src[i]);
@@ -523,14 +572,14 @@ namespace PetsciiMapgen
       val += centerPoint;
       return val;
     }
-    internal static Color AdjustContrast(Color val, double factor, double centerPoint = 0.5)
-    {
-      return Color.FromArgb(
-        (int)(Clamp(AdjustContrast((double)val.R / 255.0, factor, centerPoint), 0, 1) * 255.0),
-        (int)(Clamp(AdjustContrast((double)val.G / 255.0, factor, centerPoint), 0, 1) * 255.0),
-        (int)(Clamp(AdjustContrast((double)val.B / 255.0, factor, centerPoint), 0, 1) * 255.0)
-        );
-    }
+    //internal static Color AdjustContrast(Color val, double factor, double centerPoint = 0.5)
+    //{
+    //  return Color.FromArgb(
+    //    (int)(Clamp(AdjustContrast((float)val.R / 255.0f, factor, centerPoint), 0, 1) * 255.0),
+    //    (int)(Clamp(AdjustContrast((float)val.G / 255.0f, factor, centerPoint), 0, 1) * 255.0),
+    //    (int)(Clamp(AdjustContrast((float)val.B / 255.0f, factor, centerPoint), 0, 1) * 255.0)
+    //    );
+    //}
   }
 }
 
