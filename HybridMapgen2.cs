@@ -147,7 +147,7 @@ namespace PetsciiMapgen
         float lastDimensionCharValue = ci.actualValues.Values[lastDimensionIndex];
 
         // find literally any value that matches
-        UInt32 iKeyOrigin = 0;// = (UInt32)(keys.Length / 2);
+        UInt32 iKeyOrigin = 0;
 
         // if our max dist is .5, then we should start at .5 in the list.right in the middle, because we're guaranteed it will match.
         // if maxdist is .3, then we want to check ranges where maxdist will never be exceeded.
@@ -168,12 +168,10 @@ namespace PetsciiMapgen
           iKeyOrigin = (UInt32)keys.Length - 1;
 
         // walk left
-        //float lastMapval = 1;
         for (UInt32 ikey = iKeyOrigin; ; --ikey)
         {
           allMappings[imap].icharInfo = ici;
           allMappings[imap].imapKey = ikey;
-          //float fdist = keys[ikey].DistFrom(ci.actualValues, this.weights);
           float fdist = Utils.DistFrom(keys[ikey], ci.actualValues, this.weights);
           allMappings[imap].dist = (UInt32)(fdist * Constants.DistanceRange);
           distanceRange.Visit(allMappings[imap].dist);
@@ -185,8 +183,6 @@ namespace PetsciiMapgen
           imap++;
 
           float lastDimDist = Math.Abs(lastDimensionCharValue - keys[ikey].Values[lastDimensionIndex]);
-          //Debug.Assert(keys[ikey][lastDimensionIndex] <= lastMapval);
-          //lastMapval = keys[ikey][lastDimensionIndex];
           if (lastDimDist > Constants.MaxDimensionDist)
           {
             shortCircuitSavedBegin += (uint)ikey;
@@ -198,13 +194,10 @@ namespace PetsciiMapgen
         }
 
         // walk right
-        //bool encountered = true;
-        //lastMapval = 0;
         for (UInt32 ikey = iKeyOrigin + 1; ikey < keys.Length; ++ ikey)
         {
           allMappings[imap].icharInfo = ici;
           allMappings[imap].imapKey = ikey;
-          //float fdist = keys[ikey].DistFrom(ci.actualValues, this.weights);
           float fdist = Utils.DistFrom(keys[ikey], ci.actualValues, this.weights);
           allMappings[imap].dist = (UInt32)(fdist * Constants.DistanceRange);
           distanceRange.Visit(allMappings[imap].dist);
@@ -217,8 +210,6 @@ namespace PetsciiMapgen
           imap++;
 
           float lastDimDist = Math.Abs(lastDimensionCharValue - keys[ikey].Values[lastDimensionIndex]);
-          //Debug.Assert(keys[ikey][lastDimensionIndex] >= lastMapval);
-          //lastMapval = keys[ikey][lastDimensionIndex];
           if (lastDimDist > Constants.MaxDimensionDist)
           {
             shortCircuitSavedEnd += (uint)keys.Length - ikey;
@@ -255,9 +246,6 @@ namespace PetsciiMapgen
         maxMinDist = Math.Max(maxMinDist, mapKey.MinDistFound);
       }
       Console.WriteLine("Max minimum distance found: {0}", maxMinDist);
-      //var crm = allMappings.Count(o => o.dist <= maxMinDist);
-      //Console.WriteLine(" -> items to keep: {0}", crm);
-      //Console.WriteLine(" -> items to remove: {0}", allMappings.Count() - crm);
 
       timings.EndTask();
 
@@ -283,9 +271,6 @@ namespace PetsciiMapgen
       timings.EndTask();
       timings.EnterTask("Sorting mappings");
 
-      //prunedMappings = prunedMappings.OrderBy(o => o.dist).ThenByDescending(o => o.charInfo.versatility).ToArray();
-      //prunedMappings = prunedMappings.OrderBy(o => o.dist).ToArray();
-      //Array.Sort<Mapping>(prunedMappings, new Comparison<Mapping>()
       Array.Sort<Mapping>(prunedMappings, (a, b) => a.dist.CompareTo(b.dist));
 
       timings.EndTask();
@@ -350,7 +335,7 @@ namespace PetsciiMapgen
             missingKeys++;
             continue;
           }
-          //CharInfo ci = map[k];
+
           ulong cellY = k.ID / (ulong)numCellsX;
           ulong cellX = k.ID - ((ulong)numCellsX * cellY);
           Rectangle srcRect = new Rectangle(ci.srcIndex.X * charSize.Width, ci.srcIndex.Y * charSize.Height, charSize.Width, charSize.Height);

@@ -92,99 +92,14 @@ namespace PetsciiMapgen
 
   // basically wraps List<Value>.
   // simplifies code that wants to do set operations.
-  public struct ValueSet// : IComparable<ValueSet>, IEqualityComparer<ValueSet>
+  public struct ValueSet
   {
-    //public ValueSet(int capacity, UInt64 id)
-    //{
-    //  _values = new float[capacity];
-    //  _id = id;
-    //}
-
-    //List<double> values = new List<double>();
     public float[] Values;
     public UInt64 ID;
 
     // optimizations
     public bool Mapped;
     public uint MinDistFound;
-
-    //public bool Mapped { get; set; } = false;
-    //public uint MinDistFound { get; set; } = uint.MaxValue;
-
-    //public int Length { get { return _values.Length; } }
-    //public UInt64 ID { get { return _id; } }
-
-    //public float this[int i]
-    //{
-    //  get
-    //  {
-    //    return _values[i];
-    //  }
-    //  set
-    //  {
-    //    _values[i] = value;
-    //  }
-    //}
-
-    // returns squared dist
-    //public float DistFrom(ValueSet b, ValueSet weights)
-    //{
-    //  Debug.Assert(this.Length == b.Length);
-    //  Debug.Assert(this.Length == weights.Length);
-    //  float acc = 0;
-    //  for (int i = 0; i < this.Length; ++i)
-    //  {
-    //    var m = Math.Abs(this[i] - b[i]);
-    //    acc += m * m * weights[i];
-    //  }
-    //  return acc;
-    //}
-
-    //int IComparable<ValueSet>.CompareTo(ValueSet other)
-    //{
-    //  //if (other == null)
-    //  //  return -1;
-    //  int d = other._values.Length.CompareTo(this._values.Length);
-    //  if (d != 0)
-    //    return d;
-    //  for (int i = 0; i < _values.Length; ++i)
-    //  {
-    //    d = other._values[i].CompareTo(_values[i]);
-    //    if (d != 0)
-    //      return d;
-    //  }
-    //  return 0;
-    //}
-
-    //bool IEqualityComparer<ValueSet>.Equals(ValueSet x, ValueSet y)
-    //{
-    //  return x.Equals(y);
-    //}
-
-    //int IEqualityComparer<ValueSet>.GetHashCode(ValueSet obj)
-    //{
-    //  return obj.GetHashCode();
-    //}
-
-    //public override bool Equals(object obj)
-    //{
-    //  if (!(obj is ValueSet))
-    //    return false;
-    //  return (this as IComparable<ValueSet>).CompareTo(obj as ValueSet) == 0;
-    //}
-    //public override int GetHashCode()
-    //{
-    //  return ToString().GetHashCode();
-    //}
-    //public override string ToString()
-    //{
-    //  List<string> tokens = new List<string>();
-    //  foreach (var v in _values)
-    //  {
-    //    tokens.Add(v.ToString());
-    //  }
-    //  return "[" + string.Join(",", tokens) + "]";
-    //}
   }
 
   public static class Utils
@@ -493,24 +408,24 @@ namespace PetsciiMapgen
       // actually this symbolizes the # of digits in the result, PLUS the number of possible values per digit.
       UInt64 numDigits = (UInt64)discreteValuesPerTile.Values.Length;
       UInt64 theoreticalBase = numDigits;
-      double dtp = Math.Pow(numDigits, numTiles);
-      UInt64 totalPermutations = (UInt64)dtp;
+      UInt64 totalPermutations = (UInt64)Math.Pow(numDigits, numTiles);
 
-      List<ValueSet> ret = new List<ValueSet>();
+      ValueSet[] ret = new ValueSet[totalPermutations];
       for (UInt64 i = 0; i < totalPermutations; ++i)
       {
         // just like digits in a number, use % and divide to shave off "digits" one by one.
         UInt64 a = i;// the value that originates from i and we shift/mod to enumerate digits
-        ValueSet n = NewValueSet(numTiles, i);
+        InitValueSet(ref ret[i], numTiles, i);
+        //ValueSet n = NewValueSet(numTiles, i);
         for (int d = 0; d < numTiles; ++d)
         {
           UInt64 thisIndex = a % theoreticalBase;
           a /= theoreticalBase;
-          n.Values[d] = discreteValuesPerTile.Values[(int)thisIndex];
+          ret[i].Values[d] = discreteValuesPerTile.Values[(int)thisIndex];
         }
-        ret.Add(n);
+        //ret.Add(n);
       }
-      return ret.ToArray();
+      return ret;
     }
 
 
@@ -557,11 +472,15 @@ namespace PetsciiMapgen
 
     internal static ValueSet NewValueSet(int dimensionsPerCharacter, UInt64 id)
     {
-      return new ValueSet {
-        Values = new float[dimensionsPerCharacter],
-        ID = id,
-        MinDistFound = UInt32.MaxValue
-      };
+      ValueSet ret = new ValueSet();
+      InitValueSet(ref ret, dimensionsPerCharacter, id);
+      return ret;
+    }
+    internal static void InitValueSet(ref ValueSet n, int dimensionsPerCharacter, UInt64 id)
+    {
+      n.Values = new float[dimensionsPerCharacter];
+      n.ID = id;
+      n.MinDistFound = UInt32.MaxValue;
     }
   }
 }
