@@ -22,7 +22,7 @@ namespace PetsciiMapgen
     // funny that's actually 360. no relation to angles/radians.
     public static UInt32 DistanceRange { get { return 360; } }
 
-    public static float MaxDimensionDist {  get { return .1f; } }
+    public static float MaxDimensionDist {  get { return .7f; } }
   }
 
   public class CharInfo
@@ -37,7 +37,7 @@ namespace PetsciiMapgen
 
     public CharInfo(int dimensionsPerCharacter)
     {
-      actualValues = new ValueSet(dimensionsPerCharacter, 9999);
+      actualValues = Utils.NewValueSet(dimensionsPerCharacter, 9999);
     }
 
     public override string ToString()
@@ -52,6 +52,7 @@ namespace PetsciiMapgen
     public UInt32 icharInfo;
     public UInt32 dist;
   }
+
   public class Timings
   {
     public struct Task
@@ -91,100 +92,133 @@ namespace PetsciiMapgen
 
   // basically wraps List<Value>.
   // simplifies code that wants to do set operations.
-  public class ValueSet : IComparable<ValueSet>, IEqualityComparer<ValueSet>
+  public struct ValueSet// : IComparable<ValueSet>, IEqualityComparer<ValueSet>
   {
-    public ValueSet(int capacity, UInt64 id)
-    {
-      _values = new float[capacity];
-      _id = id;
-    }
+    //public ValueSet(int capacity, UInt64 id)
+    //{
+    //  _values = new float[capacity];
+    //  _id = id;
+    //}
 
     //List<double> values = new List<double>();
-    float[] _values;
-    UInt64 _id;
+    public float[] Values;
+    public UInt64 ID;
 
     // optimizations
-    public bool Mapped { get; set; } = false;
-    public uint MinDistFound { get; set; } = uint.MaxValue;
+    public bool Mapped;
+    public uint MinDistFound;
 
-    public int Length { get { return _values.Length; } }
-    public UInt64 ID { get { return _id; } }
+    //public bool Mapped { get; set; } = false;
+    //public uint MinDistFound { get; set; } = uint.MaxValue;
 
-    public float this[int i]
-    {
-      get
-      {
-        return _values[i];
-      }
-      set
-      {
-        _values[i] = value;
-      }
-    }
+    //public int Length { get { return _values.Length; } }
+    //public UInt64 ID { get { return _id; } }
+
+    //public float this[int i]
+    //{
+    //  get
+    //  {
+    //    return _values[i];
+    //  }
+    //  set
+    //  {
+    //    _values[i] = value;
+    //  }
+    //}
 
     // returns squared dist
-    public float DistFrom(ValueSet b, ValueSet weights)
+    //public float DistFrom(ValueSet b, ValueSet weights)
+    //{
+    //  Debug.Assert(this.Length == b.Length);
+    //  Debug.Assert(this.Length == weights.Length);
+    //  float acc = 0;
+    //  for (int i = 0; i < this.Length; ++i)
+    //  {
+    //    var m = Math.Abs(this[i] - b[i]);
+    //    acc += m * m * weights[i];
+    //  }
+    //  return acc;
+    //}
+
+    //int IComparable<ValueSet>.CompareTo(ValueSet other)
+    //{
+    //  //if (other == null)
+    //  //  return -1;
+    //  int d = other._values.Length.CompareTo(this._values.Length);
+    //  if (d != 0)
+    //    return d;
+    //  for (int i = 0; i < _values.Length; ++i)
+    //  {
+    //    d = other._values[i].CompareTo(_values[i]);
+    //    if (d != 0)
+    //      return d;
+    //  }
+    //  return 0;
+    //}
+
+    //bool IEqualityComparer<ValueSet>.Equals(ValueSet x, ValueSet y)
+    //{
+    //  return x.Equals(y);
+    //}
+
+    //int IEqualityComparer<ValueSet>.GetHashCode(ValueSet obj)
+    //{
+    //  return obj.GetHashCode();
+    //}
+
+    //public override bool Equals(object obj)
+    //{
+    //  if (!(obj is ValueSet))
+    //    return false;
+    //  return (this as IComparable<ValueSet>).CompareTo(obj as ValueSet) == 0;
+    //}
+    //public override int GetHashCode()
+    //{
+    //  return ToString().GetHashCode();
+    //}
+    //public override string ToString()
+    //{
+    //  List<string> tokens = new List<string>();
+    //  foreach (var v in _values)
+    //  {
+    //    tokens.Add(v.ToString());
+    //  }
+    //  return "[" + string.Join(",", tokens) + "]";
+    //}
+  }
+
+  public static class Utils
+  {
+    // returns squared dist
+    public static float DistFrom(ValueSet a, ValueSet b, ValueSet weights)
     {
-      Debug.Assert(this.Length == b.Length);
-      Debug.Assert(this.Length == weights.Length);
+      Debug.Assert(a.Values.Length == b.Values.Length);
+      Debug.Assert(a.Values.Length == weights.Values.Length);
       float acc = 0;
-      for (int i = 0; i < this.Length; ++i)
+      for (int i = 0; i < a.Values.Length; ++i)
       {
-        var m = Math.Abs(this[i] - b[i]);
-        acc += m * m * weights[i];
+        var m = Math.Abs(a.Values[i] - b.Values[i]);
+        acc += m * m * weights.Values[i];
       }
       return acc;
     }
 
-    int IComparable<ValueSet>.CompareTo(ValueSet other)
+    public static int CompareTo(ValueSet a, ValueSet other)
     {
-      //if (other == null)
-      //  return -1;
-      int d = other._values.Length.CompareTo(this._values.Length);
+      int d = other.Values.Length.CompareTo(a.Values.Length);
       if (d != 0)
         return d;
-      for (int i = 0; i < _values.Length; ++i)
+      for (int i = 0; i < a.Values.Length; ++i)
       {
-        d = other._values[i].CompareTo(_values[i]);
+        d = other.Values[i].CompareTo(a.Values[i]);
         if (d != 0)
           return d;
       }
       return 0;
     }
 
-    bool IEqualityComparer<ValueSet>.Equals(ValueSet x, ValueSet y)
-    {
-      return x.Equals(y);
-    }
 
-    int IEqualityComparer<ValueSet>.GetHashCode(ValueSet obj)
-    {
-      return obj.GetHashCode();
-    }
 
-    public override bool Equals(object obj)
-    {
-      if (!(obj is ValueSet))
-        return false;
-      return (this as IComparable<ValueSet>).CompareTo(obj as ValueSet) == 0;
-    }
-    public override int GetHashCode()
-    {
-      return ToString().GetHashCode();
-    }
-    public override string ToString()
-    {
-      List<string> tokens = new List<string>();
-      foreach (var v in _values)
-      {
-        tokens.Add(v.ToString());
-      }
-      return "[" + string.Join(",", tokens) + "]";
-    }
-  }
-
-  public static class Utils
-  {
     public class ValueRangeInspector
     {
       public float MinValue { get; private set; } = default(float);
@@ -457,7 +491,7 @@ namespace PetsciiMapgen
     {
       // we will just do this as if each value is a digit in a number. that's the analogy that drives this.
       // actually this symbolizes the # of digits in the result, PLUS the number of possible values per digit.
-      UInt64 numDigits = (UInt64)discreteValuesPerTile.Length;
+      UInt64 numDigits = (UInt64)discreteValuesPerTile.Values.Length;
       UInt64 theoreticalBase = numDigits;
       double dtp = Math.Pow(numDigits, numTiles);
       UInt64 totalPermutations = (UInt64)dtp;
@@ -467,12 +501,12 @@ namespace PetsciiMapgen
       {
         // just like digits in a number, use % and divide to shave off "digits" one by one.
         UInt64 a = i;// the value that originates from i and we shift/mod to enumerate digits
-        ValueSet n = new ValueSet(numTiles, i);
+        ValueSet n = NewValueSet(numTiles, i);
         for (int d = 0; d < numTiles; ++d)
         {
           UInt64 thisIndex = a % theoreticalBase;
           a /= theoreticalBase;
-          n[d] = discreteValuesPerTile[(int)thisIndex];
+          n.Values[d] = discreteValuesPerTile.Values[(int)thisIndex];
         }
         ret.Add(n);
       }
@@ -500,11 +534,11 @@ namespace PetsciiMapgen
     {
       // returning [0, 1] for 2 discrete values. [0,.5,1] for 3, etc.
       float segSpan = 1.0f / (discreteValues - 1);
-      var ret = new ValueSet(discreteValues, 9998);
+      var ret = NewValueSet(discreteValues, 9998);
       int i = 0;
       for (float v = 0; v <= 1.0001f; v += segSpan)
       {
-        ret[i] = v;
+        ret.Values[i] = v;
         ++i;
       }
       return ret;
@@ -515,10 +549,19 @@ namespace PetsciiMapgen
       float lastVal = 0;
       for (int i = 0; i < keys.Length; ++i)
       {
-        float lastDimensionValue = keys[i][lastDimensionIndex];
+        float lastDimensionValue = keys[i].Values[lastDimensionIndex];
         Debug.Assert(lastDimensionValue >= lastVal);
         lastVal = lastDimensionValue;
       }
+    }
+
+    internal static ValueSet NewValueSet(int dimensionsPerCharacter, UInt64 id)
+    {
+      return new ValueSet {
+        Values = new float[dimensionsPerCharacter],
+        ID = id,
+        MinDistFound = UInt32.MaxValue
+      };
     }
   }
 }
