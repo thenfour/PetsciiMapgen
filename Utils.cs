@@ -22,7 +22,7 @@ namespace PetsciiMapgen
     // funny that's actually 360. no relation to angles/radians.
     public static UInt32 DistanceRange { get { return 360; } }
 
-    public static float MaxDimensionDist {  get { return .7f; } }// must be above .5!
+    public static float MaxDimensionDist {  get { return .1f; } }
   }
 
   public class CharInfo
@@ -37,7 +37,7 @@ namespace PetsciiMapgen
 
     public CharInfo(int dimensionsPerCharacter)
     {
-      actualValues = new ValueSet(dimensionsPerCharacter, -1);
+      actualValues = new ValueSet(dimensionsPerCharacter, 9999);
     }
 
     public override string ToString()
@@ -93,7 +93,7 @@ namespace PetsciiMapgen
   // simplifies code that wants to do set operations.
   public class ValueSet : IComparable<ValueSet>, IEqualityComparer<ValueSet>
   {
-    public ValueSet(int capacity, int id)
+    public ValueSet(int capacity, UInt64 id)
     {
       _values = new float[capacity];
       _id = id;
@@ -101,14 +101,14 @@ namespace PetsciiMapgen
 
     //List<double> values = new List<double>();
     float[] _values;
-    int _id;
+    UInt64 _id;
 
     // optimizations
     public bool Mapped { get; set; } = false;
     public uint MinDistFound { get; set; } = uint.MaxValue;
 
     public int Length { get { return _values.Length; } }
-    public int ID { get { return _id; } }
+    public UInt64 ID { get { return _id; } }
 
     public float this[int i]
     {
@@ -453,29 +453,30 @@ namespace PetsciiMapgen
     // returns all possible combinations of tile values.
     // this sets the ID for the resulting ValueSets which is an ordered number,
     // required for the un-mapping algo to know where things are.
-    public static IEnumerable<ValueSet> Permutate(int numTiles, ValueSet discreteValuesPerTile)
+    public static ValueSet[] Permutate(int numTiles, ValueSet discreteValuesPerTile)
     {
       // we will just do this as if each value is a digit in a number. that's the analogy that drives this.
       // actually this symbolizes the # of digits in the result, PLUS the number of possible values per digit.
-      int numDigits = discreteValuesPerTile.Length;
-      int theoreticalBase = numDigits;
+      UInt64 numDigits = (UInt64)discreteValuesPerTile.Length;
+      UInt64 theoreticalBase = numDigits;
       double dtp = Math.Pow(numDigits, numTiles);
-      int totalPermutations = (int)dtp;
+      UInt64 totalPermutations = (UInt64)dtp;
+
       List<ValueSet> ret = new List<ValueSet>();
-      for (int i = 0; i < totalPermutations; ++i)
+      for (UInt64 i = 0; i < totalPermutations; ++i)
       {
         // just like digits in a number, use % and divide to shave off "digits" one by one.
-        int a = i;// the value that originates from i and we shift/mod to enumerate digits
+        UInt64 a = i;// the value that originates from i and we shift/mod to enumerate digits
         ValueSet n = new ValueSet(numTiles, i);
         for (int d = 0; d < numTiles; ++d)
         {
-          int thisIndex = a % theoreticalBase;
+          UInt64 thisIndex = a % theoreticalBase;
           a /= theoreticalBase;
-          n[d] = discreteValuesPerTile[thisIndex];
+          n[d] = discreteValuesPerTile[(int)thisIndex];
         }
         ret.Add(n);
       }
-      return ret;
+      return ret.ToArray();
     }
 
 
@@ -499,7 +500,7 @@ namespace PetsciiMapgen
     {
       // returning [0, 1] for 2 discrete values. [0,.5,1] for 3, etc.
       float segSpan = 1.0f / (discreteValues - 1);
-      var ret = new ValueSet(discreteValues, - 1);
+      var ret = new ValueSet(discreteValues, 9998);
       int i = 0;
       for (float v = 0; v <= 1.0001f; v += segSpan)
       {
@@ -509,6 +510,16 @@ namespace PetsciiMapgen
       return ret;
     }
 
+    internal static void AssertSortedByDimension(ValueSet[] keys, int lastDimensionIndex)
+    {
+      float lastVal = 0;
+      for (int i = 0; i < keys.Length; ++i)
+      {
+        float lastDimensionValue = keys[i][lastDimensionIndex];
+        Debug.Assert(lastDimensionValue >= lastVal);
+        lastVal = lastDimensionValue;
+      }
+    }
   }
 }
 

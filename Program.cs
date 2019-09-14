@@ -19,6 +19,13 @@ namespace PetsciiMapgen
       Timings t = new Timings();
       t.EnterTask("---");
 
+      ValueSet br = new ValueSet(3, 0);
+      br[0] = 4;
+      br[1] = 5;
+      br[2] = 6;
+      var t2 = Utils.Permutate(3, br);
+      Utils.AssertSortedByDimension(t2, 2);
+
       var map = new HybridMap2("..\\..\\img\\fonts\\emojidark12.png", new Size(12, 12), new Size(2, 2), 5, 0.65f, 0.35f, true);
 
       //var map = HybridMap2.Load("..\\..\\img\\maps\\mapHybrid-emoji12x12-2x2x6.png", new Size(12, 12), new Size(2, 2), 6);

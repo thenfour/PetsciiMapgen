@@ -46,7 +46,7 @@ namespace PetsciiMapgen
       int numYcomponents = Utils.Product(tilesPerCell);
       this.componentsPerCell = numYcomponents + 2; // number of dimensions
 
-      weights = new ValueSet(componentsPerCell, - 1);
+      weights = new ValueSet(componentsPerCell, 9997);
       this.weights[0] = UVweight / 2;
       this.weights[1] = UVweight / 2;
       for (int i = 0; i < numYcomponents; ++i)
@@ -65,7 +65,11 @@ namespace PetsciiMapgen
       Console.WriteLine("Number of source chars: " + Utils.ToString(numSrcChars));
       Console.WriteLine("Number of source chars (1d): " + Utils.Product(numSrcChars));
       Console.WriteLine("Chosen values per tile: " + valuesPerComponent);
+      Console.WriteLine("Dimensions: " + componentsPerCell);
       Console.WriteLine("Resulting map will have this many entries: " + numDestCharacters);
+
+      //Console.WriteLine("\r\nhit a key to continue");
+      //Console.ReadKey();
 
       // fill in char source info (actual tile values)
       timings.EnterTask("Analyze incoming font");
@@ -119,18 +123,21 @@ namespace PetsciiMapgen
 
       // create list of all mapkeys
       timings.EnterTask("Generating permutations");
-      var keys = Utils.Permutate(componentsPerCell, Utils.GetDiscreteValues(valuesPerComponent)).ToArray(); // returns sorted.
+      var keys = Utils.Permutate(componentsPerCell, Utils.GetDiscreteValues(valuesPerComponent)); // returns sorted.
+
+      int lastDimensionIndex = componentsPerCell - 1;
+      //Utils.AssertSortedByDimension(keys, lastDimensionIndex);
 
       timings.EndTask();
       timings.EnterTask("Calculate all mappings");
 
       // - generate a list of all mappings and their distances
       // - accumulate versatility for chars
-      Console.WriteLine("  (" + (Utils.Product(numSrcChars) * (int)numDestCharacters) + " mappings)");
+      ulong theoreticalMappings = (ulong)Utils.Product(numSrcChars) * (ulong)numDestCharacters;
+      Console.WriteLine("  (" + theoreticalMappings + " mappings)");
       Utils.ValueRangeInspector distanceRange = new Utils.ValueRangeInspector();
-      var allMappings = new Mapping[Utils.Product(numSrcChars) * (int)numDestCharacters];
+      var allMappings = new Mapping[theoreticalMappings];
       int imap = 0;
-      int lastDimensionIndex = componentsPerCell - 2;
       UInt32 shortCircuitSavedEnd = 0;
       UInt32 shortCircuitSavedBegin = 0;
       for (UInt32 ici = 0; ici < charInfo.Count; ++ ici)
@@ -138,17 +145,31 @@ namespace PetsciiMapgen
         var ci = charInfo[(int)ici];
 
         float lastDimensionCharValue = ci.actualValues[lastDimensionIndex];
-        //UInt32 indexInDistRange = Utils.BinarySearchAny(keys, 0, (UInt32)keys.Length, mapKey =>
-        //{
-        //  float d = lastDimensionCharValue - mapKey[lastDimensionIndex];
-        //  if (Math.Abs(d)  Constants.MaxDimensionDist)
-        //    return 0;
-        //  return Math.Sign(d);
-        //});
+
+        // find literally any value that matches
+        UInt32 iKeyOrigin = 0;// = (UInt32)(keys.Length / 2);
+
+        // if our max dist is .5, then we should start at .5 in the list.right in the middle, because we're guaranteed it will match.
+        // if maxdist is .3, then we want to check ranges where maxdist will never be exceeded.
+        // that would be 0-.3, .3-.6. .6-.9, .9-1
+        // and maybe with just a bit of overlap in there, so shrink the window a bit.
+        UInt32 windowSize = (UInt32)(keys.Length * Constants.MaxDimensionDist * .9);
+        windowSize = Math.Min((UInt32)keys.Length / 3, windowSize);
+        for (iKeyOrigin = 0; iKeyOrigin < keys.Length; iKeyOrigin += windowSize)
+        {
+          float lastDimDist = Math.Abs(lastDimensionCharValue - keys[iKeyOrigin][lastDimensionIndex]);
+          if (lastDimDist <= Constants.MaxDimensionDist)
+          {
+            break;
+          }
+        }
+
+        if (iKeyOrigin >= keys.Length)
+          iKeyOrigin = (UInt32)keys.Length - 1;
 
         // walk left
-        UInt32 midindex = (UInt32)(keys.Length / 2);
-        for (UInt32 ikey = midindex; ; --ikey)
+        //float lastMapval = 1;
+        for (UInt32 ikey = iKeyOrigin; ; --ikey)
         {
           allMappings[imap].icharInfo = ici;
           allMappings[imap].imapKey = ikey;
@@ -163,6 +184,8 @@ namespace PetsciiMapgen
           imap++;
 
           float lastDimDist = Math.Abs(lastDimensionCharValue - keys[ikey][lastDimensionIndex]);
+          //Debug.Assert(keys[ikey][lastDimensionIndex] <= lastMapval);
+          //lastMapval = keys[ikey][lastDimensionIndex];
           if (lastDimDist > Constants.MaxDimensionDist)
           {
             shortCircuitSavedBegin += (uint)ikey;
@@ -174,7 +197,9 @@ namespace PetsciiMapgen
         }
 
         // walk right
-        for (UInt32 ikey = midindex + 1; ikey < keys.Length; ++ ikey)
+        //bool encountered = true;
+        //lastMapval = 0;
+        for (UInt32 ikey = iKeyOrigin + 1; ikey < keys.Length; ++ ikey)
         {
           allMappings[imap].icharInfo = ici;
           allMappings[imap].imapKey = ikey;
@@ -190,6 +215,8 @@ namespace PetsciiMapgen
           imap++;
 
           float lastDimDist = Math.Abs(lastDimensionCharValue - keys[ikey][lastDimensionIndex]);
+          //Debug.Assert(keys[ikey][lastDimensionIndex] >= lastMapval);
+          //lastMapval = keys[ikey][lastDimensionIndex];
           if (lastDimDist > Constants.MaxDimensionDist)
           {
             shortCircuitSavedEnd += (uint)keys.Length - ikey;
@@ -226,9 +253,9 @@ namespace PetsciiMapgen
         maxMinDist = Math.Max(maxMinDist, mapKey.MinDistFound);
       }
       Console.WriteLine("Max minimum distance found: {0}", maxMinDist);
-      var crm = allMappings.Count(o => o.dist <= maxMinDist);
-      Console.WriteLine(" -> items to keep: {0}", crm);
-      Console.WriteLine(" -> items to remove: {0}", allMappings.Count() - crm);
+      //var crm = allMappings.Count(o => o.dist <= maxMinDist);
+      //Console.WriteLine(" -> items to keep: {0}", crm);
+      //Console.WriteLine(" -> items to remove: {0}", allMappings.Count() - crm);
 
       timings.EndTask();
 
@@ -321,10 +348,10 @@ namespace PetsciiMapgen
             continue;
           }
           //CharInfo ci = map[k];
-          int cellY = k.ID / numCellsX;
-          int cellX = k.ID - (numCellsX * cellY);
+          ulong cellY = k.ID / (ulong)numCellsX;
+          ulong cellX = k.ID - ((ulong)numCellsX * cellY);
           Rectangle srcRect = new Rectangle(ci.srcIndex.X * charSize.Width, ci.srcIndex.Y * charSize.Height, charSize.Width, charSize.Height);
-          g.DrawImage(srcBmp, cellX * charSize.Width, cellY * charSize.Height, srcRect, GraphicsUnit.Pixel);
+          g.DrawImage(srcBmp, (int)(cellX * (ulong)charSize.Width), (int)(cellY * (ulong)charSize.Height), srcRect, GraphicsUnit.Pixel);
         }
       }
 
@@ -402,7 +429,7 @@ namespace PetsciiMapgen
 
       using (var g = Graphics.FromImage(destImg))
       {
-        ValueSet vals = new ValueSet(componentsPerCell,- 1);
+        ValueSet vals = new ValueSet(componentsPerCell, 9995);
         // roughly simulate the shader algo
         for (int srcCellY = 0; srcCellY < testImg.Height / charSize.Height; ++srcCellY)
         {
