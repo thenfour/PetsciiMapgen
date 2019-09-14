@@ -126,13 +126,12 @@ namespace PetsciiMapgen
   // simplifies code that wants to do set operations.
   public unsafe struct ValueSet
   {
-    public fixed float Values[11];
     public int ValuesLength;
     public UInt64 ID;
-
-    // optimizations
     public bool Mapped;
     public uint MinDistFound;
+
+    public fixed float Values[11];
   }
 
   public static class Utils
