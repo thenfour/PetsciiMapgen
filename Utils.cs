@@ -124,9 +124,10 @@ namespace PetsciiMapgen
 
   // basically wraps List<Value>.
   // simplifies code that wants to do set operations.
-  public struct ValueSet
+  public unsafe struct ValueSet
   {
-    public float[] Values;
+    public fixed float Values[11];
+    public int ValuesLength;
     public UInt64 ID;
 
     // optimizations
@@ -137,12 +138,12 @@ namespace PetsciiMapgen
   public static class Utils
   {
     // returns squared dist
-    public static float DistFrom(ValueSet a, ValueSet b, ValueSet weights)
+    public unsafe static float DistFrom(ValueSet a, ValueSet b, ValueSet weights)
     {
-      Debug.Assert(a.Values.Length == b.Values.Length);
-      Debug.Assert(a.Values.Length == weights.Values.Length);
+      Debug.Assert(a.ValuesLength == b.ValuesLength);
+      Debug.Assert(a.ValuesLength == weights.ValuesLength);
       float acc = 0;
-      for (int i = 0; i < a.Values.Length; ++i)
+      for (int i = 0; i < a.ValuesLength; ++i)
       {
         var m = Math.Abs(a.Values[i] - b.Values[i]);
         acc += m * m * weights.Values[i];
@@ -150,12 +151,12 @@ namespace PetsciiMapgen
       return acc;
     }
 
-    public static int CompareTo(ValueSet a, ValueSet other)
+    public unsafe static int CompareTo(ValueSet a, ValueSet other)
     {
-      int d = other.Values.Length.CompareTo(a.Values.Length);
+      int d = other.ValuesLength.CompareTo(a.ValuesLength);
       if (d != 0)
         return d;
-      for (int i = 0; i < a.Values.Length; ++i)
+      for (int i = 0; i < a.ValuesLength; ++i)
       {
         d = other.Values[i].CompareTo(a.Values[i]);
         if (d != 0)
@@ -434,11 +435,11 @@ namespace PetsciiMapgen
     // returns all possible combinations of tile values.
     // this sets the ID for the resulting ValueSets which is an ordered number,
     // required for the un-mapping algo to know where things are.
-    public static ValueSet[] Permutate(int numTiles, ValueSet discreteValuesPerTile)
+    public unsafe static ValueSet[] Permutate(int numTiles, ValueSet discreteValuesPerTile)
     {
       // we will just do this as if each value is a digit in a number. that's the analogy that drives this.
       // actually this symbolizes the # of digits in the result, PLUS the number of possible values per digit.
-      UInt64 numDigits = (UInt64)discreteValuesPerTile.Values.Length;
+      UInt64 numDigits = (UInt64)discreteValuesPerTile.ValuesLength;
       UInt64 theoreticalBase = numDigits;
       UInt64 totalPermutations = (UInt64)Math.Pow(numDigits, numTiles);
 
@@ -477,7 +478,7 @@ namespace PetsciiMapgen
       origin = begin;
       sz = Utils.Sub(end, begin);
     }
-    public static ValueSet GetDiscreteValues(int discreteValues)
+    public unsafe static ValueSet GetDiscreteValues(int discreteValues)
     {
       // returning [0, 1] for 2 discrete values. [0,.5,1] for 3, etc.
       float segSpan = 1.0f / (discreteValues - 1);
@@ -491,7 +492,7 @@ namespace PetsciiMapgen
       return ret;
     }
 
-    internal static void AssertSortedByDimension(ValueSet[] keys, int lastDimensionIndex)
+    internal unsafe static void AssertSortedByDimension(ValueSet[] keys, int lastDimensionIndex)
     {
       float lastVal = 0;
       for (int i = 0; i < keys.Length; ++i)
@@ -510,7 +511,8 @@ namespace PetsciiMapgen
     }
     internal static void InitValueSet(ref ValueSet n, int dimensionsPerCharacter, UInt64 id)
     {
-      n.Values = new float[dimensionsPerCharacter];
+      //n.Values = new float[dimensionsPerCharacter];
+      n.ValuesLength = dimensionsPerCharacter;
       n.ID = id;
       n.MinDistFound = UInt32.MaxValue;
     }

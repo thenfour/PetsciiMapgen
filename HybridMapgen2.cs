@@ -36,7 +36,7 @@ namespace PetsciiMapgen
     {
     }
 
-    public HybridMap2(string fontFileName, Size charSize, Size tilesPerCell, int valuesPerComponent, float Yweight, float UVweight, bool useChroma)
+    public unsafe HybridMap2(string fontFileName, Size charSize, Size tilesPerCell, int valuesPerComponent, float Yweight, float UVweight, bool useChroma)
     {
       Timings timings = new Timings();
 
@@ -368,7 +368,7 @@ namespace PetsciiMapgen
     }
 
   // fills in the actual component values for this character.
-  private void ProcessCharacter(Bitmap srcBmp, CharInfo ci)
+  private unsafe void ProcessCharacter(Bitmap srcBmp, CharInfo ci)
     {
       int componentIndex = 0;
       float charU = 0, charV = 0;
@@ -410,7 +410,7 @@ namespace PetsciiMapgen
       componentIndex++;
     }
 
-    public void PETSCIIIZE(string srcImagePath, string destImagePath, bool shade)
+    public unsafe void PETSCIIIZE(string srcImagePath, string destImagePath, bool shade)
     {
       Console.WriteLine("  tranfsorm image + " + srcImagePath);
       var testImg = Image.FromFile(srcImagePath);
