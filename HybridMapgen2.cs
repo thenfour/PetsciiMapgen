@@ -46,12 +46,12 @@ namespace PetsciiMapgen
       int numYcomponents = Utils.Product(tilesPerCell);
       this.componentsPerCell = numYcomponents + 2; // number of dimensions
 
-      weights = new ValueSet(componentsPerCell, 9997);
-      this.weights[0] = UVweight / 2;
-      this.weights[1] = UVweight / 2;
+      weights = Utils.NewValueSet(componentsPerCell, 9997);
+      this.weights.Values[0] = UVweight / 2;
+      this.weights.Values[1] = UVweight / 2;
       for (int i = 0; i < numYcomponents; ++i)
       {
-        this.weights[i + 2] = Yweight / numYcomponents;
+        this.weights.Values[i + 2] = Yweight / numYcomponents;
       }
 
       var srcImg = System.Drawing.Image.FromFile(fontFileName);
@@ -97,7 +97,7 @@ namespace PetsciiMapgen
 
           for (int i = 0; i < componentsPerCell; ++i)
           {
-            ranges[i].Visit(ci.actualValues[i]);
+            ranges[i].Visit(ci.actualValues.Values[i]);
           }
 
           charInfo.Add(ci);
@@ -116,7 +116,7 @@ namespace PetsciiMapgen
       {
         for (int i = 0; i < componentsPerCell; ++i)
         {
-          ci.actualValues[i] = ranges[i].Normalize01(ci.actualValues[i]);
+          ci.actualValues.Values[i] = ranges[i].Normalize01(ci.actualValues.Values[i]);
         }
       }
       timings.EndTask();
@@ -144,7 +144,7 @@ namespace PetsciiMapgen
       {
         var ci = charInfo[(int)ici];
 
-        float lastDimensionCharValue = ci.actualValues[lastDimensionIndex];
+        float lastDimensionCharValue = ci.actualValues.Values[lastDimensionIndex];
 
         // find literally any value that matches
         UInt32 iKeyOrigin = 0;// = (UInt32)(keys.Length / 2);
@@ -157,7 +157,7 @@ namespace PetsciiMapgen
         windowSize = Math.Min((UInt32)keys.Length / 3, windowSize);
         for (iKeyOrigin = 0; iKeyOrigin < keys.Length; iKeyOrigin += windowSize)
         {
-          float lastDimDist = Math.Abs(lastDimensionCharValue - keys[iKeyOrigin][lastDimensionIndex]);
+          float lastDimDist = Math.Abs(lastDimensionCharValue - keys[iKeyOrigin].Values[lastDimensionIndex]);
           if (lastDimDist <= Constants.MaxDimensionDist)
           {
             break;
@@ -173,7 +173,8 @@ namespace PetsciiMapgen
         {
           allMappings[imap].icharInfo = ici;
           allMappings[imap].imapKey = ikey;
-          float fdist = keys[ikey].DistFrom(ci.actualValues, this.weights);
+          //float fdist = keys[ikey].DistFrom(ci.actualValues, this.weights);
+          float fdist = Utils.DistFrom(keys[ikey], ci.actualValues, this.weights);
           allMappings[imap].dist = (UInt32)(fdist * Constants.DistanceRange);
           distanceRange.Visit(allMappings[imap].dist);
           keys[ikey].MinDistFound = Math.Min(keys[ikey].MinDistFound, allMappings[imap].dist);
@@ -183,7 +184,7 @@ namespace PetsciiMapgen
 
           imap++;
 
-          float lastDimDist = Math.Abs(lastDimensionCharValue - keys[ikey][lastDimensionIndex]);
+          float lastDimDist = Math.Abs(lastDimensionCharValue - keys[ikey].Values[lastDimensionIndex]);
           //Debug.Assert(keys[ikey][lastDimensionIndex] <= lastMapval);
           //lastMapval = keys[ikey][lastDimensionIndex];
           if (lastDimDist > Constants.MaxDimensionDist)
@@ -203,7 +204,8 @@ namespace PetsciiMapgen
         {
           allMappings[imap].icharInfo = ici;
           allMappings[imap].imapKey = ikey;
-          float fdist = keys[ikey].DistFrom(ci.actualValues, this.weights);
+          //float fdist = keys[ikey].DistFrom(ci.actualValues, this.weights);
+          float fdist = Utils.DistFrom(keys[ikey], ci.actualValues, this.weights);
           allMappings[imap].dist = (UInt32)(fdist * Constants.DistanceRange);
           distanceRange.Visit(allMappings[imap].dist);
           keys[ikey].MinDistFound = Math.Min(keys[ikey].MinDistFound, allMappings[imap].dist);
@@ -214,7 +216,7 @@ namespace PetsciiMapgen
           ci.mapKeysVisited++;
           imap++;
 
-          float lastDimDist = Math.Abs(lastDimensionCharValue - keys[ikey][lastDimensionIndex]);
+          float lastDimDist = Math.Abs(lastDimensionCharValue - keys[ikey].Values[lastDimensionIndex]);
           //Debug.Assert(keys[ikey][lastDimensionIndex] >= lastMapval);
           //lastMapval = keys[ikey][lastDimensionIndex];
           if (lastDimDist > Constants.MaxDimensionDist)
@@ -290,13 +292,14 @@ namespace PetsciiMapgen
       timings.EnterTask("Select mappings for map");
 
       // now walk through and fill in mappings from top to bottom.
-      Dictionary<ValueSet, CharInfo> map = new Dictionary<ValueSet, CharInfo>((int)numDestCharacters);
+      // maps key index to charinfo
+      Dictionary<UInt64, CharInfo> map = new Dictionary<UInt64, CharInfo>((int)numDestCharacters);
 
       foreach (var mapping in prunedMappings)
       {
         if (keys[mapping.imapKey].Mapped)
           continue;
-        map[keys[mapping.imapKey]] = charInfo[(int)mapping.icharInfo];
+        map[keys[mapping.imapKey].ID] = charInfo[(int)mapping.icharInfo];
         keys[mapping.imapKey].Mapped = true;
         charInfo[(int)mapping.icharInfo].usages++;
         if (map.Count == numDestCharacters)
@@ -342,7 +345,7 @@ namespace PetsciiMapgen
         foreach (ValueSet k in keys)
         {
           CharInfo ci = null;
-          if (!map.TryGetValue(k, out ci))
+          if (!map.TryGetValue(k.ID, out ci))
           {
             missingKeys++;
             continue;
@@ -369,7 +372,6 @@ namespace PetsciiMapgen
       ret.charSize = charSize;
       ret.tilesPerCell = tilesPerCell;
       ret.valuesPerComponent = valuesPerComponent;
-      ret.weights = null;
       ret.componentsPerCell = 2 + Utils.Product(tilesPerCell);
       return ret;
     }
@@ -405,15 +407,15 @@ namespace PetsciiMapgen
             }
           }
 
-          ci.actualValues[componentIndex] = tileY / tilePixelCount;// normalized to pixel
+          ci.actualValues.Values[componentIndex] = tileY / tilePixelCount;// normalized to pixel
           componentIndex++;
         }
       }
 
       int pixelsPerChar = Utils.Product(charSize);
-      ci.actualValues[componentIndex] = charU / pixelsPerChar;
+      ci.actualValues.Values[componentIndex] = charU / pixelsPerChar;
       componentIndex++;
-      ci.actualValues[componentIndex] = charV / pixelsPerChar;
+      ci.actualValues.Values[componentIndex] = charV / pixelsPerChar;
       componentIndex++;
     }
 
@@ -429,7 +431,7 @@ namespace PetsciiMapgen
 
       using (var g = Graphics.FromImage(destImg))
       {
-        ValueSet vals = new ValueSet(componentsPerCell, 9995);
+        ValueSet vals = Utils.NewValueSet(componentsPerCell, 9995);
         // roughly simulate the shader algo
         for (int srcCellY = 0; srcCellY < testImg.Height / charSize.Height; ++srcCellY)
         {
@@ -452,14 +454,14 @@ namespace PetsciiMapgen
                 Utils.RGBtoYUV(srcColor, out cy, out cu, out cv);
 
                 int tileIndex = tx + (ty * tilesPerCell.Width);
-                vals[this.componentsPerCell - 1 - tileIndex] = Utils.Clamp(cy, 0, 1);
+                vals.Values[this.componentsPerCell - 1 - tileIndex] = Utils.Clamp(cy, 0, 1);
                 charU += cu;
                 charV += cv;
               }
             }
             int numTiles = Utils.Product(tilesPerCell);
-            vals[1] = Utils.Clamp(charU / numTiles, 0, 1);
-            vals[0] = Utils.Clamp(charV / numTiles, 0, 1);
+            vals.Values[1] = Utils.Clamp(charU / numTiles, 0, 1);
+            vals.Values[0] = Utils.Clamp(charV / numTiles, 0, 1);
 
             // figure out which "ID" this value corresponds to.
             // (val - segCenter) would give us the boundary. for example between 0-1 with 2 segments, the center vals are .25 and .75.
@@ -470,7 +472,7 @@ namespace PetsciiMapgen
 
             for(int i = 0; i < this.componentsPerCell; ++ i )
             {
-              float val = vals[i];
+              float val = vals.Values[i];
               val -= halfSegCenter;
               val = Utils.Clamp(val, 0, 1);
               val *= valuesPerComponent;
