@@ -1,12 +1,7 @@
 ﻿/*
 
 ADDS some stuff to the hybrid map
-x output informative filename
-x add timings
-x fix distance algorithm (square!)
 - optimize processing
-  - remove items from the mappings table before sorting (based on max min dist encountered for any key)
-
 - optional chroma components
 - monochrome bitmap with palette handling
 - map generation should produce a reference, not replicate every single glyph
@@ -133,28 +128,53 @@ namespace PetsciiMapgen
       // - accumulate versatility for chars
       Console.WriteLine("  (" + (Utils.Product(numSrcChars) * (int)numDestCharacters) + " mappings)");
       Utils.ValueRangeInspector distanceRange = new Utils.ValueRangeInspector();
-      //var allMappings = new List<Mapping>(Utils.Product(numSrcChars) * (int)numDestCharacters);
       var allMappings = new Mapping[Utils.Product(numSrcChars) * (int)numDestCharacters];
       int imap = 0;
       int lastDimensionIndex = componentsPerCell - 2;
       UInt32 shortCircuitSavedEnd = 0;
       UInt32 shortCircuitSavedBegin = 0;
-      //foreach (var ci in charInfo)
       for (UInt32 ici = 0; ici < charInfo.Count; ++ ici)
       {
         var ci = charInfo[(int)ici];
-        bool encounteredusable = false;
 
         float lastDimensionCharValue = ci.actualValues[lastDimensionIndex];
-        UInt32 indexInDistRange = Utils.BinarySearchAny(keys, 0, (UInt32)keys.Length, mapKey =>
-        {
-          float d = lastDimensionCharValue - mapKey[lastDimensionIndex];
-          if (Math.Abs(d) < Constants.MaxDimensionDist)
-            return 0;
-          return Math.Sign(d);
-        });
+        //UInt32 indexInDistRange = Utils.BinarySearchAny(keys, 0, (UInt32)keys.Length, mapKey =>
+        //{
+        //  float d = lastDimensionCharValue - mapKey[lastDimensionIndex];
+        //  if (Math.Abs(d)  Constants.MaxDimensionDist)
+        //    return 0;
+        //  return Math.Sign(d);
+        //});
 
-        for (UInt32 ikey = 0; ikey < keys.Length; ++ ikey)
+        // walk left
+        UInt32 midindex = (UInt32)(keys.Length / 2);
+        for (UInt32 ikey = midindex; ; --ikey)
+        {
+          allMappings[imap].icharInfo = ici;
+          allMappings[imap].imapKey = ikey;
+          float fdist = keys[ikey].DistFrom(ci.actualValues, this.weights);
+          allMappings[imap].dist = (UInt32)(fdist * Constants.DistanceRange);
+          distanceRange.Visit(allMappings[imap].dist);
+          keys[ikey].MinDistFound = Math.Min(keys[ikey].MinDistFound, allMappings[imap].dist);
+
+          ci.versatility += allMappings[imap].dist;
+          ci.mapKeysVisited++;
+
+          imap++;
+
+          float lastDimDist = Math.Abs(lastDimensionCharValue - keys[ikey][lastDimensionIndex]);
+          if (lastDimDist > Constants.MaxDimensionDist)
+          {
+            shortCircuitSavedBegin += (uint)ikey;
+            break;
+          }
+          // uint loop exiting...
+          if (ikey == 0)
+            break;
+        }
+
+        // walk right
+        for (UInt32 ikey = midindex + 1; ikey < keys.Length; ++ ikey)
         {
           allMappings[imap].icharInfo = ici;
           allMappings[imap].imapKey = ikey;
@@ -165,25 +185,21 @@ namespace PetsciiMapgen
 
           // keys is sorted by its LAST dimension. let's figure out if the last dimension is within usable range,
           // and short circuit if not.
-          float lastDimDist = Math.Abs(lastDimensionCharValue - keys[ikey][lastDimensionIndex]);
           ci.versatility += allMappings[imap].dist;
           ci.mapKeysVisited++;
           imap++;
 
-          if (encounteredusable && (lastDimDist > Constants.MaxDimensionDist))
+          float lastDimDist = Math.Abs(lastDimensionCharValue - keys[ikey][lastDimensionIndex]);
+          if (lastDimDist > Constants.MaxDimensionDist)
           {
             shortCircuitSavedEnd += (uint)keys.Length - ikey;
             break;
-          }
-          if (!encounteredusable && (lastDimDist <= Constants.MaxDimensionDist)) {
-            encounteredusable = true;
           }
         }
       }
 
       Console.WriteLine("  Short circuit saved us {0} mappings (END)", shortCircuitSavedBegin);
       Console.WriteLine("  Short circuit saved us {0} mappings (END)", shortCircuitSavedEnd);
-      //Console.WriteLine("  Potential short circuit savings {0}", potentialMoreCircuitSaved);
       Console.WriteLine("  Remaining elements: {0}", imap);
 
       // we short circuited many more map entries than we actually need. remove those.
@@ -293,17 +309,26 @@ namespace PetsciiMapgen
       Console.WriteLine("  Image size: [" + mapImageSize.Width + ", " + mapImageSize.Height + "]");
 
       this.mapBmp = new Bitmap(mapImageSize.Width, mapImageSize.Height, PixelFormat.Format24bppRgb);
+      int missingKeys = 0;
       using (Graphics g = Graphics.FromImage(mapBmp))
       {
         foreach (ValueSet k in keys)
         {
-          CharInfo ci = map[k];
+          CharInfo ci = null;
+          if (!map.TryGetValue(k, out ci))
+          {
+            missingKeys++;
+            continue;
+          }
+          //CharInfo ci = map[k];
           int cellY = k.ID / numCellsX;
           int cellX = k.ID - (numCellsX * cellY);
           Rectangle srcRect = new Rectangle(ci.srcIndex.X * charSize.Width, ci.srcIndex.Y * charSize.Height, charSize.Width, charSize.Height);
           g.DrawImage(srcBmp, cellX * charSize.Width, cellY * charSize.Height, srcRect, GraphicsUnit.Pixel);
         }
       }
+
+      Console.WriteLine("MISSING MAP KEYS: {0} ({1}%)", missingKeys, (float)missingKeys / keys.Length * 100);
 
       mapBmp.Save(string.Format("..\\..\\img\\map-{0}-pow({1},{2}x{3}+{4}).png",
         System.IO.Path.GetFileNameWithoutExtension(fontFileName),

@@ -22,7 +22,7 @@ namespace PetsciiMapgen
     // funny that's actually 360. no relation to angles/radians.
     public static UInt32 DistanceRange { get { return 360; } }
 
-    public static float MaxDimensionDist {  get { return .8f; } }
+    public static float MaxDimensionDist {  get { return .7f; } }// must be above .5!
   }
 
   public class CharInfo
@@ -215,24 +215,7 @@ namespace PetsciiMapgen
         return string.Format("[{0}, {1}]", MinValue, MaxValue);
       }
     }
-
-    // returns the index of keys found where func returns 0. func should compare and return
-    // -1 to search left, 1 to search right
-    internal static uint BinarySearchAny(ValueSet[] keys, uint begin, uint end, Func<ValueSet, int> func)
-    {
-      uint ithis = (begin + end) / 2;
-      int c = func(keys[ithis]);
-      if (c == 0)
-      {
-        return ithis;
-      }
-      if (ithis == begin || ithis == end)
-        throw new Exception("no matching elements found");
-      if (c < 0)
-        return BinarySearchAny(keys, begin, ithis, func);
-      return BinarySearchAny(keys, ithis, end, func);
-    }
-
+    
     // https://stackoverflow.com/questions/359612/how-to-change-rgb-color-to-hsv
     public static void ColorToHSV(Color color, out double hue, out double saturation, out double value)
     {
@@ -279,17 +262,6 @@ namespace PetsciiMapgen
       u = Cb + .5f;
       v = Cr + .5f;
     }
-
-    // adapted from https://www.xaymar.com/2017/07/06/how-to-converting-rgb-to-yuv-and-yuv-to-rgb/
-    //public static void RGBtoYUV(double r, double g, double b, out double y, out double u, out double v)
-    //{
-    //  y = r * 0.2126 + 0.7152 * g + 0.0722 * b;
-    //  u = (b - y) / 1.8556;
-    //  v = (r - y) / 1.5748;
-
-    //  u += 0.5;
-    //  v += 0.5;
-    //}
 
     public static void RGBtoYUV(Color rgb, out float y, out float u, out float v)
     {
@@ -537,49 +509,6 @@ namespace PetsciiMapgen
       return ret;
     }
 
-    public static float FindClosestValue(ValueSet possibleValues, float v)
-    {
-      int indexOfNearest = -1;
-      float distanceToNearest = 0;
-      for (int i = 0; i < possibleValues.Length; ++i)
-      {
-        float d = Math.Abs(possibleValues[i] - v);
-        if (indexOfNearest == -1 || (d < distanceToNearest))
-        {
-          distanceToNearest = d;
-          indexOfNearest = i;
-        }
-      }
-      Debug.Assert(indexOfNearest != -1);
-      return possibleValues[indexOfNearest];
-    }
-
-    public static ValueSet FindClosestDestValueSet(int discreteValues, ValueSet src)
-    {
-      ValueSet possibleValues = GetDiscreteValues(discreteValues);
-      ValueSet ret = new ValueSet(discreteValues , - 1);
-      for (int i = 0; i < src.Length; ++i)
-      {
-        ret[i] = FindClosestValue(possibleValues, src[i]);
-      }
-      return ret;
-    }
-
-    internal static double AdjustContrast(double val, double factor, double centerPoint = 0.5)
-    {
-      val -= centerPoint;
-      val *= factor;
-      val += centerPoint;
-      return val;
-    }
-    //internal static Color AdjustContrast(Color val, double factor, double centerPoint = 0.5)
-    //{
-    //  return Color.FromArgb(
-    //    (int)(Clamp(AdjustContrast((float)val.R / 255.0f, factor, centerPoint), 0, 1) * 255.0),
-    //    (int)(Clamp(AdjustContrast((float)val.G / 255.0f, factor, centerPoint), 0, 1) * 255.0),
-    //    (int)(Clamp(AdjustContrast((float)val.B / 255.0f, factor, centerPoint), 0, 1) * 255.0)
-    //    );
-    //}
   }
 }
 
