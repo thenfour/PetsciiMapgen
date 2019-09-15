@@ -1,7 +1,5 @@
 ﻿/*
 
-ADDS some stuff to the hybrid map
-- optimize processing
 - monochrome bitmap with palette handling
 - map generation should produce a reference, not replicate every single glyph
 
@@ -23,16 +21,16 @@ namespace PetsciiMapgen
 {
   public class HybridMap2
   {
-    //public ValueSet weights; // weights for calculating distance.
     public Bitmap mapBmp;
     public Size charSize;
-    public Size tilesPerCell;
+    public Size lumaTiles;
     public int valuesPerComponent;
     public int componentsPerCell; // # of dimensions (UV + Y*size)
     public int numYcomponents;
     public bool useChroma;
     float lumaBias;
     long numDestCharacters;
+    Color[] monoPalette = null;
 
     private HybridMap2()
     {
@@ -41,7 +39,7 @@ namespace PetsciiMapgen
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal int GetValueYIndex(int tx, int ty)
     {
-      return (ty * tilesPerCell.Width) + tx;
+      return (ty * lumaTiles.Width) + tx;
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal int GetValueUIndex()
@@ -76,16 +74,26 @@ namespace PetsciiMapgen
       return acc;
     }
 
-    public unsafe HybridMap2(string fontFileName, Size charSize, Size tilesPerCell, int valuesPerComponent, int valuesPerPartition, float lumaBias, bool useChroma)
+    internal Color SelectColor(Color c, int? ifg, int? ibg)
+    {
+      if (!ifg.HasValue)
+        return c;
+      return c.R > 0.5f ? monoPalette[ifg.Value] : monoPalette[ibg.Value];
+    }
+
+    public unsafe HybridMap2(string fontFileName, Size charSize,
+      Size lumaTiles, int valuesPerComponent, int valuesPerPartition, float lumaBias, bool useChroma,
+      Color[] monoPalette, bool outputFullMap, bool outputRefMapAndFont)
     {
       Timings timings = new Timings();
 
+      this.monoPalette = monoPalette;
       this.lumaBias = lumaBias;
-      this.tilesPerCell = tilesPerCell;
+      this.lumaTiles = lumaTiles;
       this.charSize = charSize;
       this.useChroma = useChroma;
       this.valuesPerComponent = valuesPerComponent;
-      this.numYcomponents = Utils.Product(tilesPerCell);
+      this.numYcomponents = Utils.Product(lumaTiles);
       this.componentsPerCell = numYcomponents + (useChroma ? 2 : 0); // number of dimensions
 
       var srcImg = System.Drawing.Image.FromFile(fontFileName);
@@ -118,20 +126,49 @@ namespace PetsciiMapgen
       {
         for (int x = 0; x < numSrcChars.Width; ++x)
         {
-          // gather up all the info we can about this char.
-          var ci = new CharInfo(componentsPerCell)
+          if (monoPalette == null)
           {
-            srcIndex = new Point(x, y)
-          };
+            var ci = new CharInfo(componentsPerCell)
+            {
+              srcIndex = new Point(x, y)
+            };
+            ProcessCharacter(srcBmp, ci, null, null);
+            for (int i = 0; i < componentsPerCell; ++i)
+            {
+              ranges[i].Visit(ci.actualValues.Values[i]);
+            }
 
-          ProcessCharacter(srcBmp, ci);
-
-          for (int i = 0; i < componentsPerCell; ++i)
-          {
-            ranges[i].Visit(ci.actualValues.Values[i]);
+            charInfo.Add(ci);
           }
+          else
+          {
+            //foreach(Color fg in monoPalette)
+            for(int ifg = 0; ifg < monoPalette.Length; ++ ifg)
+            {
+              Color fg = monoPalette[ifg];
+              for (int ibg = 0; ibg < monoPalette.Length; ++ibg)
+              {
+                if (ifg != ibg)
+                {
+                  Color bg = monoPalette[ibg];
+                  var ci = new CharInfo(componentsPerCell)
+                  {
+                    srcIndex = new Point(x, y),
+                    ifg = ifg,
+                    ibg = ibg
+                  };
 
-          charInfo.Add(ci);
+                  ProcessCharacter(srcBmp, ci, ifg, ibg);
+                  for (int i = 0; i < componentsPerCell; ++i)
+                  {
+                    ranges[i].Visit(ci.actualValues.Values[i]);
+                  }
+
+                  charInfo.Add(ci);
+                }
+              }
+            }
+          }
         }
       }
 
@@ -347,6 +384,18 @@ namespace PetsciiMapgen
       Console.WriteLine("  Most-used char: " + mostUsedChar + " (" + mostUsedChar.usages + ") usages");
       Console.WriteLine("  Number of total char repetitions: " + numRepetitions);
 
+      if (outputFullMap)
+      {
+        OutputFullMap(keys, map, srcBmp, fontFileName);
+      }
+      if (outputRefMapAndFont)
+      {
+        OutputRefMapAndFont(keys, map, srcBmp, fontFileName);
+      }
+    }
+
+    internal void OutputFullMap(ValueSet[] keys, Dictionary<long, CharInfo> map, Bitmap srcBmp, string fontFileName)
+    {
       int numCellsX = (int)Math.Ceiling(Math.Sqrt(keys.Count()));
       Size mapImageSize = new Size(numCellsX * charSize.Width, numCellsX * charSize.Height);
 
@@ -355,55 +404,169 @@ namespace PetsciiMapgen
       Console.WriteLine("  Image size: [" + mapImageSize.Width + ", " + mapImageSize.Height + "]");
 
       this.mapBmp = new Bitmap(mapImageSize.Width, mapImageSize.Height, PixelFormat.Format24bppRgb);
-      using (Graphics g = Graphics.FromImage(mapBmp))
-      {
-        foreach (ValueSet k in keys)
-        {
-          CharInfo ci = null;
-          if (!map.TryGetValue(k.ID, out ci))
-          {
-            continue;
-          }
+      BitmapData srcData = srcBmp.LockBits(new Rectangle(0, 0, srcBmp.Width, srcBmp.Height), ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
+      BitmapData destData = mapBmp.LockBits(new Rectangle(0, 0, mapImageSize.Width, mapImageSize.Height), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
 
-          long cellY = k.ID / numCellsX;
-          long cellX = k.ID - (numCellsX * cellY);
-          Rectangle srcRect = new Rectangle(ci.srcIndex.X * charSize.Width, ci.srcIndex.Y * charSize.Height, charSize.Width, charSize.Height);
-          g.DrawImage(srcBmp, (int)(cellX * charSize.Width), (int)(cellY * charSize.Height), srcRect, GraphicsUnit.Pixel);
+      foreach (ValueSet k in keys)
+      {
+        CharInfo ci = null;
+        if (!map.TryGetValue(k.ID, out ci))
+        {
+          continue;
+        }
+
+        long cellY = k.ID / numCellsX;
+        long cellX = k.ID - (numCellsX * cellY);
+
+        for (int y = 0; y < charSize.Height; ++y)
+        {
+          for (int x = 0; x < charSize.Width; ++x)
+          {
+            Color c = srcData.GetPixel((ci.srcIndex.X * charSize.Width) + x, (ci.srcIndex.Y * charSize.Height) + y);
+            c = SelectColor(c, ci.ifg, ci.ibg);
+            destData.SetPixel((cellX * charSize.Width) + x, (cellY * charSize.Height) + y, c);
+          }
         }
       }
 
-      Console.WriteLine("  Map keys in place: {0}", numDestCharacters - missingKeys);
-      Console.WriteLine("MISSING MAP KEYS: {0} ({1}%)", missingKeys, (float)missingKeys / keys.Length * 100);
+      mapBmp.UnlockBits(destData);
+      srcBmp.UnlockBits(srcData);
 
-      mapBmp.Save(string.Format("..\\..\\img\\map-{0}-pow({1},{2}x{3}+{4}).png",
+      mapBmp.Save(string.Format("..\\..\\img\\mapFull-{0}-pow({1},{2}x{3}+{4}).png",
         System.IO.Path.GetFileNameWithoutExtension(fontFileName),
-        valuesPerComponent, tilesPerCell.Width, tilesPerCell.Height, useChroma ? "2" : "0"));
+        valuesPerComponent, lumaTiles.Width, lumaTiles.Height, useChroma ? "2" : "0"));
     }
 
-    internal static HybridMap2 Load(string path, Size charSize, Size tilesPerCell, int valuesPerComponent)
+    internal long HashCharInfo(CharInfo ci)
     {
-      HybridMap2 ret = new HybridMap2();
-      ret.mapBmp = new Bitmap(Bitmap.FromFile(path));
-      ret.charSize = charSize;
-      ret.tilesPerCell = tilesPerCell;
-      ret.valuesPerComponent = valuesPerComponent;
-      ret.componentsPerCell = 2 + Utils.Product(tilesPerCell);
+      long ret = (ci.srcIndex.Y * charSize.Height) + ci.srcIndex.X; // linear char index.
+      if (ci.ifg.HasValue)
+      {
+        ret *= monoPalette.Length;
+        ret += ci.ifg.Value;// bake in other values.
+        ret *= monoPalette.Length;
+        ret += ci.ibg.Value;
+      }
       return ret;
     }
 
+    // each R,G,B value of the resulting image is a mapping. the inserted value 0-1 refers to a character
+    // in the font texture.
+    internal unsafe void OutputRefMapAndFont(ValueSet[] keys, Dictionary<long, CharInfo> map, Bitmap srcFontBmp, string fontFileName)
+    {
+      // first generate the font because it will determine all the IDs.
+      // generate a dictionary of chars used.
+      var distinctChars = map.DistinctBy(o => HashCharInfo(o.Value)).ToArray();
+
+      Console.WriteLine("FONT MAP image generation...");
+      float fontMapCharCount = distinctChars.Length;
+      Console.WriteLine("  Entries linear: " + fontMapCharCount);
+      long fontImgPixels = distinctChars.Length * charSize.Width * charSize.Height;
+      Console.WriteLine("  Total pixels: " + fontImgPixels);
+      int fontImgWidthChars = (int)Math.Ceiling(Math.Sqrt(fontImgPixels) / charSize.Width);
+      int fontImgWidthPixels = fontImgWidthChars * charSize.Width;
+      int fontImgHeightChars = (int)Math.Ceiling((double)fontImgPixels / fontImgWidthPixels / charSize.Height);
+      int fontImgHeightPixels = fontImgHeightChars * charSize.Height;
+      Console.WriteLine("  Image size chars: [" + fontImgWidthChars + ", " + fontImgHeightChars + "]");
+      Console.WriteLine("  Image size pixels: [" + fontImgWidthPixels + ", " + fontImgHeightPixels + "]");
+
+      var fontBmp = new Bitmap(fontImgWidthPixels, fontImgHeightPixels, PixelFormat.Format24bppRgb);
+      BitmapData srcFontData = srcFontBmp.LockBits(new Rectangle(0, 0, srcFontBmp.Width, srcFontBmp.Height), ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
+      BitmapData destFontData = fontBmp.LockBits(new Rectangle(0, 0, fontImgWidthPixels, fontImgHeightPixels), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
+
+      for (int ichar = 0; ichar < distinctChars.Length; ++ ichar)
+      {
+        CharInfo ci = distinctChars[ichar].Value;
+        ci.index = ichar;
+
+        long cellY = ichar / fontImgWidthChars;
+        long cellX = ichar - (fontImgWidthChars * cellY);
+
+        for (int y = 0; y < charSize.Height; ++y)
+        {
+          for (int x = 0; x < charSize.Width; ++x)
+          {
+            Color c = srcFontData.GetPixel((ci.srcIndex.X * charSize.Width) + x, (ci.srcIndex.Y * charSize.Height) + y);
+            //Color c = srcFontBmp.GetPixel((ci.srcIndex.X * charSize.Width) + x, (ci.srcIndex.Y * charSize.Height) + y);
+            c = SelectColor(c, ci.ifg, ci.ibg);
+            destFontData.SetPixel((cellX * charSize.Width) + x, (cellY * charSize.Height) + y, c);
+          }
+        }
+      }
+
+      fontBmp.UnlockBits(destFontData);
+      srcFontBmp.UnlockBits(srcFontData);
+
+      fontBmp.Save(string.Format("..\\..\\img\\mapRefFont-{0}-pow({1},{2}x{3}+{4}).png",
+        System.IO.Path.GetFileNameWithoutExtension(fontFileName),
+        valuesPerComponent, lumaTiles.Width, lumaTiles.Height, useChroma ? "2" : "0"));
+
+
+      // NOW generate the ref map. since we aim to support >65k fonts, we can't just use
+      // a single R/G/B val for an index. there's just not enough precision. The most precise PNG format is 16-bit grayscale.
+      // we should just aim to use RGB as 8-bit values, so each pixel is an encoded
+      // 24-bit char index.
+
+      double pixelCountD = Math.Ceiling((double)keys.Length);
+
+      int mapWidthPixels = (int)Math.Ceiling(Math.Sqrt(pixelCountD));
+      int mapHeightPixels = (int)Math.Ceiling(pixelCountD / mapWidthPixels);
+
+      Console.WriteLine("REF MAP image generation...");
+      Console.WriteLine("  Image size: [" + mapWidthPixels + ", " + mapHeightPixels + "]");
+
+      var refMapBmp = new Bitmap(mapWidthPixels, mapHeightPixels, PixelFormat.Format24bppRgb);
+      BitmapData destData = refMapBmp.LockBits(new Rectangle(0, 0, mapWidthPixels, mapHeightPixels), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
+
+      for (int i = 0; i < keys.Length; ++ i)
+      {
+        CharInfo ci = null;
+        if (!map.TryGetValue(i, out ci))
+        {
+          continue;
+        }
+        int y = i / mapWidthPixels;
+        int x = i- (y * mapWidthPixels);
+        byte* p = destData.GetRGBPointer(x, y);
+        int v = i;
+        p[0] = (byte)(v & 0xff);
+        v >>= 8;
+        p[1] = (byte)(v & 0xff);
+        v >>= 8;
+        p[2] = (byte)(v & 0xff);
+      }
+
+      refMapBmp.UnlockBits(destData);
+
+      refMapBmp.Save(string.Format("..\\..\\img\\mapRef-{0}-pow({1},{2}x{3}+{4}).png",
+        System.IO.Path.GetFileNameWithoutExtension(fontFileName),
+        valuesPerComponent, lumaTiles.Width, lumaTiles.Height, useChroma ? "2" : "0"));
+    }
+
+    //internal static HybridMap2 Load(string path, Size charSize, Size tilesPerCell, int valuesPerComponent)
+    //{
+    //  HybridMap2 ret = new HybridMap2();
+    //  ret.mapBmp = new Bitmap(Bitmap.FromFile(path));
+    //  ret.charSize = charSize;
+    //  ret.lumaTiles = tilesPerCell;
+    //  ret.valuesPerComponent = valuesPerComponent;
+    //  ret.componentsPerCell = 2 + Utils.Product(tilesPerCell);
+    //  return ret;
+    //}
+
     // fills in the actual component values for this character.
-    private unsafe void ProcessCharacter(Bitmap srcBmp, CharInfo ci)
+    private unsafe void ProcessCharacter(Bitmap srcBmp, CharInfo ci, int? ifg, int? ibg)
     {
       //int componentIndex = 0;
       float charU = 0, charV = 0;
-      for (int sy = 0; sy < tilesPerCell.Height; ++sy)
+      for (int sy = 0; sy < lumaTiles.Height; ++sy)
       {
-        for (int sx = 0; sx < tilesPerCell.Width; ++sx)
+        for (int sx = 0; sx < lumaTiles.Width; ++sx)
         {
           // process a tile
           Size tileSize;
           Point tilePos;
-          Utils.GetTileInfo(charSize, tilesPerCell, sx, sy, out tilePos, out tileSize);
+          Utils.GetTileInfo(charSize, lumaTiles, sx, sy, out tilePos, out tileSize);
           // process this single tile of this char.
           // grab all pixels for this tile and calculate Y component for each
           int tilePixelCount = 0;
@@ -413,6 +576,10 @@ namespace PetsciiMapgen
             for (int px = 0; px < tileSize.Width; ++px)
             {
               var c = srcBmp.GetPixel(charSize.Width * ci.srcIndex.X + tilePos.X + px, charSize.Height * ci.srcIndex.Y + tilePos.Y + py);
+
+              // monochrome palette processingc
+              c = SelectColor(c, ifg, ibg);
+
               float pixY, pixU, pixV;
               ColorUtils.ToMapping(c, out pixY, out pixU, out pixV);
               tileY += pixY;
@@ -434,7 +601,7 @@ namespace PetsciiMapgen
       }
     }
 
-    public unsafe void PETSCIIIZE(string srcImagePath, string destImagePath)
+    public unsafe void ProcessImage(string srcImagePath, string destImagePath)
     {
       Console.WriteLine("  tranfsorm image + " + srcImagePath);
       var testImg = Image.FromFile(srcImagePath);
@@ -454,11 +621,11 @@ namespace PetsciiMapgen
             // sample in the cell to determine the "key" "ID".
             float charU = 0, charV = 0;// accumulate Cr and Cb
 
-            for (int ty = tilesPerCell.Height - 1; ty >= 0; --ty)
+            for (int ty = lumaTiles.Height - 1; ty >= 0; --ty)
             {
-              for (int tx = tilesPerCell.Width - 1; tx >= 0; --tx)
+              for (int tx = lumaTiles.Width - 1; tx >= 0; --tx)
               {
-                Point tilePos = Utils.GetTileOrigin(charSize, tilesPerCell, tx, ty);
+                Point tilePos = Utils.GetTileOrigin(charSize, lumaTiles, tx, ty);
                 Color srcColor = testBmp.GetPixel(((srcCellX) * charSize.Width) + tilePos.X, ((srcCellY) * charSize.Height) + tilePos.Y);
 
                 float cy, cu, cv;
@@ -468,7 +635,7 @@ namespace PetsciiMapgen
                 charV += cv;
               }
             }
-            int numTiles = Utils.Product(tilesPerCell);
+            int numTiles = Utils.Product(lumaTiles);
             if (useChroma)
             {
               vals.Values[GetValueUIndex()] = Utils.Clamp(charU / numTiles, 0, 1);

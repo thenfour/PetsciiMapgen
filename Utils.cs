@@ -65,6 +65,9 @@ namespace PetsciiMapgen
     public UInt32 versatility;
     public UInt32 mapKeysVisited = 0;
     public long partition; // which spatial partition does this character fit into?
+    public int? ifg;// only for mono palette processing, index to palette
+    public int? ibg;// only for mono palette processing
+    public int index;// used when generating font texture
 
     public CharInfo(int dimensionsPerCharacter)
     {
@@ -177,6 +180,30 @@ namespace PetsciiMapgen
 
   public static class Utils
   {
+    public static unsafe byte* GetRGBPointer(this BitmapData data, long x, long y)
+    {
+      byte* ret = (byte*)data.Scan0;
+      ret += y * data.Stride;
+      ret += x * 3;
+      return ret;
+    }
+
+    // assumes 24 bits per pixel RGB
+    public static unsafe Color GetPixel(this BitmapData data, long x, long y)
+    {
+      byte* p = data.GetRGBPointer(x, y);
+      return Color.FromArgb(p[0], p[1], p[2]);
+    }
+
+    // assumes 24 bits per pixel RGB
+    public static unsafe void SetPixel(this BitmapData data, long x, long y, Color c)
+    {
+      byte* p = data.GetRGBPointer(x, y);
+      p[0] = c.R;
+      p[1] = c.G;
+      p[2] = c.B;
+    }
+
     public static IEnumerable<TSource> DistinctBy<TSource, TKey>
          (this IEnumerable<TSource> source, Func<TSource, TKey> keySelector)
     {
