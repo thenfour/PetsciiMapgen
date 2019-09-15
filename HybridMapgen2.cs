@@ -2,7 +2,6 @@
 
 ADDS some stuff to the hybrid map
 - optimize processing
-- optional chroma components
 - monochrome bitmap with palette handling
 - map generation should produce a reference, not replicate every single glyph
 
@@ -30,35 +29,73 @@ namespace PetsciiMapgen
     public Size tilesPerCell;
     public int valuesPerComponent;
     public int componentsPerCell; // # of dimensions (UV + Y*size)
+    public int numYcomponents;
     public bool useChroma;
+    //int UdimIdx = -1;
+    //int VdimIdx = -1;
+    float Yweight;
+    float Uweight;
+    float Vweight;
+    long numDestCharacters;// = (int)Utils.Pow(valuesPerComponent, (uint)componentsPerCell);
 
     private HybridMap2()
     {
     }
 
-    public unsafe HybridMap2(string fontFileName, Size charSize, Size tilesPerCell, int valuesPerComponent, float Yweight, float UVweight, bool useChroma)
+    // value indices are YYYY U V
+    internal unsafe void EstablishWeights()
+    {
+      weights = ValueSet.New(componentsPerCell, 9997);
+      for (int i = 0; i < numYcomponents; ++i)
+      {
+        this.weights.Values[i] = Yweight / numYcomponents;
+      }
+      if (useChroma)
+      {
+        this.weights.Values[GetValueUIndex()] = Uweight;
+        this.weights.Values[GetValueVIndex()] = Vweight;
+      }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal int GetValueYIndex(int tx, int ty)
+    {
+      return (ty * tilesPerCell.Width) + tx;
+    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal int GetValueUIndex()
+    {
+      return numYcomponents;
+    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal int GetValueVIndex()
+    {
+      return numYcomponents + 1;
+    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal int GetHueIndex() { return GetValueVIndex(); }
+
+    public unsafe HybridMap2(string fontFileName, Size charSize, Size tilesPerCell, int valuesPerComponent, int valuesPerPartition, float Yweight, float Uweight, float Vweight, bool useChroma)
     {
       Timings timings = new Timings();
 
+      this.Yweight = Yweight;
+      this.Uweight = Uweight;
+      this.Vweight = Vweight;
       this.tilesPerCell = tilesPerCell;
       this.charSize = charSize;
+      this.useChroma = useChroma;
       this.valuesPerComponent = valuesPerComponent;
-      int numYcomponents = Utils.Product(tilesPerCell);
-      this.componentsPerCell = numYcomponents + 2; // number of dimensions
+      this.numYcomponents = Utils.Product(tilesPerCell);
+      this.componentsPerCell = numYcomponents + (useChroma ? 2 : 0); // number of dimensions
 
-      weights = Utils.NewValueSet(componentsPerCell, 9997);
-      this.weights.Values[0] = UVweight / 2;
-      this.weights.Values[1] = UVweight / 2;
-      for (int i = 0; i < numYcomponents; ++i)
-      {
-        this.weights.Values[i + 2] = Yweight / numYcomponents;
-      }
+      EstablishWeights();
 
       var srcImg = System.Drawing.Image.FromFile(fontFileName);
       var srcBmp = new Bitmap(srcImg);
       Size numSrcChars = Utils.Div(srcImg.Size, charSize);
 
-      double numDestCharacters = Utils.Pow(valuesPerComponent, (uint)componentsPerCell);
+      numDestCharacters = Utils.Pow(valuesPerComponent, (uint)componentsPerCell);
 
       Console.WriteLine("Src character size: " + Utils.ToString(charSize));
       Console.WriteLine("Src image size: " + Utils.ToString(srcBmp.Size));
@@ -112,39 +149,55 @@ namespace PetsciiMapgen
 
       // normalize all YUV seen so it will correspond nicely with permutations.
       Console.WriteLine("Normalizing values...");
+      float[] discreteValues = Utils.GetDiscreteValues(valuesPerComponent);
+      PartitionManager pm = new PartitionManager(valuesPerPartition, componentsPerCell, discreteValues, weights);
+
       foreach (var ci in charInfo)
       {
         for (int i = 0; i < componentsPerCell; ++i)
         {
           ci.actualValues.Values[i] = ranges[i].Normalize01(ci.actualValues.Values[i]);
         }
-        ci.partition = Utils.GetPartitionIndex(ci.actualValues, false);
+        ci.partition = pm.GetPartitionIndex(ci.actualValues);
       }
       timings.EndTask();
 
       var dp = charInfo.DistinctBy(a => a.partition);
+      Console.WriteLine("  Chars placed into distinct partitions: " + dp.Count());
 
       // create list of all mapkeys
       timings.EnterTask("Generating permutations and partitions");
-      var keys = Utils.Permutate(componentsPerCell, Utils.GetDiscreteValues(valuesPerComponent)); // returns sorted.
+      var keys = Utils.Permutate(componentsPerCell, discreteValues); // returns sorted.
 
       Console.WriteLine("  Key count: " + keys.Length);
 
       // generate a list of partitions and map them to keys.
       timings.EnterTask("Generating permutations");
-      var partitions = new Partition[Utils.GetPartitionCountND(componentsPerCell, false)];
+      var partitions = new Partition[pm.PartitionCountND];
       Console.WriteLine("  Partition count: " + partitions.Length);
-      var maxPartitionElementSize = Utils.GetPartitionMaxElementSize(componentsPerCell, valuesPerComponent);
-      Console.WriteLine("  Elements per partition: " + maxPartitionElementSize);
+      //var maxPartitionElementSize = pm.PartitionMaxElementSize;  //Utils.GetPartitionMaxElementSize(componentsPerCell, valuesPerComponent);
+      Console.WriteLine("  Elements per partition: " + pm.PartitionMaxElementSize);
       for (int i = 0; i < partitions.Length; ++i)
       {
-        Partition.Init(ref partitions[i], maxPartitionElementSize);
+        Partition.Init(ref partitions[i], pm.PartitionMaxElementSize);
       }
 
+
+      // TESTING
+      ValueSet vs1 = ValueSet.New(componentsPerCell, 0);
+      ValueSet vs2 = ValueSet.New(componentsPerCell, 0);
+      for (int i = 0; i < componentsPerCell; ++ i)
+      {
+        vs1.Values[i] = 1.0f;
+        vs2.Values[i] = 1.0f;
+      }
+      var tpi = pm.GetPartitionIndex(vs1);
+      //Utils.DistFrom();
+      
       // assign map keys to partitions.
       for (uint i = 0; i <  keys.Length; ++ i)
       {
-        long partitionIndex = Utils.GetPartitionIndex(keys[i], false);
+        long partitionIndex = pm.GetPartitionIndex(keys[i]); // Utils.GetPartitionIndex(keys[i], false);
         Partition.Add(ref partitions[partitionIndex], i);
       }
 
@@ -174,11 +227,12 @@ namespace PetsciiMapgen
           long imap = allMappings.Add();
           allMappings.Values[imap].icharInfo = ici;
           allMappings.Values[imap].imapKey = (uint)ikey;
-          float fdist = Utils.DistFrom(keys[ikey], ci.actualValues, this.weights);
+          float fdist = ValueSet.DistFrom(keys[ikey], ci.actualValues, this.weights, GetHueIndex());
           UInt32 dist = (UInt32)(fdist * Constants.DistanceRange);
           allMappings.Values[imap].dist = dist;
           distanceRange.Visit(dist);
           keys[ikey].MinDistFound = Math.Min(keys[ikey].MinDistFound, dist);
+          keys[ikey].Visited = true;
           ci.versatility += dist;
           ci.mapKeysVisited++;
         }
@@ -201,7 +255,8 @@ namespace PetsciiMapgen
       uint maxMinDist = 0;
       foreach (var mapKey in keys)
       {
-        maxMinDist = Math.Max(maxMinDist, mapKey.MinDistFound);
+        if (mapKey.Visited)
+          maxMinDist = Math.Max(maxMinDist, mapKey.MinDistFound);
       }
       Console.WriteLine("Max minimum distance found: {0}", maxMinDist);
 
@@ -265,6 +320,34 @@ namespace PetsciiMapgen
 
       timings.EndTask();
 
+      double missingMappings = numDestCharacters - map.Count;
+      timings.EnterTask(string.Format("Fill in any missing mappings (est: {0} / {1}%)", missingMappings, missingMappings / numDestCharacters));
+
+      int missingKeys = 0;
+
+      foreach (ValueSet k in keys)
+      {
+        CharInfo ci = null;
+        if (!map.TryGetValue(k.ID, out ci))
+        {
+          // fill in this map key! just find the closest char.
+          float minDist = distanceRange.MaxValue;
+          foreach (var ci2 in charInfo)
+          {
+            float fdist = ValueSet.DistFrom(k, ci2.actualValues, this.weights, GetHueIndex());
+            if (fdist < minDist)
+            {
+              minDist = fdist;
+              ci = ci2;
+            }
+          }
+          missingKeys++;
+          map[k.ID] = ci;
+        }
+      }
+
+      timings.EndTask();
+
       Console.WriteLine("Post-map stats:");
       Console.WriteLine("  Used char count: " + numCharsUsed);
       Console.WriteLine("  Number of unused char: " + (charInfo.Count - numCharsUsed));
@@ -280,17 +363,11 @@ namespace PetsciiMapgen
       Console.WriteLine("  Image size: [" + mapImageSize.Width + ", " + mapImageSize.Height + "]");
 
       this.mapBmp = new Bitmap(mapImageSize.Width, mapImageSize.Height, PixelFormat.Format24bppRgb);
-      int missingKeys = 0;
       using (Graphics g = Graphics.FromImage(mapBmp))
       {
         foreach (ValueSet k in keys)
         {
-          CharInfo ci = null;
-          if (!map.TryGetValue(k.ID, out ci))
-          {
-            missingKeys++;
-            continue;
-          }
+          CharInfo ci = map[k.ID];
 
           long cellY = k.ID / numCellsX;
           long cellX = k.ID - (numCellsX * cellY);
@@ -299,11 +376,12 @@ namespace PetsciiMapgen
         }
       }
 
+      Console.WriteLine("  Map keys in place: {0}", numDestCharacters - missingKeys);
       Console.WriteLine("MISSING MAP KEYS: {0} ({1}%)", missingKeys, (float)missingKeys / keys.Length * 100);
 
       mapBmp.Save(string.Format("..\\..\\img\\map-{0}-pow({1},{2}x{3}+{4}).png",
         System.IO.Path.GetFileNameWithoutExtension(fontFileName),
-        valuesPerComponent, tilesPerCell.Width, tilesPerCell.Height, useChroma ? "1" : "0"));
+        valuesPerComponent, tilesPerCell.Width, tilesPerCell.Height, useChroma ? "2" : "0"));
     }
 
     internal static HybridMap2 Load(string path, Size charSize, Size tilesPerCell, int valuesPerComponent)
@@ -320,7 +398,7 @@ namespace PetsciiMapgen
     // fills in the actual component values for this character.
     private unsafe void ProcessCharacter(Bitmap srcBmp, CharInfo ci)
     {
-      int componentIndex = 0;
+      //int componentIndex = 0;
       float charU = 0, charV = 0;
       for (int sy = 0; sy < tilesPerCell.Height; ++sy)
       {
@@ -340,7 +418,8 @@ namespace PetsciiMapgen
             {
               var c = srcBmp.GetPixel(charSize.Width * ci.srcIndex.X + tilePos.X + px, charSize.Height * ci.srcIndex.Y + tilePos.Y + py);
               float pixY, pixU, pixV;
-              Utils.RGBtoYUV(c, out pixY, out pixU, out pixV);
+              Utils.RGBtoYUV_Mapping(c, out pixY, out pixU, out pixV);
+              //Utils.RGBtoHSL(c, out pixH, out pixS, out pixL);
               tileY += pixY;
               charU += pixU;
               charV += pixV;
@@ -348,19 +427,20 @@ namespace PetsciiMapgen
             }
           }
 
-          ci.actualValues.Values[componentIndex] = tileY / tilePixelCount;// normalized to pixel
-          componentIndex++;
+          ci.actualValues.Values[GetValueYIndex(sx,sy)] = tileY / tilePixelCount;// normalized to pixel
+          //componentIndex++;
         }
       }
 
       int pixelsPerChar = Utils.Product(charSize);
-      ci.actualValues.Values[componentIndex] = charU / pixelsPerChar;
-      componentIndex++;
-      ci.actualValues.Values[componentIndex] = charV / pixelsPerChar;
-      componentIndex++;
+      if (useChroma)
+      {
+        ci.actualValues.Values[GetValueUIndex()] = charU / pixelsPerChar;
+        ci.actualValues.Values[GetValueVIndex()] = charV / pixelsPerChar;
+      }
     }
 
-    public unsafe void PETSCIIIZE(string srcImagePath, string destImagePath, bool shade)
+    public unsafe void PETSCIIIZE(string srcImagePath, string destImagePath)
     {
       Console.WriteLine("  tranfsorm image + " + srcImagePath);
       var testImg = Image.FromFile(srcImagePath);
@@ -368,18 +448,16 @@ namespace PetsciiMapgen
       Bitmap destImg = new Bitmap(testBmp.Width, testBmp.Height, PixelFormat.Format32bppArgb);
 
       int mapCellsX = mapBmp.Width / charSize.Width;
-      int numDestCharacters = (int)Utils.Pow(valuesPerComponent, (uint)componentsPerCell);
 
       using (var g = Graphics.FromImage(destImg))
       {
-        ValueSet vals = Utils.NewValueSet(componentsPerCell, 9995);
+        ValueSet vals = ValueSet.New(componentsPerCell, 9995);
         // roughly simulate the shader algo
         for (int srcCellY = 0; srcCellY < testImg.Height / charSize.Height; ++srcCellY)
         {
           for (int srcCellX = 0; srcCellX < testImg.Width / charSize.Width; ++srcCellX)
           {
             // sample in the cell to determine the "key" "ID".
-            int ID = 0;
             float charU = 0, charV = 0;// accumulate Cr and Cb
 
             for (int ty = tilesPerCell.Height - 1; ty >= 0; --ty)
@@ -394,15 +472,19 @@ namespace PetsciiMapgen
                 float cy, cu, cv;
                 Utils.RGBtoYUV(srcColor, out cy, out cu, out cv);
 
-                int tileIndex = tx + (ty * tilesPerCell.Width);
-                vals.Values[this.componentsPerCell - 1 - tileIndex] = Utils.Clamp(cy, 0, 1);
+                //int tileIndex = tx + (ty * tilesPerCell.Width);
+                //vals.Values[this.componentsPerCell - 1 - tileIndex] = Utils.Clamp(cy, 0, 1);
+                vals.Values[GetValueYIndex(tx, ty)] = Utils.Clamp(cy, 0, 1);
                 charU += cu;
                 charV += cv;
               }
             }
             int numTiles = Utils.Product(tilesPerCell);
-            vals.Values[1] = Utils.Clamp(charU / numTiles, 0, 1);
-            vals.Values[0] = Utils.Clamp(charV / numTiles, 0, 1);
+            if (useChroma)
+            {
+              vals.Values[GetValueUIndex()] = Utils.Clamp(charU / numTiles, 0, 1);
+              vals.Values[GetValueVIndex()] = Utils.Clamp(charV / numTiles, 0, 1);
+            }
 
             // figure out which "ID" this value corresponds to.
             // (val - segCenter) would give us the boundary. for example between 0-1 with 2 segments, the center vals are .25 and .75.
@@ -411,7 +493,9 @@ namespace PetsciiMapgen
             // value regardless of scale or any rounding issues.
             float halfSegCenter = 0.25f / valuesPerComponent;
 
-            for(int i = 0; i < this.componentsPerCell; ++ i )
+            //for(int i = 0; i < this.componentsPerCell; ++ i )
+            long ID = 0;
+            for (int i = this.componentsPerCell - 1; i >= 0; --i)
             {
               float val = vals.Values[i];
               val -= halfSegCenter;
@@ -427,11 +511,11 @@ namespace PetsciiMapgen
             }
 
             // ID is now calculated.
-            int mapCellY = ID / mapCellsX;
-            int mapCellX = ID - (mapCellY * mapCellsX);
+            long mapCellY = ID / mapCellsX;
+            long mapCellX = ID - (mapCellY * mapCellsX);
 
             // blit from map img.
-            Rectangle srcRect = new Rectangle(mapCellX * charSize.Width, mapCellY * charSize.Height, charSize.Width, charSize.Height);
+            Rectangle srcRect = new Rectangle((int)mapCellX * charSize.Width, (int)mapCellY * charSize.Height, charSize.Width, charSize.Height);
             g.DrawImage(mapBmp, srcCellX * charSize.Width, srcCellY * charSize.Height, srcRect, GraphicsUnit.Pixel);
           }
         }

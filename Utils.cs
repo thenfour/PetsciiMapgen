@@ -20,32 +20,10 @@ namespace PetsciiMapgen
     // values are 0-1 so distances are on avg even less. (sqrt(2)/2).
     // actual pixel values are 0-255 so i can just multiply by 255/(sqrt(2)/2) to make "real" sameness be equal here.
     // funny that's actually 360. no relation to angles/radians.
-    public static UInt32 DistanceRange { get { return 360; } }
+    public static UInt32 DistanceRange { get { return 1000; } }
 
-    public const int PartitionsPerDimension = 1;
     public const long AllocGranularity = 30000000;
-  }
-
-  // a partition is really just a big list of map keys.
-  public struct Partition
-  {
-    public uint[] keyIdxs;
-    public uint Length;
-    public bool initialized;
-
-    static public void Init(ref Partition p, long prealloc)
-    {
-      p.initialized = true;
-      p.Length = 0;
-      p.keyIdxs = new uint[prealloc];
-    }
-
-    internal static long Add(ref Partition partition, uint i)
-    {
-      partition.keyIdxs[partition.Length] = i;
-      partition.Length++;
-      return partition.Length - 1;
-    }
+    public const long AllocGranularityPartitions = 1000;
   }
 
   public class MappingArray
@@ -90,7 +68,7 @@ namespace PetsciiMapgen
 
     public CharInfo(int dimensionsPerCharacter)
     {
-      actualValues = Utils.NewValueSet(dimensionsPerCharacter, 9999);
+      actualValues = ValueSet.New(dimensionsPerCharacter, 9999);
     }
 
     public override string ToString()
@@ -151,35 +129,48 @@ namespace PetsciiMapgen
     public long ID;
     public bool Mapped;
     public uint MinDistFound;
+    public bool Visited;
 
     public fixed float Values[11];
-  }
 
-  public static class Utils
-  {
-    public static IEnumerable<TSource> DistinctBy<TSource, TKey>
-         (this IEnumerable<TSource> source, Func<TSource, TKey> keySelector)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static ValueSet New(int dimensionsPerCharacter, long id)
     {
-      HashSet<TKey> knownKeys = new HashSet<TKey>();
-      foreach (TSource element in source)
-      {
-        if (knownKeys.Add(keySelector(element)))
-        {
-          yield return element;
-        }
-      }
+      ValueSet ret = new ValueSet();
+      Init(ref ret, dimensionsPerCharacter, id);
+      return ret;
     }
-    
-    // returns squared dist
-    public unsafe static float DistFrom(ValueSet a, ValueSet b, ValueSet weights)
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void Init(ref ValueSet n, int dimensionsPerCharacter, long id)
     {
-      Debug.Assert(a.ValuesLength == b.ValuesLength);
-      Debug.Assert(a.ValuesLength == weights.ValuesLength);
+      //n.Values = new float[dimensionsPerCharacter];
+      n.ValuesLength = dimensionsPerCharacter;
+      n.ID = id;
+      n.MinDistFound = UInt32.MaxValue;
+    }
+
+    // returns squared dist
+    public unsafe static float DistFrom(ValueSet a, ValueSet b, ValueSet weights, int hueIndex)
+    {
+      //Debug.Assert((SdimIdx < HdimIdx) || (SdimIdx == -1 && HdimIdx == -1));
+      //Debug.Assert(a.ValuesLength == b.ValuesLength);
+      //Debug.Assert(a.ValuesLength == weights.ValuesLength);
       float acc = 0;
       for (int i = 0; i < a.ValuesLength; ++i)
       {
-        var m = Math.Abs(a.Values[i] - b.Values[i]);
-        acc += m * m * weights.Values[i];
+        float m = 0;
+        if (hueIndex == i)
+        {
+          // hue is circular, 0-1 where 1 == 0. at least we know the values are in range 0-1 so we can take advantage of that.
+          m = Utils.HueDifference(a.Values[i], b.Values[i]);
+        }
+        else
+        {
+          m = Math.Abs(a.Values[i] - b.Values[i]);
+        }
+        m = m * m * weights.Values[i];
+        acc += m;
       }
       return acc;
     }
@@ -198,8 +189,32 @@ namespace PetsciiMapgen
       return 0;
     }
 
+    public unsafe static string ToString(ValueSet o)
+    {
+      List<string> items = new List<string>();
+      for (int i = 0; i < o.ValuesLength; ++i) {
+        items.Add(o.Values[i].ToString());
+      }
+      return string.Format("[{0}]", string.Join(",", items));
+    }
 
+  }
 
+  public static class Utils
+  {
+    public static IEnumerable<TSource> DistinctBy<TSource, TKey>
+         (this IEnumerable<TSource> source, Func<TSource, TKey> keySelector)
+    {
+      HashSet<TKey> knownKeys = new HashSet<TKey>();
+      foreach (TSource element in source)
+      {
+        if (knownKeys.Add(keySelector(element)))
+        {
+          yield return element;
+        }
+      }
+    }
+    
     public class ValueRangeInspector
     {
       public float MinValue { get; private set; } = default(float);
@@ -222,6 +237,8 @@ namespace PetsciiMapgen
       // normalize a value based on min/max values seen, returning 0-1.
       public float Normalize01(float v)
       {
+        if (MinValue == MaxValue)
+          return 1.0f;
         return (v - MinValue) / (MaxValue - MinValue);
       }
 
@@ -230,56 +247,69 @@ namespace PetsciiMapgen
         return string.Format("[{0}, {1}]", MinValue, MaxValue);
       }
     }
-    
-    // https://stackoverflow.com/questions/359612/how-to-change-rgb-color-to-hsv
-    public static void ColorToHSV(Color color, out double hue, out double saturation, out double value)
-    {
-      int max = Math.Max(color.R, Math.Max(color.G, color.B));
-      int min = Math.Min(color.R, Math.Min(color.G, color.B));
-
-      hue = color.GetHue();
-      saturation = (max == 0) ? 0 : 1d - (1d * min / max);
-      value = max / 255d;
-    }
-
-    public static Color ColorFromHSV(double hue, double saturation, double value)
-    {
-      int hi = Convert.ToInt32(Math.Floor(hue / 60)) % 6;
-      double f = hue / 60 - Math.Floor(hue / 60);
-
-      value = value * 255;
-      int v = Convert.ToInt32(value);
-      int p = Convert.ToInt32(value * (1 - saturation));
-      int q = Convert.ToInt32(value * (1 - f * saturation));
-      int t = Convert.ToInt32(value * (1 - (1 - f) * saturation));
-
-      if (hi == 0)
-        return Color.FromArgb(255, v, t, p);
-      else if (hi == 1)
-        return Color.FromArgb(255, q, v, p);
-      else if (hi == 2)
-        return Color.FromArgb(255, p, v, t);
-      else if (hi == 3)
-        return Color.FromArgb(255, p, q, v);
-      else if (hi == 4)
-        return Color.FromArgb(255, t, p, v);
-      else
-        return Color.FromArgb(255, v, p, q);
-    }
 
     // adapted from https://www.programmingalgorithms.com/algorithm/rgb-to-ycbcr
-    public static void RGBtoYCbCr(float fr, float fg, float fb, out float y, out float u, out float v)
+    //public static void RGBtoYCbCr(float sat, float fr, float fg, float fb, out float y, out float u, out float v)
+    //{
+    //  float Y = (0.2989f * fr + 0.5866f * fg + 0.1145f * fb);
+    //  float Cb = (-0.1687f * fr - 0.3313f * fg + 0.5000f * fb);
+    //  float Cr = (0.5000f * fr - 0.4184f * fg - 0.0816f * fb);
+    //  y = Y;
+    //  Cb *= sat;
+    //  Cr *= sat;
+    //  u = Cb + .5f;
+    //  v = Cr + .5f;
+    //}
+    //public static void RGBtoYCbCr_Naive(float red, float green, float blue, out float y, out float u, out float v)
+    //{
+    //  y = (red + green + blue) / 3;
+    //  u = (red - y) / 2 + .5f;
+    //  v = (blue - y) / 2 + .5f;
+    //  y = Utils.Clamp(y, 0, 1);
+    //  u = Utils.Clamp(u, 0, 1);
+    //  v = Utils.Clamp(v, 0, 1);
+    //}
+
+    public static float HueDifference(float hue1, float hue2)
     {
-      float Y = (0.2989f * fr + 0.5866f * fg + 0.1145f * fb);
-      float Cb = (-0.1687f * fr - 0.3313f * fg + 0.5000f * fb);
-      float Cr = (0.5000f * fr - 0.4184f * fg - 0.0816f * fb);
-      y = Y;
-      u = Cb + .5f;
-      v = Cr + .5f;
+      return Math.Min(Math.Abs(hue1 - hue2), 1 - Math.Abs(hue1 - hue2));
     }
 
+    public static void RGBtoYUV_Mapping(Color rgb, out float y, out float u, out float v)
+    {
+      RGBtoYUV(rgb, out y, out u, out v);
+      ////y = (float)rgb.R / 255.0f;
+      ////u = (float)rgb.G / 255.0f;
+      ////v = (float)rgb.B / 255.0f;
+
+      //y = rgb.GetBrightness();
+      //u = rgb.GetSaturation();
+      //v = rgb.GetHue() / 360.0f;
+
+      //// the less saturated a color is, the closer i want hues to match.
+      //v *= u;
+    }
+
+
+
+    public static void RGBtoYCbCr(float red, float green, float blue, out float y, out float u, out float v)
+    {
+      // http://www.fourcc.org/fccyvrgb.php#mikes_answer
+      //Ey = 0.299R + 0.587G + 0.114B
+      //Ecr = 0.713(R - Ey) = 0.500R - 0.419G - 0.081B
+      //Ecb = 0.564(B - Ey) = -0.169R - 0.331G + 0.500B
+      y = ((0.299f * red) + (0.587f * green) + (0.114f * blue));
+      u = 0.713f * (red - y);// = 0.500R - 0.419G - 0.081B
+      v = 0.564f * (blue - y);// = 0.500R - 0.419G - 0.081B
+      u += .5f;
+      v += .5f;
+    }
     public static void RGBtoYUV(Color rgb, out float y, out float u, out float v)
     {
+      //y = rgb.GetBrightness();
+      //u = rgb.GetSaturation();
+      //v = rgb.GetHue() / 360.0f;
+
       RGBtoYCbCr(
         (float)rgb.R / 255.0f,
         (float)rgb.G / 255.0f,
@@ -289,6 +319,99 @@ namespace PetsciiMapgen
         out v
         );
     }
+
+
+    //public static void RGBtoHSL(float _R, float _G, float _B, out float H, out float S, out float L)
+    //{
+    //  float _Min = Math.Min(Math.Min(_R, _G), _B);
+    //  float _Max = Math.Max(Math.Max(_R, _G), _B);
+    //  float _Delta = _Max - _Min;
+
+    //  H = 0;
+    //  S = 0;
+    //  L = (float)((_Max + _Min) / 2.0f);
+
+    //  if (_Delta != 0)
+    //  {
+    //    if (L < 0.5f)
+    //    {
+    //      S = (float)(_Delta / (_Max + _Min));
+    //    }
+    //    else
+    //    {
+    //      S = (float)(_Delta / (2.0f - _Max - _Min));
+    //    }
+
+    //    if (_R == _Max)
+    //    {
+    //      H = (_G - _B) / _Delta;
+    //    }
+    //    else if (_G == _Max)
+    //    {
+    //      H = 2f + (_B - _R) / _Delta;
+    //    }
+    //    else if (_B == _Max)
+    //    {
+    //      H = 4f + (_R - _G) / _Delta;
+    //    }
+    //  }
+    //}
+
+    //// Convert an RGB value into an HLS value.
+    //public static void RGBtoHSL(int r, int g, int b,
+    //    out float h, out float s, out float l)
+    //{
+    //  // Convert RGB to a 0.0 to 1.0 range.
+    //  float double_r = r / 255.0f;
+    //  float double_g = g / 255.0f;
+    //  float double_b = b / 255.0f;
+
+    //  // Get the maximum and minimum RGB components.
+    //  float max = double_r;
+    //  if (max < double_g) max = double_g;
+    //  if (max < double_b) max = double_b;
+
+    //  float min = double_r;
+    //  if (min > double_g) min = double_g;
+    //  if (min > double_b) min = double_b;
+
+    //  float diff = max - min;
+    //  l = (max + min) / 2;
+    //  if (Math.Abs(diff) < 0.00001)
+    //  {
+    //    s = 0;
+    //    h = 0;  // H is really undefined.
+    //  }
+    //  else
+    //  {
+    //    if (l <= 0.5) s = diff / (max + min);
+    //    else s = diff / (2 - max - min);
+
+    //    float r_dist = (max - double_r) / diff;
+    //    float g_dist = (max - double_g) / diff;
+    //    float b_dist = (max - double_b) / diff;
+
+    //    if (double_r == max) h = b_dist - g_dist;
+    //    else if (double_g == max) h = 2 + r_dist - b_dist;
+    //    else h = 4 + g_dist - r_dist;
+
+    //    h = h * 60;
+    //    if (h < 0) h += 360;
+    //  }
+    //  h /= 360;
+    //}
+    //public static void RGBtoHSL(Color rgb, out float h, out float s, out float l)
+    //{
+    //  RGBtoHSL(
+    //    rgb.R,
+    //    rgb.G,
+    //    rgb.B,
+    //    out h,
+    //    out s,
+    //    out l
+    //    );
+    //}
+
 
     public struct RGBColorF
     {
@@ -468,11 +591,11 @@ namespace PetsciiMapgen
     // returns all possible combinations of tile values.
     // this sets the ID for the resulting ValueSets which is an ordered number,
     // required for the un-mapping algo to know where things are.
-    public unsafe static ValueSet[] Permutate(int numTiles, ValueSet discreteValuesPerTile)
+    public unsafe static ValueSet[] Permutate(int numTiles, float[] discreteValuesPerTile)
     {
       // we will just do this as if each value is a digit in a number. that's the analogy that drives this.
       // actually this symbolizes the # of digits in the result, PLUS the number of possible values per digit.
-      long numDigits = discreteValuesPerTile.ValuesLength;
+      long numDigits = discreteValuesPerTile.Length;
       long theoreticalBase = numDigits;
       long totalPermutations = Pow(numDigits, (uint)numTiles);
 
@@ -481,13 +604,13 @@ namespace PetsciiMapgen
       {
         // just like digits in a number, use % and divide to shave off "digits" one by one.
         long a = i;// the value that originates from i and we shift/mod to enumerate digits
-        InitValueSet(ref ret[i], numTiles, i);
+        ValueSet.Init(ref ret[i], numTiles, i);
         //ValueSet n = NewValueSet(numTiles, i);
         for (int d = 0; d < numTiles; ++d)
         {
           long thisIndex = a % theoreticalBase;
           a /= theoreticalBase;
-          ret[i].Values[d] = discreteValuesPerTile.Values[(int)thisIndex];
+          ret[i].Values[d] = discreteValuesPerTile[(int)thisIndex];
         }
         //ret.Add(n);
       }
@@ -511,15 +634,16 @@ namespace PetsciiMapgen
       origin = begin;
       sz = Utils.Sub(end, begin);
     }
-    public unsafe static ValueSet GetDiscreteValues(int discreteValues)
+    public unsafe static float[] GetDiscreteValues(int discreteValues)
     {
       // returning [0, 1] for 2 discrete values. [0,.5,1] for 3, etc.
       float segSpan = 1.0f / (discreteValues - 1);
-      var ret = NewValueSet(discreteValues, 9998);
+      //var ret = ValueSet.New(discreteValues, 9998);
+      float[] ret = new float[discreteValues];
       int i = 0;
       for (float v = 0; v <= 1.0001f; v += segSpan)
       {
-        ret.Values[i] = v;
+        ret[i] = v;
         ++i;
       }
       return ret;
@@ -551,94 +675,10 @@ namespace PetsciiMapgen
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static int GetPartitionCount1D(bool staggered)
+    internal static float Mix(float v0, float v1, float t)
     {
-      return staggered ? Constants.PartitionsPerDimension + 1 : Constants.PartitionsPerDimension;
+      return (1 - t) * v0 + t * v1;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static long GetPartitionID1D(bool staggered, float val)
-    {
-      float partitionSize = 1.0f / Constants.PartitionsPerDimension;
-      float spaceBegin = staggered ? -0.5f : 0.0f;
-      long ret = (long)Math.Floor((val - spaceBegin) / partitionSize);
-      long maxPartition = GetPartitionCount1D(staggered) - 1;
-      if (ret >= maxPartition)
-        ret = maxPartition;
-      return ret;
-    }
-
-    //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-    //internal static float GetPartitionSizeRel1D()
-    //{
-    //  return 1.0f / Constants.PartitionsPerDimension;
-    //}
-
-    //internal static void GetPartitionInfo1D(bool staggered, int partitionID, out float begin, out float end)
-    //{
-    //  float spaceBegin = staggered ? -0.5f : 0.0f;
-    //  float partitionSize = 1.0f / Constants.PartitionsPerDimension;
-    //  begin = spaceBegin + partitionSize * partitionID;
-    //  end = begin + partitionSize;
-    //}
-
-    // maximum number of distinct map keys which fall into this partition. NOT precise, it's a maximum used for allocating.
-    internal static long GetPartitionMaxElementSize(int dimensions, int distinctValuesPerDimension)
-    {
-      // how many distinct values are within the range
-      float partitionSize = 1.0f / Constants.PartitionsPerDimension;
-      float valuesPerPartition = partitionSize * distinctValuesPerDimension;
-      return Pow((long)Math.Ceiling(valuesPerPartition), (uint)dimensions);
-    }
-
-    internal static long GetPartitionCountND(int dimensions, bool staggered = false)
-    {
-      // each dimension can have values 0-1.
-      // but we want to support "staggered" partitions in order to reduce hard partition edges.
-      // staggered partition is just shifted half a partition away in each dimension.
-      // so in 1 dimension, and 3 partitions:
-      //
-      // non-staggered:
-      //               -0.166    0.0-----0.166----0.33-----0.5-----0.66----.833-----1.0
-      // non-staggered:           |---partition0---|---partition1---|---partition2---|
-      // staggered:      |---partition0---|---partition1---|---partition2---|---partition3---|
-      // so:
-      // 1. the total count is different between staggered & non-staggered
-      // 2. total partition space includes area outside of the valid range.
-      long ret = Pow(GetPartitionCount1D(staggered), (uint)dimensions);
-      return ret;
-    }
-
-    internal unsafe static long GetPartitionIndex(ValueSet v, bool staggered)
-    {
-      long elementsPerDimension = GetPartitionCount1D(staggered); // virtual base
-      long ret = 0;
-      for (int i = 0; i < v.ValuesLength; ++ i)
-      {
-        long id1d = GetPartitionID1D(staggered, v.Values[i]);
-        ret *= elementsPerDimension;
-        ret += id1d;
-      }
-      return ret;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static ValueSet NewValueSet(int dimensionsPerCharacter, long id)
-    {
-      ValueSet ret = new ValueSet();
-      InitValueSet(ref ret, dimensionsPerCharacter, id);
-      return ret;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void InitValueSet(ref ValueSet n, int dimensionsPerCharacter, long id)
-    {
-      //n.Values = new float[dimensionsPerCharacter];
-      n.ValuesLength = dimensionsPerCharacter;
-      n.ID = id;
-      n.MinDistFound = UInt32.MaxValue;
-    }
-
   }
 }
 
