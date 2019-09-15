@@ -150,31 +150,6 @@ namespace PetsciiMapgen
       n.MinDistFound = UInt32.MaxValue;
     }
 
-    // returns squared dist
-    public unsafe static float DistFrom(ValueSet a, ValueSet b, ValueSet weights, int hueIndex)
-    {
-      //Debug.Assert((SdimIdx < HdimIdx) || (SdimIdx == -1 && HdimIdx == -1));
-      //Debug.Assert(a.ValuesLength == b.ValuesLength);
-      //Debug.Assert(a.ValuesLength == weights.ValuesLength);
-      float acc = 0;
-      for (int i = 0; i < a.ValuesLength; ++i)
-      {
-        float m = 0;
-        if (hueIndex == i)
-        {
-          // hue is circular, 0-1 where 1 == 0. at least we know the values are in range 0-1 so we can take advantage of that.
-          m = Utils.HueDifference(a.Values[i], b.Values[i]);
-        }
-        else
-        {
-          m = Math.Abs(a.Values[i] - b.Values[i]);
-        }
-        m = m * m * weights.Values[i];
-        acc += m;
-      }
-      return acc;
-    }
-
     public unsafe static int CompareTo(ValueSet a, ValueSet other)
     {
       int d = other.ValuesLength.CompareTo(a.ValuesLength);
@@ -248,264 +223,6 @@ namespace PetsciiMapgen
       }
     }
 
-    // adapted from https://www.programmingalgorithms.com/algorithm/rgb-to-ycbcr
-    //public static void RGBtoYCbCr(float sat, float fr, float fg, float fb, out float y, out float u, out float v)
-    //{
-    //  float Y = (0.2989f * fr + 0.5866f * fg + 0.1145f * fb);
-    //  float Cb = (-0.1687f * fr - 0.3313f * fg + 0.5000f * fb);
-    //  float Cr = (0.5000f * fr - 0.4184f * fg - 0.0816f * fb);
-    //  y = Y;
-    //  Cb *= sat;
-    //  Cr *= sat;
-    //  u = Cb + .5f;
-    //  v = Cr + .5f;
-    //}
-    //public static void RGBtoYCbCr_Naive(float red, float green, float blue, out float y, out float u, out float v)
-    //{
-    //  y = (red + green + blue) / 3;
-    //  u = (red - y) / 2 + .5f;
-    //  v = (blue - y) / 2 + .5f;
-    //  y = Utils.Clamp(y, 0, 1);
-    //  u = Utils.Clamp(u, 0, 1);
-    //  v = Utils.Clamp(v, 0, 1);
-    //}
-
-    public static float HueDifference(float hue1, float hue2)
-    {
-      return Math.Min(Math.Abs(hue1 - hue2), 1 - Math.Abs(hue1 - hue2));
-    }
-
-    public static void RGBtoYUV_Mapping(Color rgb, out float y, out float u, out float v)
-    {
-      RGBtoYUV(rgb, out y, out u, out v);
-      ////y = (float)rgb.R / 255.0f;
-      ////u = (float)rgb.G / 255.0f;
-      ////v = (float)rgb.B / 255.0f;
-
-      //y = rgb.GetBrightness();
-      //u = rgb.GetSaturation();
-      //v = rgb.GetHue() / 360.0f;
-
-      //// the less saturated a color is, the closer i want hues to match.
-      //v *= u;
-    }
-
-
-
-    public static void RGBtoYCbCr(float red, float green, float blue, out float y, out float u, out float v)
-    {
-      // http://www.fourcc.org/fccyvrgb.php#mikes_answer
-      //Ey = 0.299R + 0.587G + 0.114B
-      //Ecr = 0.713(R - Ey) = 0.500R - 0.419G - 0.081B
-      //Ecb = 0.564(B - Ey) = -0.169R - 0.331G + 0.500B
-      y = ((0.299f * red) + (0.587f * green) + (0.114f * blue));
-      u = 0.713f * (red - y);// = 0.500R - 0.419G - 0.081B
-      v = 0.564f * (blue - y);// = 0.500R - 0.419G - 0.081B
-      u += .5f;
-      v += .5f;
-    }
-    public static void RGBtoYUV(Color rgb, out float y, out float u, out float v)
-    {
-      //y = rgb.GetBrightness();
-      //u = rgb.GetSaturation();
-      //v = rgb.GetHue() / 360.0f;
-
-      RGBtoYCbCr(
-        (float)rgb.R / 255.0f,
-        (float)rgb.G / 255.0f,
-        (float)rgb.B / 255.0f,
-        out y,
-        out u,
-        out v
-        );
-    }
-
-
-    //public static void RGBtoHSL(float _R, float _G, float _B, out float H, out float S, out float L)
-    //{
-    //  float _Min = Math.Min(Math.Min(_R, _G), _B);
-    //  float _Max = Math.Max(Math.Max(_R, _G), _B);
-    //  float _Delta = _Max - _Min;
-
-    //  H = 0;
-    //  S = 0;
-    //  L = (float)((_Max + _Min) / 2.0f);
-
-    //  if (_Delta != 0)
-    //  {
-    //    if (L < 0.5f)
-    //    {
-    //      S = (float)(_Delta / (_Max + _Min));
-    //    }
-    //    else
-    //    {
-    //      S = (float)(_Delta / (2.0f - _Max - _Min));
-    //    }
-
-    //    if (_R == _Max)
-    //    {
-    //      H = (_G - _B) / _Delta;
-    //    }
-    //    else if (_G == _Max)
-    //    {
-    //      H = 2f + (_B - _R) / _Delta;
-    //    }
-    //    else if (_B == _Max)
-    //    {
-    //      H = 4f + (_R - _G) / _Delta;
-    //    }
-    //  }
-    //}
-
-    //// Convert an RGB value into an HLS value.
-    //public static void RGBtoHSL(int r, int g, int b,
-    //    out float h, out float s, out float l)
-    //{
-    //  // Convert RGB to a 0.0 to 1.0 range.
-    //  float double_r = r / 255.0f;
-    //  float double_g = g / 255.0f;
-    //  float double_b = b / 255.0f;
-
-    //  // Get the maximum and minimum RGB components.
-    //  float max = double_r;
-    //  if (max < double_g) max = double_g;
-    //  if (max < double_b) max = double_b;
-
-    //  float min = double_r;
-    //  if (min > double_g) min = double_g;
-    //  if (min > double_b) min = double_b;
-
-    //  float diff = max - min;
-    //  l = (max + min) / 2;
-    //  if (Math.Abs(diff) < 0.00001)
-    //  {
-    //    s = 0;
-    //    h = 0;  // H is really undefined.
-    //  }
-    //  else
-    //  {
-    //    if (l <= 0.5) s = diff / (max + min);
-    //    else s = diff / (2 - max - min);
-
-    //    float r_dist = (max - double_r) / diff;
-    //    float g_dist = (max - double_g) / diff;
-    //    float b_dist = (max - double_b) / diff;
-
-    //    if (double_r == max) h = b_dist - g_dist;
-    //    else if (double_g == max) h = 2 + r_dist - b_dist;
-    //    else h = 4 + g_dist - r_dist;
-
-    //    h = h * 60;
-    //    if (h < 0) h += 360;
-    //  }
-    //  h /= 360;
-    //}
-    //public static void RGBtoHSL(Color rgb, out float h, out float s, out float l)
-    //{
-    //  RGBtoHSL(
-    //    rgb.R,
-    //    rgb.G,
-    //    rgb.B,
-    //    out h,
-    //    out s,
-    //    out l
-    //    );
-    //}
-
-
-    public struct RGBColorF
-    {
-      public double r;
-      public double g;
-      public double b;
-    }
-
-    [StructLayout(LayoutKind.Explicit)]
-    public struct RGBColor
-    {
-      [FieldOffset(0)] public byte r;
-      [FieldOffset(1)] public byte g;
-      [FieldOffset(2)] public byte b;
-    }
-    public static double ColorantFromByte(byte b)
-    {
-      return ((double)b) / 255.0;
-    }
-    public static byte ByteFromColorant(double c)
-    {
-      int i = (int)(c * 255.0f);
-      if (i < 0) i = 0;
-      if (i > 255) i = 255;
-      return (byte)i;
-    }
-    public static void TransformPixels(Bitmap srcA, Func<RGBColorF, RGBColorF> trans)
-    {
-      Rectangle roi = new Rectangle(0, 0, srcA.Width, srcA.Height);
-      BitmapData dataA = srcA.LockBits(roi, ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
-
-      unsafe
-      {
-        byte* ptrA = (byte*)dataA.Scan0;
-
-        for (int y = 0; y < dataA.Height; ++y)
-        {
-          for (int x = 0; x < dataA.Width * 3; x += 3)
-          {
-            RGBColorF c = new RGBColorF
-            {
-              r = ColorantFromByte(ptrA[x]),
-              g = ColorantFromByte(ptrA[x+1]),
-              b = ColorantFromByte(ptrA[x+2])
-            };
-
-            c = trans(c);
-
-            ptrA[x] = ByteFromColorant(c.r);
-            ptrA[x+1] = ByteFromColorant(c.g);
-            ptrA[x+2] = ByteFromColorant(c.b);
-          }
-          ptrA += dataA.Stride;
-        }
-      }
-      srcA.UnlockBits(dataA);
-    }
-
-    public static void Pixellate(Bitmap src, Size cellSize)
-    {
-      Rectangle roi = new Rectangle(0, 0, src.Width, src.Height);
-      BitmapData data = src.LockBits(roi, ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
-
-      unsafe
-      {
-        for (int y = 0; y < data.Height; y += cellSize.Height)
-        {
-          for (int x = 0; x < data.Width; x += cellSize.Width)
-          {
-            byte* pCellScanLine = (byte*)data.Scan0;
-            pCellScanLine += y * data.Stride;
-            RGBColor* pCell = (RGBColor*)pCellScanLine;
-            pCell += x;
-
-            // color this tile using the upper-left pixel.
-            for (int py = 0; py < cellSize.Height; ++ py)
-            {
-              if ((y + py) >= data.Height)
-                break;
-              for (int px = 0; px < cellSize.Width; ++ px)
-              {
-                byte* pScanLine = pCellScanLine + (data.Stride * py);
-                RGBColor* pPix = (RGBColor*)pScanLine;
-                pPix += px + x;
-                *pPix = *pCell;
-              }
-            }
-
-          }
-        }
-      }
-      src.UnlockBits(data);
-    }
-
     public static float Clamp(float v, float m, float x)
     {
       if (v < m) return m;
@@ -561,10 +278,6 @@ namespace PetsciiMapgen
     public static string ToString(Point s)
     {
       return string.Format("[{0},{1}]", s.X, s.Y);
-    }
-    public static double ToGrayscale(Color c)
-    {
-      return ((0.3 * c.R) + (0.59 * c.G) + (0.11 * c.B)) / 256;
     }
     public static System.Drawing.Size Div(System.Drawing.Size a, System.Drawing.Size b)
     {
@@ -647,6 +360,17 @@ namespace PetsciiMapgen
         ++i;
       }
       return ret;
+
+      // return centers of partitions.
+      //float[] ret = new float[discreteValues];
+      //float segSpan = 1.0f / discreteValues;
+      //int i = 0;
+      //for (float v = 0; v < 1.0f; v += segSpan)
+      //{
+      //  ret[i] = v + segSpan / 2;
+      //  ++i;
+      //}
+      //return ret;
     }
 
     internal unsafe static void AssertSortedByDimension(ValueSet[] keys, int lastDimensionIndex)
