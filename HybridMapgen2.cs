@@ -1,11 +1,4 @@
-﻿/*
-
-- monochrome bitmap with palette handling
-- map generation should produce a reference, not replicate every single glyph
-
- */
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -57,10 +50,11 @@ namespace PetsciiMapgen
     public unsafe float CalcCellDistance(ValueSet a, ValueSet b)
     {
       // total up color distances for all luma cells.
-      float au = a.Values[GetValueUIndex()];
-      float av = a.Values[GetValueVIndex()];
-      float bu = b.Values[GetValueUIndex()];
-      float bv = b.Values[GetValueVIndex()];
+      // these colorants need to be scaled back to their "native" form.
+      float au = ColorUtils.RestoreU(a.Values[GetValueUIndex()]);
+      float av = ColorUtils.RestoreV(a.Values[GetValueVIndex()]);
+      float bu = ColorUtils.RestoreU(b.Values[GetValueUIndex()]);
+      float bv = ColorUtils.RestoreV(b.Values[GetValueVIndex()]);
       float acc = 0.0f;
       float m = Math.Abs(au - bu);
       acc += m * m * numYcomponents;
@@ -68,7 +62,7 @@ namespace PetsciiMapgen
       acc += m * m * numYcomponents;
       for (int i = 0; i < numYcomponents; ++ i)
       {
-        m = Math.Abs(a.Values[i] - b.Values[i]);
+        m = Math.Abs(ColorUtils.RestoreY(a.Values[i]) - ColorUtils.RestoreY(b.Values[i]));
         acc += m * m * lumaBias;
       }
       return acc;
@@ -212,16 +206,6 @@ namespace PetsciiMapgen
         Partition.Init(ref partitions[i], pm.PartitionMaxElementSize);
       }
 
-
-      // TESTING
-      ValueSet vs1 = ValueSet.New(componentsPerCell, 0);
-      ValueSet vs2 = ValueSet.New(componentsPerCell, 0);
-      for (int i = 0; i < componentsPerCell; ++ i)
-      {
-        vs1.Values[i] = 1.0f;
-        vs2.Values[i] = 1.0f;
-      }
-      var tpi = pm.GetPartitionIndex(vs1);
       
       // assign map keys to partitions.
       for (uint i = 0; i <  keys.Length; ++ i)
@@ -270,7 +254,7 @@ namespace PetsciiMapgen
       Console.WriteLine("  Remaining elements: {0}", allMappings.Length);
 
       // some versatility adjustment and normalization
-      uint maxCharVersatility = 0;
+      ulong maxCharVersatility = 0;
       foreach (CharInfo ci in charInfo)
       {
         ci.versatility = ci.versatility * Constants.CharVersatilityRange / ci.mapKeysVisited;
@@ -297,12 +281,12 @@ namespace PetsciiMapgen
       Console.WriteLine("  calculating sort metric");
       for (int i = 0; i < allMappings.Length; ++i)
       {
-        uint dist = allMappings.Values[i].dist;
+        ulong dist = allMappings.Values[i].dist;
         float fv = ((float)charInfo[(int)allMappings.Values[i].icharInfo].versatility) / maxCharVersatility;
         fv = 1.0f - fv;
-        int vers = (int)(fv * Constants.DistanceRange);
+        ulong vers = (ulong)(fv * Constants.DistanceRange);
 
-        allMappings.Values[i].dist = (uint)(dist * Constants.DistanceRange + vers);// / 256;
+        allMappings.Values[i].dist = (ulong)(dist * Constants.DistanceRange + vers);// / 256;
       }
 
       Console.WriteLine("   {0} items removed", itemsRemoved);
@@ -383,6 +367,29 @@ namespace PetsciiMapgen
       Console.WriteLine("  Number of chars used exactly once: " + numCharsUsedOnce);
       Console.WriteLine("  Most-used char: " + mostUsedChar + " (" + mostUsedChar.usages + ") usages");
       Console.WriteLine("  Number of total char repetitions: " + numRepetitions);
+
+
+      // massive dump.
+      //Console.WriteLine("ALL CHAR INFO:");
+      //foreach (CharInfo ci in charInfo)
+      //{
+      //  Console.WriteLine("  src:{0} fg:{5} bg:{6} = {1}, p{2}, keysvisited:{3}, vers:{4}, usages:{7}", ci.srcIndex, ValueSet.ToString(ci.actualValues), ci.partition,
+      //    ci.mapKeysVisited, ci.versatility, ci.ifg, ci.ibg, ci.usages);
+      //}
+
+      //Console.WriteLine("ALL MAPPING INFO:");
+      //foreach (var k in keys)
+      //{
+      //  CharInfo ci = null;
+      //  if (!map.TryGetValue(k.ID, out ci))
+      //  {
+      //    continue;
+      //  }
+
+      //  Console.WriteLine("  id:{1} key:{0} mindist:{2} mappedtoCharSrc:{3},fg:{4},bg:{5}",
+      //    ValueSet.ToString(k), k.ID, k.MinDistFound, ci.srcIndex, ci.ifg, ci.ibg);
+      //}
+
 
       if (outputFullMap)
       {
@@ -579,6 +586,10 @@ namespace PetsciiMapgen
 
               // monochrome palette processingc
               c = SelectColor(c, ifg, ibg);
+              if (c == Palettes.C64[2])
+              {
+                int a = 0;
+              }
 
               float pixY, pixU, pixV;
               ColorUtils.ToMapping(c, out pixY, out pixU, out pixV);

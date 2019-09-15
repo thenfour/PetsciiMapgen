@@ -69,6 +69,7 @@
   <ItemGroup>
     <Compile Include="Color.cs" />
     <Compile Include="HybridMapgen2.cs" />
+    <Compile Include="Palettes.cs" />
     <Compile Include="Partitions.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -29,6 +29,19 @@ namespace PetsciiMapgen
       u = Utils.Clamp(u, 0, 1);
       v = Utils.Clamp(v, 0, 1);
     }
+
+    public static float RestoreY(float y)
+    {
+      return y * 100.0f;
+    }
+    public static float RestoreU(float u)
+    {
+      return (u - .5f) * 255;
+    }
+    public static float RestoreV(float v)
+    {
+      return (v - .5f) * 255;
+    }
     //public static float ColorDist(float y1, float u1, float v1, float y2, float u2, float v2)
     //{
     //  //var laba = new ColorMine.ColorSpaces.Lab { L = y1, A = u1, B = v1 };

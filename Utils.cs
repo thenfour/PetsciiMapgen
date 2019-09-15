@@ -20,7 +20,7 @@ namespace PetsciiMapgen
     // values are 0-1 so distances are on avg even less. (sqrt(2)/2).
     // actual pixel values are 0-255 so i can just multiply by 255/(sqrt(2)/2) to make "real" sameness be equal here.
     // funny that's actually 360. no relation to angles/radians.
-    public static UInt32 DistanceRange { get { return 1000; } }
+    public static ulong DistanceRange { get { return 1000; } }
 
     public const long AllocGranularity = 30000000;
     public const long AllocGranularityPartitions = 1000;
@@ -62,7 +62,7 @@ namespace PetsciiMapgen
     public System.Drawing.Point srcIndex;
     public ValueSet actualValues;// N-dimension values
     public int usages = 0;
-    public UInt32 versatility;
+    public ulong versatility;
     public UInt32 mapKeysVisited = 0;
     public long partition; // which spatial partition does this character fit into?
     public int? ifg;// only for mono palette processing, index to palette
@@ -84,7 +84,7 @@ namespace PetsciiMapgen
   {
     public UInt32 imapKey; // a set of tile values
     public UInt32 icharInfo;
-    public UInt32 dist;
+    public ulong dist;
   }
 
   public class Timings
@@ -171,7 +171,7 @@ namespace PetsciiMapgen
     {
       List<string> items = new List<string>();
       for (int i = 0; i < o.ValuesLength; ++i) {
-        items.Add(o.Values[i].ToString());
+        items.Add(o.Values[i].ToString("0.00"));
       }
       return string.Format("[{0}]", string.Join(",", items));
     }
@@ -192,16 +192,16 @@ namespace PetsciiMapgen
     public static unsafe Color GetPixel(this BitmapData data, long x, long y)
     {
       byte* p = data.GetRGBPointer(x, y);
-      return Color.FromArgb(p[0], p[1], p[2]);
+      return Color.FromArgb(p[2], p[1], p[0]);
     }
 
     // assumes 24 bits per pixel RGB
     public static unsafe void SetPixel(this BitmapData data, long x, long y, Color c)
     {
       byte* p = data.GetRGBPointer(x, y);
-      p[0] = c.R;
+      p[2] = c.R;
       p[1] = c.G;
-      p[2] = c.B;
+      p[0] = c.B;
     }
 
     public static IEnumerable<TSource> DistinctBy<TSource, TKey>
@@ -378,7 +378,6 @@ namespace PetsciiMapgen
     {
       // returning [0, 1] for 2 discrete values. [0,.5,1] for 3, etc.
       float segSpan = 1.0f / (discreteValues - 1);
-      //var ret = ValueSet.New(discreteValues, 9998);
       float[] ret = new float[discreteValues];
       int i = 0;
       for (float v = 0; v <= 1.0001f; v += segSpan)
