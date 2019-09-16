@@ -40,6 +40,8 @@ namespace PetsciiMapgen
 
     public Color TransformColor(int cellX, int cellY, Color c)
     {
+      if (c == Color.Black || c == Color.White)
+        return c;// don't dither these; they're useful to be pure!
       cellX &= 7;
       cellY &= 7;
       double p = (matrix[cellX, cellY] - .5) * strength;

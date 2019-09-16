@@ -86,7 +86,7 @@ namespace PetsciiMapgen
       Console.WriteLine("  Partition mgr // SpaceBegin: " + SpaceBegin);
       Console.WriteLine("  Partition mgr // SpaceEnd: " + SpaceEnd);
       Console.WriteLine("  Partition mgr // SpaceSize: " + SpaceSize);
-      Console.WriteLine("  Partition mgr // PartitionMaxElementSize: " + PartitionMaxElementSize);
+      Console.WriteLine("  Partition mgr // PartitionMaxElementSize: " + PartitionMaxElementSize.ToString("N0"));
       Console.WriteLine("  Partition mgr // PartitionCountND: " + PartitionCountND);
       Console.WriteLine("  Partition mgr // Distinct values: [" + string.Join(",", DistinctValues) + "]");
     }

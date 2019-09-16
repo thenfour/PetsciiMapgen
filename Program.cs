@@ -16,30 +16,14 @@ namespace PetsciiMapgen
   {
     static void Main(string[] args)
     {
-      ColorMine.ColorSpaces.Lab realKeyColor = new ColorMine.ColorSpaces.Lab();
-
-      realKeyColor.L = 0;
-      realKeyColor.A = -127;
-      realKeyColor.B = -200;
-      var rgb = realKeyColor.ToRgb();
-      var lab2 = rgb.To<ColorMine.ColorSpaces.Lab>();
-      rgb = realKeyColor.ToRgb();
-
-      var rgb2 = new ColorMine.ColorSpaces.Rgb();
-      rgb2.R = 255;
-      rgb2.G = 255;
-      rgb2.B = 255;
-      var lab3 = rgb2.To<ColorMine.ColorSpaces.Lab>();
-
       Timings t = new Timings();
       t.EnterTask("--- MAIN PROCESSING");
 
       //var map = new HybridMap2("..\\..\\img\\fonts\\pantoneswatches8x8.png", new Size(8, 8),
       //new Size(1, 1), 12, 12, 2.0f, true, null, true, true);
 
-      var map = new HybridMap2("..\\..\\img\\fonts\\emojidark16.png", new Size(16, 16),
-        new Size(2, 2), 8, 4, 1.5f, true, null, true, true, 0, new Bayer8DitherProvider(1));
-
+      //var map = new HybridMap2("..\\..\\img\\fonts\\emojidark12.png", new Size(12, 12),
+        //new Size(1, 1), 512, 3, 1.5f, false, null, true, true, 0, new Bayer8DitherProvider(0));
 
       //var map = new HybridMap2("..\\..\\img\\fonts\\mariotiles4.png", new Size(16, 16),
       //  new Size(2, 2), 16, 2, 1.5f, false, null, true, true, 1);
@@ -52,8 +36,8 @@ namespace PetsciiMapgen
       //var map = new HybridMap2("..\\..\\img\\fonts\\test2.png", new Size(1, 1),
       //  new Size(1, 1), 3, 3, 1.0f, true, null, true, true);
 
-      //var map = new HybridMap2("..\\..\\img\\fonts\\c64opt160.png", new Size(8, 8),
-      //new Size(2, 2), 8, 4, 1.4f, true, Palettes.C64, true, true);
+      var map = new HybridMap2("..\\..\\img\\fonts\\c64opt160.png", new Size(8, 8),
+      new Size(3, 3), 4, 2, 1.4f, true, Palettes.C64, true, true);
 
       //var map = new HybridMap2("..\\..\\img\\fonts\\VGAboxonly45.png", new Size(8, 16),
       //  new Size(2, 2), 8, 4, 1.5f, true, Palettes.RGBPrimariesHalftone16, true, true);
@@ -68,7 +52,7 @@ namespace PetsciiMapgen
       t.EnterTask("processing images");
 
       map.ProcessImage("..\\..\\img\\circle.png", "..\\..\\img\\testdest-circle.png");
-      map.ProcessImage("..\\..\\img\\sega.png", "..\\..\\img\\testdest-sega.png");
+      //map.ProcessImage("..\\..\\img\\sega.png", "..\\..\\img\\testdest-sega.png");
       map.ProcessImage("..\\..\\img\\grad.png", "..\\..\\img\\testdest-grad.png");
 
       map.ProcessImage("..\\..\\img\\airplane.jpg", "..\\..\\img\\testdest-airplane.png");
