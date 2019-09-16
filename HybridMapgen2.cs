@@ -15,6 +15,7 @@ namespace PetsciiMapgen
   public class HybridMap2
   {
     public Bitmap mapBmp;
+    public Size charSizeWithPadding;
     public Size charSize;
     public Size lumaTiles;
     public int valuesPerComponent;
@@ -24,6 +25,7 @@ namespace PetsciiMapgen
     float lumaBias;
     long numDestCharacters;
     Color[] monoPalette = null;
+    int fontLeftTopPadding;
 
     private HybridMap2()
     {
@@ -93,10 +95,11 @@ namespace PetsciiMapgen
 
     public unsafe HybridMap2(string fontFileName, Size charSize,
       Size lumaTiles, int valuesPerComponent, int valuesPerPartition, float lumaBias, bool useChroma,
-      Color[] monoPalette, bool outputFullMap, bool outputRefMapAndFont)
+      Color[] monoPalette, bool outputFullMap, bool outputRefMapAndFont, int fontLeftTopPadding = 0)
     {
       Timings timings = new Timings();
 
+      this.fontLeftTopPadding = fontLeftTopPadding;
       this.monoPalette = monoPalette;
       this.lumaBias = lumaBias;
       this.lumaTiles = lumaTiles;
@@ -108,11 +111,13 @@ namespace PetsciiMapgen
 
       var srcImg = System.Drawing.Image.FromFile(fontFileName);
       var srcBmp = new Bitmap(srcImg);
-      Size numSrcChars = Utils.Div(srcImg.Size, charSize);
+      this.charSizeWithPadding = new Size(charSize.Width + fontLeftTopPadding, charSize.Height + fontLeftTopPadding);
+      Size numSrcChars = Utils.Div(srcImg.Size, charSizeWithPadding);
 
       numDestCharacters = Utils.Pow(valuesPerComponent, (uint)componentsPerCell);
 
       Console.WriteLine("Src character size: " + Utils.ToString(charSize));
+      Console.WriteLine("Src character size with padding: " + Utils.ToString(charSizeWithPadding));
       Console.WriteLine("Src image size: " + Utils.ToString(srcBmp.Size));
       Console.WriteLine("Number of source chars: " + Utils.ToString(numSrcChars));
       Console.WriteLine("Number of source chars (1d): " + Utils.Product(numSrcChars));
@@ -123,7 +128,7 @@ namespace PetsciiMapgen
       // fill in char source info (actual tile values)
       timings.EnterTask("Analyze incoming font");
       var charInfo = new List<CharInfo>();
-      int pixelsPerChar = Utils.Product(charSize);
+      //int pixelsPerChar = Utils.Product(charSize);
 
       // used for normalization later
       List<Utils.ValueRangeInspector> ranges = new List<Utils.ValueRangeInspector>();
@@ -348,7 +353,8 @@ namespace PetsciiMapgen
       foreach (ValueSet k in keys)
       {
         CharInfo ci = null;
-        if (!map.TryGetValue(k.ID, out ci))
+        map.TryGetValue(k.ID, out ci);
+        if (ci == null)
         {
           // fill in this map key! just find the closest char.
           double minDist = distanceRange.MaxValue;
@@ -430,7 +436,8 @@ namespace PetsciiMapgen
       foreach (ValueSet k in keys)
       {
         CharInfo ci = null;
-        if (!map.TryGetValue(k.ID, out ci))
+        map.TryGetValue(k.ID, out ci);
+        if (ci == null)
         {
           continue;
         }
@@ -442,7 +449,7 @@ namespace PetsciiMapgen
         {
           for (int x = 0; x < charSize.Width; ++x)
           {
-            Color c = srcData.GetPixel((ci.srcIndex.X * charSize.Width) + x, (ci.srcIndex.Y * charSize.Height) + y);
+            Color c = srcData.GetPixel((ci.srcIndex.X * charSizeWithPadding.Width + fontLeftTopPadding) + x, (ci.srcIndex.Y * charSizeWithPadding.Height + fontLeftTopPadding) + y);
             c = SelectColor(c, ci.ifg, ci.ibg);
             destData.SetPixel((cellX * charSize.Width) + x, (cellY * charSize.Height) + y, c);
           }
@@ -459,6 +466,7 @@ namespace PetsciiMapgen
 
     internal long HashCharInfo(CharInfo ci)
     {
+      if (ci == null) return 0;
       long ret = (ci.srcIndex.Y * charSize.Height) + ci.srcIndex.X; // linear char index.
       if (ci.ifg.HasValue)
       {
@@ -497,6 +505,8 @@ namespace PetsciiMapgen
       for (int ichar = 0; ichar < distinctChars.Length; ++ ichar)
       {
         CharInfo ci = distinctChars[ichar].Value;
+        if (ci == null)
+          continue;
         ci.index = ichar;
 
         long cellY = ichar / fontImgWidthChars;
@@ -506,7 +516,9 @@ namespace PetsciiMapgen
         {
           for (int x = 0; x < charSize.Width; ++x)
           {
-            Color c = srcFontData.GetPixel((ci.srcIndex.X * charSize.Width) + x, (ci.srcIndex.Y * charSize.Height) + y);
+            Color c = srcFontData.GetPixel(
+              (ci.srcIndex.X * charSizeWithPadding.Width) + x + fontLeftTopPadding,
+              (ci.srcIndex.Y * charSizeWithPadding.Height) + y + fontLeftTopPadding);
             //Color c = srcFontBmp.GetPixel((ci.srcIndex.X * charSize.Width) + x, (ci.srcIndex.Y * charSize.Height) + y);
             c = SelectColor(c, ci.ifg, ci.ibg);
             destFontData.SetPixel((cellX * charSize.Width) + x, (cellY * charSize.Height) + y, c);
@@ -595,7 +607,9 @@ namespace PetsciiMapgen
           {
             for (int px = 0; px < tileSize.Width; ++px)
             {
-              var c = srcBmp.GetPixel(charSize.Width * ci.srcIndex.X + tilePos.X + px, charSize.Height * ci.srcIndex.Y + tilePos.Y + py);
+              var c = srcBmp.GetPixel(
+                charSize.Width * ci.srcIndex.X + tilePos.X + px + fontLeftTopPadding * ci.srcIndex.X + fontLeftTopPadding,
+                charSize.Height * ci.srcIndex.Y + tilePos.Y + py + fontLeftTopPadding * ci.srcIndex.Y + fontLeftTopPadding);
 
               // monochrome palette processingc
               c = SelectColor(c, ifg, ibg);
