@@ -259,6 +259,12 @@ namespace PetsciiMapgen
       if (v > x) return x;
       return v;
     }
+    public static int Clamp(int v, int m, int x)
+    {
+      if (v < m) return m;
+      if (v > x) return x;
+      return v;
+    }
 
     public static void Multiply(Bitmap srcA/* dest */, Bitmap srcB)
     {

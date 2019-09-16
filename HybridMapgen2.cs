@@ -22,9 +22,13 @@ namespace PetsciiMapgen
     public int componentsPerCell; // # of dimensions (UV + Y*size)
     public int numYcomponents;
     public bool useChroma;
+    public IDitherProvider ditherProvider;
     float lumaBias;
     long numDestCharacters;
+
     Color[] monoPalette = null;
+    public IPaletteProvider paletteProvider;
+
     int fontLeftTopPadding;
 
     private HybridMap2()
@@ -95,12 +99,16 @@ namespace PetsciiMapgen
 
     public unsafe HybridMap2(string fontFileName, Size charSize,
       Size lumaTiles, int valuesPerComponent, int valuesPerPartition, float lumaBias, bool useChroma,
-      Color[] monoPalette, bool outputFullMap, bool outputRefMapAndFont, int fontLeftTopPadding = 0)
+      IPaletteProvider paletteProvider, bool outputFullMap, bool outputRefMapAndFont,
+      int fontLeftTopPadding = 0, IDitherProvider ditherProvider = null)
     {
       Timings timings = new Timings();
 
+      this.ditherProvider = ditherProvider;
+      if (this.ditherProvider != null)
+        this.ditherProvider.DiscreteTargetValues = valuesPerComponent;
       this.fontLeftTopPadding = fontLeftTopPadding;
-      this.monoPalette = monoPalette;
+      this.monoPalette = null;// TODO monoPalette;
       this.lumaBias = lumaBias;
       this.lumaTiles = lumaTiles;
       this.charSize = charSize;
@@ -186,6 +194,8 @@ namespace PetsciiMapgen
           }
         }
       }
+
+      Console.WriteLine("Number of source chars after palettization: " + charInfo.Count);
 
       Console.WriteLine("RANGES encountered:");
       for (int i = 0; i < componentsPerCell; ++i)
@@ -326,23 +336,6 @@ namespace PetsciiMapgen
         if (map.Count == numDestCharacters)
           break;
       }
-
-      int numCharsUsed = 0;
-      int numCharsUsedOnce = 0;
-      CharInfo mostUsedChar = null;
-      int numRepetitions = 0;
-      foreach (var ci in charInfo)
-      {
-        if (mostUsedChar == null || mostUsedChar.usages < ci.usages)
-          mostUsedChar = ci;
-        if (ci.usages > 0)
-          numCharsUsed++;
-        if (ci.usages == 1)
-          numCharsUsedOnce++;
-        if (ci.usages > 1)
-          numRepetitions += ci.usages - 1;
-      }
-
       timings.EndTask();
 
       double missingMappings = numDestCharacters - map.Count;
@@ -369,8 +362,28 @@ namespace PetsciiMapgen
           }
           missingKeys++;
           map[k.ID] = ci;
+          keys[k.ID].Mapped = true;
+          ci.usages++;
         }
       }
+
+      int numCharsUsed = 0;
+      int numCharsUsedOnce = 0;
+      CharInfo mostUsedChar = null;
+      int numRepetitions = 0;
+      foreach (var ci in charInfo)
+      {
+        if (mostUsedChar == null || mostUsedChar.usages < ci.usages)
+          mostUsedChar = ci;
+        if (ci.usages > 0)
+          numCharsUsed++;
+        if (ci.usages == 1)
+          numCharsUsedOnce++;
+        if (ci.usages > 1)
+          numRepetitions += ci.usages - 1;
+      }
+
+
 
       timings.EndTask();
 
@@ -610,6 +623,10 @@ namespace PetsciiMapgen
               var c = srcBmp.GetPixel(
                 charSize.Width * ci.srcIndex.X + tilePos.X + px + fontLeftTopPadding * ci.srcIndex.X + fontLeftTopPadding,
                 charSize.Height * ci.srcIndex.Y + tilePos.Y + py + fontLeftTopPadding * ci.srcIndex.Y + fontLeftTopPadding);
+
+              // dithering.
+              if (ditherProvider != null)
+                c = ditherProvider.TransformColor(ci.srcIndex.X * lumaTiles.Width + sx, ci.srcIndex.Y + lumaTiles.Height, c);
 
               // monochrome palette processingc
               c = SelectColor(c, ifg, ibg);
