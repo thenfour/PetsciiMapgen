@@ -45,45 +45,41 @@ namespace PetsciiMapgen
       return numYcomponents + 1;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsBlackOrWhite(double L)
-    {
-      return L < 1 || L > 99;
-    }
-
     // key is NOT guaranteed to actually be valid CIELAB colors. they are sorta
     // estimates or something.
     // actual IS guaranteed. so in order to actually take a distance, we have to
     // convert key to real colors.
     public unsafe double CalcCellDistance(ValueSet key, ValueSet actual)
     {
-      // total up color distances for all luma cells.
-      // these colorants need to be scaled back to their "native" form.
-      //float au = ColorUtils.RestoreU(key.Values[GetValueUIndex()]);
-      //float av = ColorUtils.RestoreV(key.Values[GetValueVIndex()]);
       double actualU = ColorUtils.RestoreU(actual.Values[GetValueUIndex()]);
       double actualV = ColorUtils.RestoreV(actual.Values[GetValueVIndex()]);
-      ColorMine.ColorSpaces.Lab realKeyColor = new ColorMine.ColorSpaces.Lab();
-      realKeyColor.A = ColorUtils.RestoreU(key.Values[GetValueUIndex()]);
-      realKeyColor.B = ColorUtils.RestoreV(key.Values[GetValueVIndex()]);
+      double keyU = ColorUtils.RestoreU(key.Values[GetValueUIndex()]);
+      double keyV = ColorUtils.RestoreV(key.Values[GetValueVIndex()]);
       double acc = 0.0f;
+      double m;
       for (int i = 0; i < numYcomponents; ++ i)
       {
-        realKeyColor.L = ColorUtils.RestoreY(key.Values[i]);
-        //var rgb = realKeyColor.ToRgb();
-        //realKeyColor = rgb.To<ColorMine.ColorSpaces.Lab>();
+        double keyY = ColorUtils.RestoreY(key.Values[i]);
 
-        double actualY = ColorUtils.RestoreY(actual.Values[i]);
-        double kA = IsBlackOrWhite(realKeyColor.L) ? .5 : realKeyColor.A;
-        double kB = IsBlackOrWhite(realKeyColor.L) ? .5 : realKeyColor.B;
+        m = Math.Abs(keyY - ColorUtils.RestoreY(actual.Values[i]));
+        double tileAcc = m * m * lumaBias;
 
-        double m;
-        m = Math.Abs(realKeyColor.L - actualY);
-        acc += m * m * lumaBias;
-        m = Math.Abs(actualU - realKeyColor.A);
-        acc += m * m;
-        m = Math.Abs(actualV - realKeyColor.B);
-        acc += m * m;
+        if (keyY < 1 || keyY > 99)// black / white processing where UV are meaningless.
+        {
+          m = Math.Abs(actualU);
+          tileAcc += m * m;
+          m = Math.Abs(actualV);
+          tileAcc += m * m;
+        }
+        else
+        {
+          m = Math.Abs(actualU - keyU);
+          tileAcc += m * m;
+          m = Math.Abs(actualV - keyV);
+          tileAcc += m * m;
+        }
+
+        acc += Math.Sqrt(tileAcc);
       }
       return acc;
     }

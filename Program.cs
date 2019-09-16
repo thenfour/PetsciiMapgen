@@ -37,14 +37,14 @@ namespace PetsciiMapgen
       //var map = new HybridMap2("..\\..\\img\\fonts\\pantoneswatches8x8.png", new Size(8, 8),
         //new Size(1, 1), 12, 12, 2.0f, true, null, true, true);
 
-      var map = new HybridMap2("..\\..\\img\\fonts\\emojidark12.png", new Size(12, 12),
-        new Size(2, 2), 5, 12, 1.0f, true, null, true, true);
+      //var map = new HybridMap2("..\\..\\img\\fonts\\emojidark16.png", new Size(16, 16),
+      //  new Size(2, 2), 8, 4, 1.2f, true, null, true, true);
 
       //var map = new HybridMap2("..\\..\\img\\fonts\\test2.png", new Size(1, 1),
       //  new Size(1, 1), 3, 3, 1.0f, true, null, true, true);
 
-      //var map = new HybridMap2("..\\..\\img\\fonts\\c64opt160.png", new Size(8, 8),
-      //new Size(2, 1), 5, 5, 1.0f, true, Palettes.C64, true, true);
+      var map = new HybridMap2("..\\..\\img\\fonts\\c64opt160.png", new Size(8, 8),
+      new Size(2, 2), 8, 4, 1.4f, true, Palettes.C64, true, true);
 
       //var map = new HybridMap2("..\\..\\img\\fonts\\VGAboxonly45.png", new Size(8, 16),
       //  new Size(2, 2), 5, 5, 2.0f, true, Palettes.RGBPrimariesHalftone16, true, true);

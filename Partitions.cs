@@ -58,29 +58,6 @@ namespace PetsciiMapgen
     public unsafe PartitionManager(int valuesPerPartition, int dimensions, float[] DistinctValues)
     {
       this.Dimensions = dimensions;
-      //this.Weights = dimensionWeights;
-
-      // normalize weights so the max is 1.
-      // this is a solution to a problem related to weights. the problem is that low-weighted dimensions
-      // can cause points to end up in separate partitions when their "weighted distance" is very close.
-      // in 2D, imagne you're ignoring the Y component. (1,0) and (1,10000) should be equal.
-      // but with partitioning, they'll never be able to reach each other.
-      // we want to use these weights to make sure items end up in the same partition. it's not difficult; we just scale so the partitions follow weights.
-      //Utils.ValueRangeInspector r = new Utils.ValueRangeInspector();
-      //for (int i = 0; i < this.Weights.ValuesLength; ++ i)
-      //{
-      //  r.Visit(this.Weights.Values[i]);
-      //}
-      //// scale.
-      //Console.WriteLine("TODO!!! This may not be correct. Penguins.");
-      //for (int i = 0; i < this.Weights.ValuesLength; ++i)
-      //{
-      //  this.Weights.Values[i] /= r.MaxValue;
-      //}
-
-      // for UI purposes i want partitionfactor to mean:
-      // 0 = no partitioning. (1 partition in total)
-      // 1 = maximum partitioning (partitions = # of distinct values exactly).
 
       // space should begin in a position where, when partfactor=1, partitions are centered over values.
       float valueSize = DistinctValues[1] - DistinctValues[0];// 1.0f / DistinctValues.ValuesLength;
@@ -100,7 +77,6 @@ namespace PetsciiMapgen
       // can be improved like:
       // this:              .  0.0   .   0.25   .   0.5   .  1.0
       //          \_p0____.__________.________/ \_p1____.__________.________/
-      //this.SpaceEnd = DistinctValues.Values[DistinctValues.ValuesLength - 1] + (valueSize * 0.5f);
       this.SpaceEnd = SpaceBegin + PartitionCount1D * PartitionSize1D;
 
       this.DistinctValues = DistinctValues;
@@ -113,8 +89,6 @@ namespace PetsciiMapgen
       Console.WriteLine("  Partition mgr // PartitionMaxElementSize: " + PartitionMaxElementSize);
       Console.WriteLine("  Partition mgr // PartitionCountND: " + PartitionCountND);
       Console.WriteLine("  Partition mgr // Distinct values: [" + string.Join(",", DistinctValues) + "]");
-      //Console.WriteLine("  Partition mgr // Weights unscaled: " + ValueSet.ToString(dimensionWeights));
-      //Console.WriteLine("  Partition mgr // Weights scaled: " + ValueSet.ToString(Weights));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -122,7 +96,6 @@ namespace PetsciiMapgen
     {
       float n = (val - SpaceBegin) / SpaceSize; // this is the 0-1 position within partitioned space.
       n *= PartitionCount1D;// now it's a partition id.
-      //long ret = (long)Math.Floor(n * weight);
       long ret = (long)Math.Floor(n);
       long maxPartition = PartitionCount1D - 1;
       if (ret >= maxPartition)
@@ -136,15 +109,7 @@ namespace PetsciiMapgen
       get
       {
         // how many distinct values are within the range
-        //float partitionSize = 1.0f / PartitionCount1D;
-        //float valuesPerPartition = partitionSize * distinctValuesPerDimension;
         float valuesPerPartition = (float)DistinctValues.Length / PartitionCount1D;
-        //double ret = 1;
-        //for(int i = 0; i < this.Dimensions; ++ i)
-        //{
-        //  ret *= Math.Ceiling(valuesPerPartition / this.Weights.Values[i]);
-        //}
-        //return (long)ret;
         return Utils.Pow((long)Math.Ceiling(valuesPerPartition), (uint)this.Dimensions);
       }
     }

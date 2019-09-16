@@ -32,33 +32,16 @@ namespace PetsciiMapgen
 
     public static float RestoreY(float y)
     {
-      return y * 100.0f;
+      return y * 100f;
     }
     public static float RestoreU(float u)
     {
-      return (u - .5f) * 255;
+      return (u - .5f) * 255f;
     }
     public static float RestoreV(float v)
     {
-      return (v - .5f) * 255;
+      return (v - .5f) * 255f;
     }
-    //public static float ColorDist(float y1, float u1, float v1, float y2, float u2, float v2)
-    //{
-    //  //var laba = new ColorMine.ColorSpaces.Lab { L = y1, A = u1, B = v1 };
-    //  //var labb = new ColorMine.ColorSpaces.Lab { L = y2, A = u2, B = v2 };
-    //  //var deltaE = laba.Compare(labb, new ColorMine.ColorSpaces.Comparisons.CieDe2000Comparison());
-    //  //return (float)deltaE;
-
-    //  // euclidian distance
-    //  float acc = 0;
-    //  float m = Math.Abs(y1 - y2);
-    //  acc = m * m * 10; // prioritize luma
-    //  m = Math.Abs(u1 - u2);
-    //  acc += m * m;
-    //  m = Math.Abs(v1 - v2);
-    //  acc += m * m;
-    //  return acc;
-    //}
   }
 }
 

@@ -380,6 +380,9 @@ namespace PetsciiMapgen
     public unsafe static float[] GetDiscreteValues(int discreteValues)
     {
       // returning [0, 1] for 2 discrete values. [0,.5,1] for 3, etc.
+      // this is preferred because you want BLACK to match to BLACK.
+      // if we return the centers of partitions (.25, .75), then black and white
+      // will get mapped very loosely.
       float segSpan = 1.0f / (discreteValues - 1);
       float[] ret = new float[discreteValues];
       int i = 0;
