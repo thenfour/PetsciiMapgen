@@ -22,8 +22,8 @@ namespace PetsciiMapgen
       //var map = new HybridMap2("..\\..\\img\\fonts\\pantoneswatches8x8.png", new Size(8, 8),
       //new Size(1, 1), 12, 12, 2.0f, true, null, true, true);
 
-      //var map = new HybridMap2("..\\..\\img\\fonts\\emojidark12.png", new Size(12, 12),
-        //new Size(1, 1), 512, 3, 1.5f, false, null, true, true, 0, new Bayer8DitherProvider(0));
+      var map = new HybridMap2("..\\..\\img\\fonts\\emojidark12.png", new Size(12, 12),
+        new Size(1, 1), 512, 3, 1.5f, false, null, true, true, 0, new Bayer8DitherProvider(0));
 
       //var map = new HybridMap2("..\\..\\img\\fonts\\mariotiles4.png", new Size(16, 16),
       //  new Size(2, 2), 16, 2, 1.5f, false, null, true, true, 1);
@@ -36,8 +36,8 @@ namespace PetsciiMapgen
       //var map = new HybridMap2("..\\..\\img\\fonts\\test2.png", new Size(1, 1),
       //  new Size(1, 1), 3, 3, 1.0f, true, null, true, true);
 
-      var map = new HybridMap2("..\\..\\img\\fonts\\c64opt160.png", new Size(8, 8),
-      new Size(3, 3), 4, 2, 1.4f, true, Palettes.C64, true, true);
+      //var map = new HybridMap2("..\\..\\img\\fonts\\c64opt160.png", new Size(8, 8),
+      //new Size(2, 2), 6, 2, 1.4f, true, Palettes.BlackAndWhite, true, true);
 
       //var map = new HybridMap2("..\\..\\img\\fonts\\VGAboxonly45.png", new Size(8, 16),
       //  new Size(2, 2), 8, 4, 1.5f, true, Palettes.RGBPrimariesHalftone16, true, true);

@@ -127,60 +127,6 @@ namespace PetsciiMapgen
     }
   }
 
-  // basically wraps List<Value>.
-  // simplifies code that wants to do set operations.
-  public unsafe struct ValueSet
-  {
-    public int ValuesLength;
-    public long ID;
-    public bool Mapped;
-    public ulong MinDistFound;
-    public bool Visited;
-
-    public fixed float Values[11];
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static ValueSet New(int dimensionsPerCharacter, long id)
-    {
-      ValueSet ret = new ValueSet();
-      Init(ref ret, dimensionsPerCharacter, id);
-      return ret;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void Init(ref ValueSet n, int dimensionsPerCharacter, long id)
-    {
-      //n.Values = new float[dimensionsPerCharacter];
-      n.ValuesLength = dimensionsPerCharacter;
-      n.ID = id;
-      n.MinDistFound = UInt32.MaxValue;
-    }
-
-    public unsafe static int CompareTo(ValueSet a, ValueSet other)
-    {
-      int d = other.ValuesLength.CompareTo(a.ValuesLength);
-      if (d != 0)
-        return d;
-      for (int i = 0; i < a.ValuesLength; ++i)
-      {
-        d = other.Values[i].CompareTo(a.Values[i]);
-        if (d != 0)
-          return d;
-      }
-      return 0;
-    }
-
-    public unsafe static string ToString(ValueSet o)
-    {
-      List<string> items = new List<string>();
-      for (int i = 0; i < o.ValuesLength; ++i) {
-        items.Add(o.Values[i].ToString("0.00"));
-      }
-      return string.Format("[{0}]", string.Join(",", items));
-    }
-
-  }
-
   public static class Utils
   {
     public static unsafe byte* GetRGBPointer(this BitmapData data, long x, long y)
@@ -340,27 +286,29 @@ namespace PetsciiMapgen
     // returns all possible combinations of tile values.
     // this sets the ID for the resulting ValueSets which is an ordered number,
     // required for the un-mapping algo to know where things are.
-    public unsafe static ValueSet[] Permutate(int numTiles, float[] discreteValuesPerTile)
+    public unsafe static ValueSet[] Permutate(int numTiles, bool useChroma, float[] discreteNormalizedValuesPerTile)
     {
       // we will just do this as if each value is a digit in a number. that's the analogy that drives this.
       // actually this symbolizes the # of digits in the result, PLUS the number of possible values per digit.
-      long numDigits = discreteValuesPerTile.Length;
+      long numDigits = discreteNormalizedValuesPerTile.Length;
       long theoreticalBase = numDigits;
       long totalPermutations = Pow(numDigits, (uint)numTiles);
+      float[] normalizedValues = new float[numTiles];
 
       ValueSet[] ret = new ValueSet[totalPermutations];
       for (long i = 0; i < totalPermutations; ++i)
       {
         // just like digits in a number, use % and divide to shave off "digits" one by one.
         long a = i;// the value that originates from i and we shift/mod to enumerate digits
-        ValueSet.Init(ref ret[i], numTiles, i);
         //ValueSet n = NewValueSet(numTiles, i);
         for (int d = 0; d < numTiles; ++d)
         {
           long thisIndex = a % theoreticalBase;
           a /= theoreticalBase;
-          ret[i].Values[d] = discreteValuesPerTile[(int)thisIndex];
+          normalizedValues[d] = discreteNormalizedValuesPerTile[(int)thisIndex];
+          //ret[i].Values[d] = discreteValuesPerTile[(int)thisIndex];
         }
+        ValueSet.Init(ref ret[i], numTiles, useChroma, i, normalizedValues);
         //ret.Add(n);
       }
       return ret;
@@ -383,7 +331,7 @@ namespace PetsciiMapgen
       origin = begin;
       sz = Utils.Sub(end, begin);
     }
-    public unsafe static float[] GetDiscreteValues(int discreteValues)
+    public unsafe static float[] GetDiscreteNormalizedValues(int discreteValues)
     {
       // returning [0, 1] for 2 discrete values. [0,.5,1] for 3, etc.
       // this is preferred because you want BLACK to match to BLACK.
@@ -411,16 +359,16 @@ namespace PetsciiMapgen
       //return ret;
     }
 
-    internal unsafe static void AssertSortedByDimension(ValueSet[] keys, int lastDimensionIndex)
-    {
-      float lastVal = 0;
-      for (int i = 0; i < keys.Length; ++i)
-      {
-        float lastDimensionValue = keys[i].Values[lastDimensionIndex];
-        Debug.Assert(lastDimensionValue >= lastVal);
-        lastVal = lastDimensionValue;
-      }
-    }
+    //internal unsafe static void AssertSortedByDimension(ValueSet[] keys, int lastDimensionIndex)
+    //{
+    //  float lastVal = 0;
+    //  for (int i = 0; i < keys.Length; ++i)
+    //  {
+    //    float lastDimensionValue = keys[i].Values[lastDimensionIndex];
+    //    Debug.Assert(lastDimensionValue >= lastVal);
+    //    lastVal = lastDimensionValue;
+    //  }
+    //}
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static long Pow(long x, uint pow)

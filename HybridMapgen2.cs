@@ -57,20 +57,20 @@ namespace PetsciiMapgen
     // convert key to real colors.
     public unsafe double CalcCellDistance(ValueSet key, ValueSet actual)
     {
-      double actualU = ColorUtils.RestoreU(actual.Values[GetValueUIndex()]);
-      double actualV = ColorUtils.RestoreV(actual.Values[GetValueVIndex()]);
-      double keyU = ColorUtils.RestoreU(key.Values[GetValueUIndex()]);
-      double keyV = ColorUtils.RestoreV(key.Values[GetValueVIndex()]);
+      double actualU = actual.YUVvalues[GetValueUIndex()];
+      double actualV = actual.YUVvalues[GetValueVIndex()];
+      double keyU = key.YUVvalues[GetValueUIndex()];
+      double keyV = key.YUVvalues[GetValueVIndex()];
       double acc = 0.0f;
       double m;
       for (int i = 0; i < numYcomponents; ++ i)
       {
-        double keyY = ColorUtils.RestoreY(key.Values[i]);
+        double keyY = key.YUVvalues[i];
 
-        m = Math.Abs(keyY - ColorUtils.RestoreY(actual.Values[i]));
+        m = Math.Abs(keyY - actual.YUVvalues[i]);
         double tileAcc = m * m * lumaBias;
 
-        if (keyY < 1 || keyY > 99)// black / white processing where UV are meaningless.
+        if (keyY < 2 || keyY > 98)// black / white processing where UV are meaningless.
         {
           m = Math.Abs(actualU);
           tileAcc += m * m;
@@ -99,7 +99,8 @@ namespace PetsciiMapgen
 
     public unsafe HybridMap2(string fontFileName, Size charSize,
       Size lumaTiles, int valuesPerComponent, int valuesPerPartition, float lumaBias, bool useChroma,
-      IPaletteProvider paletteProvider, bool outputFullMap, bool outputRefMapAndFont,
+      Color[] monoPalette,// IPaletteProvider paletteProvider,
+      bool outputFullMap, bool outputRefMapAndFont,
       int fontLeftTopPadding = 0, IDitherProvider ditherProvider = null)
     {
       Timings timings = new Timings();
@@ -108,7 +109,7 @@ namespace PetsciiMapgen
       if (this.ditherProvider != null)
         this.ditherProvider.DiscreteTargetValues = valuesPerComponent;
       this.fontLeftTopPadding = fontLeftTopPadding;
-      this.monoPalette = null;// TODO monoPalette;
+      this.monoPalette = monoPalette;
       this.lumaBias = lumaBias;
       this.lumaTiles = lumaTiles;
       this.charSize = charSize;
@@ -131,7 +132,9 @@ namespace PetsciiMapgen
       Console.WriteLine("Number of source chars (1d): " + Utils.Product(numSrcChars));
       Console.WriteLine("Chosen values per tile: " + valuesPerComponent);
       Console.WriteLine("Dimensions: " + componentsPerCell);
-      Console.WriteLine("Resulting map will have this many entries: " + numDestCharacters);
+      Console.WriteLine("Resulting map will have this many entries: " + numDestCharacters.ToString("N0"));
+      long mapdimpix = (long)Math.Sqrt(numDestCharacters);
+      Console.WriteLine("Resulting map will be about: [" + mapdimpix.ToString("N0") + ", " + mapdimpix.ToString("N0") + "]");
 
       // fill in char source info (actual tile values)
       timings.EnterTask("Analyze incoming font");
@@ -139,11 +142,11 @@ namespace PetsciiMapgen
       //int pixelsPerChar = Utils.Product(charSize);
 
       // used for normalization later
-      List<Utils.ValueRangeInspector> ranges = new List<Utils.ValueRangeInspector>();
-      for (int i = 0; i < componentsPerCell; ++ i)
-      {
-        ranges.Add(new Utils.ValueRangeInspector());
-      }
+      //List<Utils.ValueRangeInspector> ranges = new List<Utils.ValueRangeInspector>();
+      //for (int i = 0; i < componentsPerCell; ++ i)
+      //{
+      //  ranges.Add(new Utils.ValueRangeInspector());
+      //}
 
       for (int y = 0; y < numSrcChars.Height; ++y)
       {
@@ -156,16 +159,15 @@ namespace PetsciiMapgen
               srcIndex = new Point(x, y)
             };
             ProcessCharacter(srcBmp, ci, null, null);
-            for (int i = 0; i < componentsPerCell; ++i)
-            {
-              ranges[i].Visit(ci.actualValues.Values[i]);
-            }
+            //for (int i = 0; i < componentsPerCell; ++i)
+            //{
+            //  //ranges[i].Visit(ci.actualValues.Values[i]);
+            //}
 
             charInfo.Add(ci);
           }
           else
           {
-            //foreach(Color fg in monoPalette)
             for(int ifg = 0; ifg < monoPalette.Length; ++ ifg)
             {
               Color fg = monoPalette[ifg];
@@ -182,10 +184,10 @@ namespace PetsciiMapgen
                   };
 
                   ProcessCharacter(srcBmp, ci, ifg, ibg);
-                  for (int i = 0; i < componentsPerCell; ++i)
-                  {
-                    ranges[i].Visit(ci.actualValues.Values[i]);
-                  }
+                  //for (int i = 0; i < componentsPerCell; ++i)
+                  //{
+                  //  ranges[i].Visit(ci.actualValues.Values[i]);
+                  //}
 
                   charInfo.Add(ci);
                 }
@@ -197,67 +199,65 @@ namespace PetsciiMapgen
 
       Console.WriteLine("Number of source chars after palettization: " + charInfo.Count);
 
-      Console.WriteLine("RANGES encountered:");
-      for (int i = 0; i < componentsPerCell; ++i)
-      {
-        Console.WriteLine("  [" + i + "]: " + ranges[i]);
-      }
+      //Console.WriteLine("RANGES encountered:");
+      //for (int i = 0; i < componentsPerCell; ++i)
+      //{
+      //  Console.WriteLine("  [" + i + "]: " + ranges[i]);
+      //}
 
-      float[] discreteValues = Utils.GetDiscreteValues(valuesPerComponent);
-      PartitionManager pm = new PartitionManager(valuesPerPartition, componentsPerCell, discreteValues);
+      float[] discreteValues = Utils.GetDiscreteNormalizedValues(valuesPerComponent);
+      //PartitionManager pm = new PartitionManager(valuesPerPartition, componentsPerCell, discreteValues);
 
       var dp = charInfo.DistinctBy(a => a.partition);
       Console.WriteLine("  Chars placed into distinct partitions: " + dp.Count());
 
       // create list of all mapkeys
-      timings.EnterTask("Generating permutations and partitions");
-      var keys = Utils.Permutate(componentsPerCell, discreteValues); // returns sorted.
-
+      var keys = Utils.Permutate(componentsPerCell, useChroma, discreteValues); // returns sorted.
       Console.WriteLine("  Key count: " + keys.Length);
 
-      // generate a list of partitions and map them to keys.
-      timings.EnterTask("Generating permutations");
-      var partitions = new Partition[pm.PartitionCountND];
-      Console.WriteLine("  Partition count: " + partitions.Length);
-      Console.WriteLine("  Elements per partition: " + pm.PartitionMaxElementSize);
-      for (int i = 0; i < partitions.Length; ++i)
-      {
-        Partition.Init(ref partitions[i], pm.PartitionMaxElementSize);
-      }
+      //// generate a list of partitions and map them to keys.
+      //timings.EnterTask("Generating permutations");
+      //var partitions = new Partition[pm.PartitionCountND];
+      //Console.WriteLine("  Partition count: " + partitions.Length);
+      //Console.WriteLine("  Elements per partition: " + pm.PartitionMaxElementSize.ToString("N0"));
+      //for (int i = 0; i < partitions.Length; ++i)
+      //{
+      //  Partition.Init(ref partitions[i], pm.PartitionMaxElementSize);
+      //}
 
+      //// assign map keys to partitions.
+      //// find a definitive "black" and "white" key.
+      //// all others will just refer to this one.
+      //// the reason  for this is that black & white are troublesome wrt chromatic colorspaces.
+      //// at 0% and 100%, chroma is meaningless so it will screw with distance.
+      //for (uint i = 0; i <  keys.Length; ++ i)
+      //{
+      //  long partitionIndex = pm.GetPartitionIndex(keys[i]);
+      //  Partition.Add(ref partitions[partitionIndex], i);
+      //}
 
-      // assign map keys to partitions.
-      // find a definitive "black" and "white" key.
-      // all others will just refer to this one.
-      // the reason  for this is that black & white are troublesome wrt chromatic colorspaces.
-      // at 0% and 100%, chroma is meaningless so it will screw with distance.
-      for (uint i = 0; i <  keys.Length; ++ i)
-      {
-        long partitionIndex = pm.GetPartitionIndex(keys[i]);
-        Partition.Add(ref partitions[partitionIndex], i);
-      }
+      //Utils.ValueRangeInspector pe = new Utils.ValueRangeInspector();
+      //for (int i = 0; i < partitions.Length; ++i)
+      //{
+      //  pe.Visit(partitions[i].Length);
+      //  Debug.Assert(partitions[i].keyIdxs.Length > 0);
+      //}
+      //Console.WriteLine("  Partition element count range: " + pe.ToString());
 
-      Utils.ValueRangeInspector pe = new Utils.ValueRangeInspector();
-      for (int i = 0; i < partitions.Length; ++i)
-      {
-        pe.Visit(partitions[i].Length);
-      }
-      Console.WriteLine("  Partition element count range: " + pe.ToString());
-
-      timings.EndTask();
       timings.EndTask();
       timings.EnterTask("Calculate all mappings");
 
       // - generate a list of mappings and their distances
-      ulong theoreticalMappings = (ulong)Utils.Product(numSrcChars) * (ulong)numDestCharacters;
-      Console.WriteLine("  (" + theoreticalMappings + " mappings)");
+      ulong theoreticalMappings = (ulong)charInfo.Count * (ulong)numDestCharacters;
+      Console.WriteLine("  (" + theoreticalMappings.ToString("N0") + " mappings)");
       Utils.ValueRangeInspector distanceRange = new Utils.ValueRangeInspector();
       MappingArray allMappings = new MappingArray();
       for (UInt32 ici = 0; ici < charInfo.Count; ++ ici)
       {
         var ci = charInfo[(int)ici];
-        Debug.Assert(partitions[ci.partition].initialized == true);
-        foreach (var ikey in partitions[ci.partition].keyIdxs)
+        //Debug.Assert(partitions[ci.partition].initialized == true);
+        //foreach (var ikey in partitions[ci.partition].keyIdxs)
+        for (int ikey = 0; ikey < keys.Length; ++ikey)
         {
           long imap = allMappings.Add();
           allMappings.Values[imap].icharInfo = ici;
@@ -268,22 +268,11 @@ namespace PetsciiMapgen
           distanceRange.Visit(fdist);
           keys[ikey].MinDistFound = Math.Min(keys[ikey].MinDistFound, dist);
           keys[ikey].Visited = true;
-          //ci.versatility += dist;
           ci.mapKeysVisited++;
         }
       }
 
-      Console.WriteLine("  Remaining elements: {0}", allMappings.Length);
-
-      //// some versatility adjustment and normalization
-      //ulong maxCharVersatility = 0;
-      //foreach (CharInfo ci in charInfo)
-      //{
-      //  ci.versatility = ci.versatility * Constants.CharVersatilityRange / ci.mapKeysVisited;
-      //  if (ci.versatility > maxCharVersatility)
-      //    maxCharVersatility = ci.versatility;
-      //}
-      //maxCharVersatility += 1;// so normalized values never quite reach 1
+      Console.WriteLine("  Remaining elements: {0}", allMappings.Length.ToString("N0"));
 
       Console.WriteLine("Distance range encountered: {0}", distanceRange);
 
@@ -300,19 +289,8 @@ namespace PetsciiMapgen
       timings.EnterTask("Pruning out mappings");
       long itemsRemoved = allMappings.PruneWhereDistGT(maxMinDist);
 
-      //Console.WriteLine("  calculating sort metric");
-      //for (int i = 0; i < allMappings.Length; ++i)
-      //{
-      //  ulong dist = allMappings.Values[i].dist;
-      //  float fv = ((float)charInfo[(int)allMappings.Values[i].icharInfo].versatility) / maxCharVersatility;
-      //  fv = 1.0f - fv;
-      //  ulong vers = (ulong)(fv * Constants.DistanceRange);
-
-      //  allMappings.Values[i].dist = (ulong)(dist * Constants.DistanceRange + vers);// / 256;
-      //}
-
       Console.WriteLine("   {0} items removed", itemsRemoved);
-      Console.WriteLine("   {0} items remaining", allMappings.Length);
+      Console.WriteLine("   {0} mappings left to choose from", allMappings.Length.ToString("N0"));
 
       timings.EndTask();
       timings.EnterTask("Sorting mappings");
@@ -339,7 +317,8 @@ namespace PetsciiMapgen
       timings.EndTask();
 
       double missingMappings = numDestCharacters - map.Count;
-      timings.EnterTask(string.Format("Fill in any missing mappings (est: {0} / {1}%)", missingMappings, missingMappings * 100 / numDestCharacters));
+      timings.EnterTask(string.Format("Fill in any missing mappings (est: {0} / {1}%)", missingMappings.ToString("N0"),
+        (missingMappings * 100 / numDestCharacters).ToString("0.00")));
 
       int missingKeys = 0;
 
@@ -350,7 +329,7 @@ namespace PetsciiMapgen
         if (ci == null)
         {
           // fill in this map key! just find the closest char.
-          double minDist = distanceRange.MaxValue;
+          double minDist = double.MaxValue;// distanceRange.MaxValue + 1;
           foreach (var ci2 in charInfo)
           {
             double fdist = CalcCellDistance(k, ci2.actualValues);
@@ -645,7 +624,7 @@ namespace PetsciiMapgen
           tileB /= tilePixelCount;
           Color tileC = Color.FromArgb(tileR, tileG, tileB);
           ColorUtils.ToMapping(tileC, out float tileY, out float tileU, out float tileV);
-          ci.actualValues.Values[GetValueYIndex(sx,sy)] = tileY;// normalized to pixel
+          ci.actualValues.YUVvalues[GetValueYIndex(sx,sy)] = tileY;// normalized to pixel
         }
       }
 
@@ -657,8 +636,8 @@ namespace PetsciiMapgen
         charB /= pixelsPerChar;
         Color tileC = Color.FromArgb(charR, charG, charB);
         ColorUtils.ToMapping(tileC, out float charY, out float charU, out float charV);
-        ci.actualValues.Values[GetValueUIndex()] = charU;
-        ci.actualValues.Values[GetValueVIndex()] = charV;
+        ci.actualValues.YUVvalues[GetValueUIndex()] = charU;
+        ci.actualValues.YUVvalues[GetValueVIndex()] = charV;
       }
     }
 
@@ -673,7 +652,8 @@ namespace PetsciiMapgen
 
       using (var g = Graphics.FromImage(destImg))
       {
-        ValueSet vals = ValueSet.New(componentsPerCell, 9995);
+        //ValueSet vals = ValueSet.New(componentsPerCell, 9995);
+        float[] vals = new float[componentsPerCell];
         // roughly simulate the shader algo
         for (int srcCellY = 0; srcCellY < testImg.Height / charSize.Height; ++srcCellY)
         {
@@ -690,8 +670,8 @@ namespace PetsciiMapgen
                 Point tilePos = Utils.GetTileOrigin(charSize, lumaTiles, tx, ty);
                 Color srcColor = testBmp.GetPixel(((srcCellX) * charSize.Width) + tilePos.X, ((srcCellY) * charSize.Height) + tilePos.Y);
 
-                ColorUtils.ToMapping(srcColor, out float cy, out float cu, out float cv);
-                vals.Values[GetValueYIndex(tx, ty)] = Utils.Clamp(cy, 0, 1);
+                ColorUtils.ToMappingNormalized(srcColor, out float cy, out float cu, out float cv);
+                vals[GetValueYIndex(tx, ty)] = Utils.Clamp(cy, 0, 1);
                 charR += srcColor.R;
                 charG += srcColor.G;
                 charB += srcColor.B;
@@ -704,8 +684,8 @@ namespace PetsciiMapgen
               charG /= numTiles;
               charB /= numTiles;
               ColorUtils.ToMapping(Color.FromArgb(charR, charG, charB), out float cy, out float cu, out float cv);
-              vals.Values[GetValueUIndex()] = Utils.Clamp(cu, 0, 1);
-              vals.Values[GetValueVIndex()] = Utils.Clamp(cv, 0, 1);
+              vals[GetValueUIndex()] = Utils.Clamp(cu, 0, 1);
+              vals[GetValueVIndex()] = Utils.Clamp(cv, 0, 1);
             }
 
             // figure out which "ID" this value corresponds to.
@@ -718,7 +698,7 @@ namespace PetsciiMapgen
             long ID = 0;
             for (int i = this.componentsPerCell - 1; i >= 0; --i)
             {
-              float val = vals.Values[i];
+              float val = vals[i];
               val -= halfSegCenter;
               val = Utils.Clamp(val, 0, 1);
               val *= valuesPerComponent;

@@ -67,27 +67,32 @@ namespace PetsciiMapgen
       var rgb = new ColorMine.ColorSpaces.Rgb { R = c.R, G = c.G, B = c.B };
       var lab = rgb.To<ColorMine.ColorSpaces.Lab>();
       // https://github.com/hvalidi/ColorMine/blob/master/ColorMine/ColorSpaces/ColorSpaces.xml
-      y = (float)lab.L / 100;
-      u = (float)lab.A / 255;
-      v = (float)lab.B / 255;
-      u += .5f;
-      v += .5f;
-      y = Utils.Clamp(y, 0, 1);
-      u = Utils.Clamp(u, 0, 1);
-      v = Utils.Clamp(v, 0, 1);
+      y = (float)lab.L;
+      u = (float)lab.A;
+      v = (float)lab.B;
+    }
+    public static void ToMappingNormalized(Color c, out float y, out float u, out float v)
+    {
+      ToMapping(c, out y, out u, out v);
+      y = Utils.Clamp(y / 100, 0, 1);
+      u = Utils.Clamp((u / 255) + .5f, 0, 1);
+      v = Utils.Clamp((v / 255) + .5f, 0, 1);
     }
 
-    public static float RestoreY(float y)
+    internal static void Denormalize(int n, bool usechroma, float[] yUVvalues)
     {
-      return y * 100f;
-    }
-    public static float RestoreU(float u)
-    {
-      return (u - .5f) * 255f;
-    }
-    public static float RestoreV(float v)
-    {
-      return (v - .5f) * 255f;
+      // changes normalized 0-1 values to YUV-ranged values. depends on value format and stuff.
+      int chromaelements = 0;
+      if (usechroma)
+      {
+        chromaelements = 2;
+        yUVvalues[n - 1] = (yUVvalues[n - 1] - .5f) * 255;
+        yUVvalues[n - 2] = (yUVvalues[n - 2] - .5f) * 255;
+      }
+      for (int i = 0; i < n-chromaelements; ++ i)
+      {
+        yUVvalues[i] *= 100;
+      }
     }
   }
 }
