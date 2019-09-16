@@ -15,7 +15,7 @@ namespace PetsciiMapgen
 {
   public class Constants
   {
-    public static UInt32 CharVersatilityRange { get { return 360; } }
+    //public static UInt32 CharVersatilityRange { get { return 360; } }
 
     // values are 0-1 so distances are on avg even less. (sqrt(2)/2).
     // actual pixel values are 0-255 so i can just multiply by 255/(sqrt(2)/2) to make "real" sameness be equal here.
@@ -43,7 +43,7 @@ namespace PetsciiMapgen
       return Length - 1;
     }
 
-    internal long PruneWhereDistGT(uint maxMinDist)
+    internal long PruneWhereDistGT(ulong maxMinDist)
     {
       var prunedMappings = Values.Take((int)this.Length).Where(o => o.dist <= maxMinDist).ToArray();
       long ret = this.Length - prunedMappings.Length;
@@ -62,7 +62,7 @@ namespace PetsciiMapgen
     public System.Drawing.Point srcIndex;
     public ValueSet actualValues;// N-dimension values
     public int usages = 0;
-    public ulong versatility;
+    //public ulong versatility;
     public UInt32 mapKeysVisited = 0;
     public long partition; // which spatial partition does this character fit into?
     public int? ifg;// only for mono palette processing, index to palette
@@ -76,7 +76,10 @@ namespace PetsciiMapgen
 
     public override string ToString()
     {
-      return srcIndex.ToString();
+      return string.Format("src:{0} fg:{5} bg:{6} = {1}, p{2}, keysvisited:{3}, usages:{7}",
+        srcIndex, ValueSet.ToString(actualValues), partition,
+        mapKeysVisited, 0, ifg, ibg, usages);
+      //return srcIndex.ToString();
     }
   }
 
@@ -131,7 +134,7 @@ namespace PetsciiMapgen
     public int ValuesLength;
     public long ID;
     public bool Mapped;
-    public uint MinDistFound;
+    public ulong MinDistFound;
     public bool Visited;
 
     public fixed float Values[11];
@@ -219,12 +222,12 @@ namespace PetsciiMapgen
     
     public class ValueRangeInspector
     {
-      public float MinValue { get; private set; } = default(float);
-      public float MaxValue { get; private set; } = default(float);
+      public double MinValue { get; private set; } = default(double);
+      public double MaxValue { get; private set; } = default(double);
 
       bool encountered = false;
 
-      public void Visit(float v)
+      public void Visit(double v)
       {
         if (!encountered)
         {
@@ -232,15 +235,15 @@ namespace PetsciiMapgen
           encountered = true;
           return;
         }
-        MinValue = Utils.Min<float>(v, MinValue);
-        MaxValue = Utils.Max<float>(v, MaxValue);
+        MinValue = Utils.Min<double>(v, MinValue);
+        MaxValue = Utils.Max<double>(v, MaxValue);
       }
 
       // normalize a value based on min/max values seen, returning 0-1.
-      public float Normalize01(float v)
+      public double Normalize01(double v)
       {
         if (MinValue == MaxValue)
-          return 1.0f;
+          return 1;
         return (v - MinValue) / (MaxValue - MinValue);
       }
 

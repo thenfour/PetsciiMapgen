@@ -17,18 +17,19 @@ namespace PetsciiMapgen
 {
   public static class Palettes
   {
-    static Color[] BlackAndWhite
+    public static Color[] BlackAndWhite
     {
       get
       {
         return new Color[] {
         Color.FromArgb(  0,   0,   0),// black
+        Color.FromArgb(106, 191, 198),// cyan
         Color.FromArgb(255, 255, 255),//white
         };
       }
     }
 
-    static Color[] Gray3
+    public static Color[] Gray3
     {
       get
       {
@@ -47,13 +48,13 @@ namespace PetsciiMapgen
         return new Color[] {
         Color.FromArgb(  0,   0,   0),// black
         Color.FromArgb(255, 255, 255),//white
-        Color.FromArgb(203, 126, 117),// light red
 
         Color.FromArgb( 98,  98,  98),//gray1
         Color.FromArgb(137, 137, 137),// gray2
         Color.FromArgb(173, 173, 173),//gray3
 
         Color.FromArgb(159,  78,  68),// brick red
+        Color.FromArgb(203, 126, 117),// light red
         Color.FromArgb(109,  84,  18),// dkbrown
         Color.FromArgb(161, 104,  60),// light brown
         
