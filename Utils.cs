@@ -15,15 +15,13 @@ namespace PetsciiMapgen
 {
   public class Constants
   {
-    //public static UInt32 CharVersatilityRange { get { return 360; } }
-
     // values are 0-1 so distances are on avg even less. (sqrt(2)/2).
     // actual pixel values are 0-255 so i can just multiply by 255/(sqrt(2)/2) to make "real" sameness be equal here.
     // funny that's actually 360. no relation to angles/radians.
-    public static ulong DistanceRange { get { return 1000; } }
+    //public static ulong DistanceRange { get { return 1000; } }
 
     public const long AllocGranularity = 30000000;
-    public const long AllocGranularityPartitions = 1000;
+    //public const long AllocGranularityPartitions = 1000;
   }
 
   public class MappingArray
@@ -43,7 +41,7 @@ namespace PetsciiMapgen
       return Length - 1;
     }
 
-    internal long PruneWhereDistGT(ulong maxMinDist)
+    internal long PruneWhereDistGT(double maxMinDist)
     {
       var prunedMappings = Values.Take((int)this.Length).Where(o => o.dist <= maxMinDist).ToArray();
       long ret = this.Length - prunedMappings.Length;
@@ -62,12 +60,10 @@ namespace PetsciiMapgen
     public System.Drawing.Point srcIndex;
     public ValueSet actualValues;// N-dimension values
     public int usages = 0;
-    //public ulong versatility;
     public UInt32 mapKeysVisited = 0;
-    public long partition; // which spatial partition does this character fit into?
     public int? ifg;// only for mono palette processing, index to palette
     public int? ibg;// only for mono palette processing
-    public int index;// used when generating font texture
+    public int masterIdx;
 
     public CharInfo(int dimensionsPerCharacter)
     {
@@ -76,8 +72,8 @@ namespace PetsciiMapgen
 
     public override string ToString()
     {
-      return string.Format("src:{0} fg:{5} bg:{6} = {1}, p{2}, keysvisited:{3}, usages:{7}",
-        srcIndex, ValueSet.ToString(actualValues), partition,
+      return string.Format("ID:{2} src:{0} fg:{5} bg:{6} = {1}, keysvisited:{3}, usages:{7}",
+        srcIndex, ValueSet.ToString(actualValues), masterIdx,
         mapKeysVisited, 0, ifg, ibg, usages);
       //return srcIndex.ToString();
     }
@@ -85,9 +81,36 @@ namespace PetsciiMapgen
 
   public struct Mapping
   {
-    public UInt32 imapKey; // a set of tile values
-    public UInt32 icharInfo;
-    public ulong dist;
+    public int imapKey; // a set of tile values
+    public int icharInfo;
+    public double dist;
+  }
+
+  public class ProgressReporter
+  {
+    long total;
+    Stopwatch swseg;
+    Stopwatch swtotal;
+    public ProgressReporter(long total)
+    {
+      this.total = total;
+      this.swtotal = new Stopwatch();
+      swtotal.Start();
+      this.swseg = new Stopwatch();
+      swseg.Start();
+    }
+    public void Visit(long item)
+    {
+      if (swseg.ElapsedMilliseconds < 5000)
+        return;
+      swseg.Restart();
+      double p = (double)item / total;
+      double elapsedSec = (double)swtotal.ElapsedMilliseconds / 1000.0;
+      double totalEst = elapsedSec / p;
+      //double estRemaining = (double)swtotal.ElapsedMilliseconds / (1.0-p);
+      double estRemaining = totalEst - elapsedSec;
+      Console.WriteLine("  Progress: {0}% (est remaining: {1} sec)", (p*100).ToString("0.00"), estRemaining.ToString("0.00"));
+    }
   }
 
   public class Timings

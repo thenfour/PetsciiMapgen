@@ -74,25 +74,46 @@ namespace PetsciiMapgen
     public static void ToMappingNormalized(Color c, out float y, out float u, out float v)
     {
       ToMapping(c, out y, out u, out v);
-      y = Utils.Clamp(y / 100, 0, 1);
-      u = Utils.Clamp((u / 255) + .5f, 0, 1);
-      v = Utils.Clamp((v / 255) + .5f, 0, 1);
+      y = NormalizeY(y);// Utils.Clamp(y / 100, 0, 1);
+      u = NormalizeUV(u);// Utils.Clamp((u / 255) + .5f, 0, 1);
+      v = NormalizeUV(v);// Utils.Clamp((v / 255) + .5f, 0, 1);
     }
-
-    internal static void Denormalize(int n, bool usechroma, float[] yUVvalues)
+    internal static float NormalizeY(float y)
+    {
+      return Utils.Clamp(y / 100, 0, 1);
+    }
+    internal static float NormalizeUV(float uv)
+    {
+      return Utils.Clamp((uv / 255) + .5f, 0, 1);
+    }
+    internal unsafe static void Denormalize(bool usechroma, ValueSet v)
     {
       // changes normalized 0-1 values to YUV-ranged values. depends on value format and stuff.
       int chromaelements = 0;
+      int n = v.ValuesLength;
       if (usechroma)
       {
         chromaelements = 2;
-        yUVvalues[n - 1] = (yUVvalues[n - 1] - .5f) * 255;
-        yUVvalues[n - 2] = (yUVvalues[n - 2] - .5f) * 255;
+        v.YUVvalues[n - 1] = (v.YUVvalues[n - 1] - .5f) * 255;
+        v.YUVvalues[n - 2] = (v.YUVvalues[n - 2] - .5f) * 255;
       }
       for (int i = 0; i < n-chromaelements; ++ i)
       {
-        yUVvalues[i] *= 100;
+        v.YUVvalues[i] *= 100;
       }
+    }
+    internal unsafe static float NormalizeElement(ValueSet v, bool usechroma, int elementToNormalize)
+    {
+      if (usechroma)
+      {
+        // valueCount-1 = element of V
+        // valueCount-2 = element of U
+        if (elementToNormalize >= v.ValuesLength - 2)
+        {
+          return NormalizeUV(v.YUVvalues[elementToNormalize]);
+        }
+      }
+      return NormalizeY(v.YUVvalues[elementToNormalize]);
     }
   }
 }

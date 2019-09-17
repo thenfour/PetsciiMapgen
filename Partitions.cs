@@ -13,15 +13,101 @@ using System.Runtime.InteropServices;
 
 namespace PetsciiMapgen
 {
+  public class Partition
+  {
+    public int Dimension { get; private set; } // which element of ValueSet is used to choose which this.Children to place it in.
+    List<Partition> children;
+    List<CharInfo> items = new List<CharInfo>();
+
+    public Partition(int partsPerLevel, int depth, int dimension)
+    {
+      this.Dimension = dimension;
+      if (depth > 1)
+      {
+        children = new List<Partition>(partsPerLevel);
+        for (int i = 0; i < partsPerLevel; ++ i)
+        {
+          children.Add(new Partition(partsPerLevel, depth - 1, dimension + 1));
+        }
+      }
+    }
+    public int PartitionCountIncludingSelf
+    {
+      get
+      {
+        int ret = 1; // self
+        if (children == null)
+          return ret;
+        foreach (Partition p in children)
+        {
+          ret += p.PartitionCountIncludingSelf;
+        }
+        return ret;
+      }
+    }
+
+    public int GetChildIndex(ValueSet v, bool useChroma)
+    {
+      float f = ColorUtils.NormalizeElement(v, useChroma, this.Dimension);
+      int n = (int)Math.Floor(f * children.Count);// if children=3, 0=0, .3=.9, .35 = 1.05, 1.0 = 3
+      n = Utils.Clamp(n, 0, children.Count - 1);
+      return n;
+    }
+
+    public void AddItem(CharInfo ci, bool useChroma)
+    {
+      items.Add(ci); // this means all partitions contain references to all child charinfo
+
+      if (children != null)
+      {
+        int n = GetChildIndex(ci.actualValues, useChroma);
+        children[n].AddItem(ci, useChroma);
+      }
+    }
+
+    // returns a list of items that's guaranteed to be populated, either of a more specific child's itemss, or if there are no
+    // child items, our own items.
+    // assumes that v is already in this current partition.
+    public IEnumerable<CharInfo> GetItemsInSamePartition(ValueSet v, bool useChroma)
+    {
+      if (children == null)
+        return this.items;// possibly returns 0 items! (and parent calls need to respond to that)
+      int n = GetChildIndex(v, useChroma);
+      var ret = children[n].GetItemsInSamePartition(v, useChroma);
+      if (ret.Any())
+        return ret;// there are some child (aka more specific) items; use it.
+      // child didn't return any items. use own.
+      return this.items;
+    }
+  }
   public class PartitionManager
   {
-    public void AddItem(CharInfo ci)
+    public int PartitionsPerDimension { get; private set; }
+    public int Depth { get; private set; }
+
+    private Partition Root { get; set; }
+    public int PartitionCount
     {
-      //
+      get
+      {
+        return Root.PartitionCountIncludingSelf;
+      }
     }
-    public void FindNearestItem(ValueSet v)
+
+    public PartitionManager(int partsPerLevel, int depth)
     {
-      //
+      this.PartitionsPerDimension = partsPerLevel;
+      this.Depth = depth;
+      this.Root = new Partition(partsPerLevel, depth, 0);
+    }
+    public void AddItem(CharInfo ci, bool useChroma)
+    {
+      this.Root.AddItem(ci, useChroma);
+    }
+
+    public IEnumerable<CharInfo> GetItemsInSamePartition(ValueSet v, bool useChroma)
+    {
+      return this.Root.GetItemsInSamePartition(v, useChroma);
     }
   }
 }

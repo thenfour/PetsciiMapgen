@@ -1,2 +1,7 @@
 testdest*.*
 map-*.*
+*.jpg
+*.png
+*.gif
+*.svg
+*

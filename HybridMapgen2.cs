@@ -1,4 +1,5 @@
-﻿using System;
+﻿//#define MASSIVE_DUMP
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -98,9 +99,11 @@ namespace PetsciiMapgen
     }
 
     public unsafe HybridMap2(string fontFileName, Size charSize,
-      Size lumaTiles, int valuesPerComponent, int valuesPerPartition, float lumaBias, bool useChroma,
-      Color[] monoPalette,// IPaletteProvider paletteProvider,
-      bool outputFullMap, bool outputRefMapAndFont,
+      Size lumaTiles, int valuesPerComponent,
+      int partitionSegments, int partitionDepth,
+      float lumaBias, bool useChroma,
+      Color[] monoPalette = null,
+      bool outputFullMap = true, bool outputRefMapAndFont = true,
       int fontLeftTopPadding = 0, IDitherProvider ditherProvider = null)
     {
       Timings timings = new Timings();
@@ -136,6 +139,18 @@ namespace PetsciiMapgen
       long mapdimpix = (long)Math.Sqrt(numDestCharacters);
       Console.WriteLine("Resulting map will be about: [" + mapdimpix.ToString("N0") + ", " + mapdimpix.ToString("N0") + "]");
 
+      if (mapdimpix > 17000)
+      {
+        // a healthy safe amount.
+        // https://stackoverflow.com/questions/29175585/what-is-the-maximum-resolution-of-c-sharp-net-bitmap
+        Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        Console.WriteLine("!!! full map generation will not be possible; too big.");
+        Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        Console.WriteLine("press a key to continue anyway.");
+        Console.ReadKey();
+      }
+
+
       // fill in char source info (actual tile values)
       timings.EnterTask("Analyze incoming font");
       var charInfo = new List<CharInfo>();
@@ -164,6 +179,7 @@ namespace PetsciiMapgen
             //  //ranges[i].Visit(ci.actualValues.Values[i]);
             //}
 
+            ci.masterIdx = charInfo.Count;
             charInfo.Add(ci);
           }
           else
@@ -189,6 +205,7 @@ namespace PetsciiMapgen
                   //  ranges[i].Visit(ci.actualValues.Values[i]);
                   //}
 
+                  ci.masterIdx = charInfo.Count;
                   charInfo.Add(ci);
                 }
               }
@@ -208,12 +225,18 @@ namespace PetsciiMapgen
       float[] discreteValues = Utils.GetDiscreteNormalizedValues(valuesPerComponent);
       //PartitionManager pm = new PartitionManager(valuesPerPartition, componentsPerCell, discreteValues);
 
-      var dp = charInfo.DistinctBy(a => a.partition);
-      Console.WriteLine("  Chars placed into distinct partitions: " + dp.Count());
+      //var dp = charInfo.DistinctBy(a => a.partition);
+      //Console.WriteLine("  Chars placed into distinct partitions: " + dp.Count());
 
       // create list of all mapkeys
       var keys = Utils.Permutate(componentsPerCell, useChroma, discreteValues); // returns sorted.
       Console.WriteLine("  Key count: " + keys.Length);
+
+      PartitionManager pm = new PartitionManager(partitionSegments, partitionDepth);
+      foreach (var ci in charInfo)
+      {
+        pm.AddItem(ci, useChroma);
+      }
 
       //// generate a list of partitions and map them to keys.
       //timings.EnterTask("Generating permutations");
@@ -249,34 +272,56 @@ namespace PetsciiMapgen
 
       // - generate a list of mappings and their distances
       ulong theoreticalMappings = (ulong)charInfo.Count * (ulong)numDestCharacters;
-      Console.WriteLine("  (" + theoreticalMappings.ToString("N0") + " mappings)");
+      Console.WriteLine("  Partition count: " + pm.PartitionCount.ToString("N0"));
+      Console.WriteLine("  Theoretical mapping count: " + theoreticalMappings.ToString("N0"));
+
       Utils.ValueRangeInspector distanceRange = new Utils.ValueRangeInspector();
       MappingArray allMappings = new MappingArray();
-      for (UInt32 ici = 0; ici < charInfo.Count; ++ ici)
+      //for (UInt32 ici = 0; ici < charInfo.Count; ++ ici)
+      //{
+      //  var ci = charInfo[(int)ici];
+      //  //Debug.Assert(partitions[ci.partition].initialized == true);
+      //  //foreach (var ikey in partitions[ci.partition].keyIdxs)
+      //  for (int ikey = 0; ikey < keys.Length; ++ikey)
+      //  {
+      //    long imap = allMappings.Add();
+      //    allMappings.Values[imap].icharInfo = ici;
+      //    allMappings.Values[imap].imapKey = (uint)ikey;
+      //    double fdist = CalcCellDistance(keys[ikey], ci.actualValues);
+      //    //ulong dist = (ulong)(fdist * Constants.DistanceRange);
+      //    allMappings.Values[imap].dist = fdist;
+      //    distanceRange.Visit(fdist);
+      //    keys[ikey].MinDistFound = Math.Min(keys[ikey].MinDistFound, fdist);
+      //    keys[ikey].Visited = true;
+      //    ci.mapKeysVisited++;
+      //  }
+      //}
+      long comparisonsMade = 0;
+      ProgressReporter pr = new ProgressReporter(keys.Length);
+      for (int ikey = 0; ikey < keys.Length; ++ikey)
       {
-        var ci = charInfo[(int)ici];
-        //Debug.Assert(partitions[ci.partition].initialized == true);
-        //foreach (var ikey in partitions[ci.partition].keyIdxs)
-        for (int ikey = 0; ikey < keys.Length; ++ikey)
+        pr.Visit(ikey);
+        var chars = pm.GetItemsInSamePartition(keys[ikey], useChroma);
+        foreach (var ci in chars)
         {
           long imap = allMappings.Add();
-          allMappings.Values[imap].icharInfo = ici;
-          allMappings.Values[imap].imapKey = (uint)ikey;
+          allMappings.Values[imap].icharInfo = ci.masterIdx;
+          allMappings.Values[imap].imapKey = ikey;
           double fdist = CalcCellDistance(keys[ikey], ci.actualValues);
-          ulong dist = (ulong)(fdist * Constants.DistanceRange);
-          allMappings.Values[imap].dist = dist;
+          allMappings.Values[imap].dist = fdist;
           distanceRange.Visit(fdist);
-          keys[ikey].MinDistFound = Math.Min(keys[ikey].MinDistFound, dist);
+          keys[ikey].MinDistFound = Math.Min(keys[ikey].MinDistFound, fdist);
           keys[ikey].Visited = true;
           ci.mapKeysVisited++;
+          comparisonsMade++;
         }
       }
 
-      Console.WriteLine("  Remaining elements: {0}", allMappings.Length.ToString("N0"));
+      Console.WriteLine("  Mappings generated: {0}", allMappings.Length.ToString("N0"));
+      Console.WriteLine("  Comparisons made: {0}", comparisonsMade.ToString("N0"));
+      Console.WriteLine("  Distance range encountered: {0}", distanceRange);
 
-      Console.WriteLine("Distance range encountered: {0}", distanceRange);
-
-      ulong maxMinDist = 0;
+      double maxMinDist = 0;
       foreach (var mapKey in keys)
       {
         if (mapKey.Visited)
@@ -316,35 +361,35 @@ namespace PetsciiMapgen
       }
       timings.EndTask();
 
-      double missingMappings = numDestCharacters - map.Count;
-      timings.EnterTask(string.Format("Fill in any missing mappings (est: {0} / {1}%)", missingMappings.ToString("N0"),
-        (missingMappings * 100 / numDestCharacters).ToString("0.00")));
+      //double missingMappings = numDestCharacters - map.Count;
+      //timings.EnterTask(string.Format("Fill in any missing mappings (est: {0} / {1}%)", missingMappings.ToString("N0"),
+      //  (missingMappings * 100 / numDestCharacters).ToString("0.00")));
 
-      int missingKeys = 0;
+      //int missingKeys = 0;
 
-      foreach (ValueSet k in keys)
-      {
-        CharInfo ci = null;
-        map.TryGetValue(k.ID, out ci);
-        if (ci == null)
-        {
-          // fill in this map key! just find the closest char.
-          double minDist = double.MaxValue;// distanceRange.MaxValue + 1;
-          foreach (var ci2 in charInfo)
-          {
-            double fdist = CalcCellDistance(k, ci2.actualValues);
-            if (fdist < minDist)
-            {
-              minDist = fdist;
-              ci = ci2;
-            }
-          }
-          missingKeys++;
-          map[k.ID] = ci;
-          keys[k.ID].Mapped = true;
-          ci.usages++;
-        }
-      }
+      //foreach (ValueSet k in keys)
+      //{
+      //  CharInfo ci = null;
+      //  map.TryGetValue(k.ID, out ci);
+      //  if (ci == null)
+      //  {
+      //    // fill in this map key! just find the closest char.
+      //    double minDist = double.MaxValue;// distanceRange.MaxValue + 1;
+      //    foreach (var ci2 in charInfo)
+      //    {
+      //      double fdist = CalcCellDistance(k, ci2.actualValues);
+      //      if (fdist < minDist)
+      //      {
+      //        minDist = fdist;
+      //        ci = ci2;
+      //      }
+      //    }
+      //    missingKeys++;
+      //    map[k.ID] = ci;
+      //    keys[k.ID].Mapped = true;
+      //    ci.usages++;
+      //  }
+      //}
 
       int numCharsUsed = 0;
       int numCharsUsedOnce = 0;
@@ -362,8 +407,6 @@ namespace PetsciiMapgen
           numRepetitions += ci.usages - 1;
       }
 
-
-
       timings.EndTask();
 
       Console.WriteLine("Post-map stats:");
@@ -375,32 +418,33 @@ namespace PetsciiMapgen
 
 
       // massive dump.
-      //Console.WriteLine("ALL CHAR INFO:");
-      //foreach (CharInfo ci in charInfo)
-      //{
-      //  Console.WriteLine("  {0}", ci);
-      //}
+#if MASSIVE_DUMP
+      Console.WriteLine("ALL CHAR INFO:");
+      foreach (CharInfo ci in charInfo)
+      {
+        Console.WriteLine("  {0}", ci);
+      }
 
-      //Console.WriteLine("ALL MAPPING INFO:");
-      //foreach (var k in keys)
-      //{
-      //  CharInfo ci = null;
-      //  if (!map.TryGetValue(k.ID, out ci))
-      //  {
-      //    continue;
-      //  }
+      Console.WriteLine("ALL MAPPING INFO:");
+      foreach (var k in keys)
+      {
+        CharInfo ci = null;
+        if (!map.TryGetValue(k.ID, out ci))
+        {
+          continue;
+        }
 
-      //  Console.WriteLine("  id:{1} key:{0} mindist:{2} mappedtoCharSrc:{3},fg:{4},bg:{5}",
-      //    ValueSet.ToString(k), k.ID, k.MinDistFound, ci.srcIndex, ci.ifg, ci.ibg);
+        Console.WriteLine("  id:{1} key:{0} mindist:{2} mappedtoCharSrc:{3},fg:{4},bg:{5}",
+          ValueSet.ToString(k), k.ID, k.MinDistFound, ci.srcIndex, ci.ifg, ci.ibg);
 
-      //  foreach (CharInfo ci2 in charInfo)
-      //  {
-      //    double fdist = CalcCellDistance(k, ci2.actualValues);
-      //    ulong dist = (ulong)(fdist * Constants.DistanceRange);
-      //    Console.WriteLine("    dist {0} to char {1}", dist, ci2);
-      //  }
-      //}
-
+        foreach (CharInfo ci2 in charInfo)
+        {
+          double fdist = CalcCellDistance(k, ci2.actualValues);
+          //ulong dist = (ulong)(fdist * Constants.DistanceRange);
+          Console.WriteLine("    dist {0} to char {1}", fdist.ToString("0.00"), ci2);
+        }
+      }
+#endif
 
       if (outputFullMap)
       {
@@ -420,6 +464,16 @@ namespace PetsciiMapgen
       Console.WriteLine("MAP image generation...");
       Console.WriteLine("  Cells: [" + numCellsX + ", " + numCellsX + "]");
       Console.WriteLine("  Image size: [" + mapImageSize.Width + ", " + mapImageSize.Height + "]");
+
+      if (mapImageSize.Width > 17000)
+      {
+        // a healthy safe amount.
+        // https://stackoverflow.com/questions/29175585/what-is-the-maximum-resolution-of-c-sharp-net-bitmap
+        Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        Console.WriteLine("!!! full map generation not possible; too big.");
+        Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        return;
+      }
 
       this.mapBmp = new Bitmap(mapImageSize.Width, mapImageSize.Height, PixelFormat.Format24bppRgb);
       BitmapData srcData = srcBmp.LockBits(new Rectangle(0, 0, srcBmp.Width, srcBmp.Height), ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
@@ -499,7 +553,7 @@ namespace PetsciiMapgen
         CharInfo ci = distinctChars[ichar].Value;
         if (ci == null)
           continue;
-        ci.index = ichar;
+        //ci.distinctIndex = ichar;
 
         long cellY = ichar / fontImgWidthChars;
         long cellX = ichar - (fontImgWidthChars * cellY);
@@ -652,6 +706,7 @@ namespace PetsciiMapgen
 
       using (var g = Graphics.FromImage(destImg))
       {
+        Color srcColor = Color.Black;
         //ValueSet vals = ValueSet.New(componentsPerCell, 9995);
         float[] vals = new float[componentsPerCell];
         // roughly simulate the shader algo
@@ -668,10 +723,10 @@ namespace PetsciiMapgen
               for (int tx = lumaTiles.Width - 1; tx >= 0; --tx)
               {
                 Point tilePos = Utils.GetTileOrigin(charSize, lumaTiles, tx, ty);
-                Color srcColor = testBmp.GetPixel(((srcCellX) * charSize.Width) + tilePos.X, ((srcCellY) * charSize.Height) + tilePos.Y);
+                srcColor = testBmp.GetPixel(((srcCellX) * charSize.Width) + tilePos.X, ((srcCellY) * charSize.Height) + tilePos.Y);
 
                 ColorUtils.ToMappingNormalized(srcColor, out float cy, out float cu, out float cv);
-                vals[GetValueYIndex(tx, ty)] = Utils.Clamp(cy, 0, 1);
+                vals[GetValueYIndex(tx, ty)] = cy;
                 charR += srcColor.R;
                 charG += srcColor.G;
                 charB += srcColor.B;
@@ -683,9 +738,9 @@ namespace PetsciiMapgen
               charR /= numTiles;
               charG /= numTiles;
               charB /= numTiles;
-              ColorUtils.ToMapping(Color.FromArgb(charR, charG, charB), out float cy, out float cu, out float cv);
-              vals[GetValueUIndex()] = Utils.Clamp(cu, 0, 1);
-              vals[GetValueVIndex()] = Utils.Clamp(cv, 0, 1);
+              ColorUtils.ToMappingNormalized(Color.FromArgb(charR, charG, charB), out float cy, out float cu, out float cv);
+              vals[GetValueUIndex()] = cu;// Utils.Clamp(cu, 0, 1);
+              vals[GetValueVIndex()] = cv;// Utils.Clamp(cv, 0, 1);
             }
 
             // figure out which "ID" this value corresponds to.
@@ -714,6 +769,13 @@ namespace PetsciiMapgen
             // ID is now calculated.
             long mapCellY = ID / mapCellsX;
             long mapCellX = ID - (mapCellY * mapCellsX);
+
+#if MASSIVE_DUMP
+            Console.WriteLine(" Pixel: {0} with vals [{1}] mapped to ID {2}",
+              srcColor,
+              string.Join(",", vals.Select(v => v.ToString("0.00"))),
+              ID);
+#endif
 
             // blit from map img.
             Rectangle srcRect = new Rectangle((int)mapCellX * charSize.Width, (int)mapCellY * charSize.Height, charSize.Width, charSize.Height);

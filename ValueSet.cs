@@ -21,7 +21,7 @@ namespace PetsciiMapgen
     public long ID;
     public bool Mapped;
     public bool Visited;
-    public ulong MinDistFound;
+    public double MinDistFound;
 
 #if DEBUG
     public float[] YUVvalues;
@@ -41,7 +41,12 @@ namespace PetsciiMapgen
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void Init(ref ValueSet n, int dimensionsPerCharacter, bool useChroma, long id, float[] discreteNormalizedValues)
     {
+#if DEBUG
       n.YUVvalues = new float[11];
+#endif
+      n.ValuesLength = dimensionsPerCharacter;
+      n.ID = id;
+      n.MinDistFound = double.MaxValue;// UInt32.MaxValue;
       if (discreteNormalizedValues != null)
       {
         Debug.Assert(dimensionsPerCharacter == discreteNormalizedValues.Length);
@@ -50,11 +55,8 @@ namespace PetsciiMapgen
           n.YUVvalues[i] = discreteNormalizedValues[i];
         }
         // un-normalize these.
-        ColorUtils.Denormalize(dimensionsPerCharacter, useChroma, n.YUVvalues);
+        ColorUtils.Denormalize(useChroma, n);
       }
-      n.ValuesLength = dimensionsPerCharacter;
-      n.ID = id;
-      n.MinDistFound = UInt32.MaxValue;
     }
 
     public unsafe static int CompareTo(ValueSet a, ValueSet other)
