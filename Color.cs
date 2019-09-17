@@ -15,7 +15,7 @@ namespace PetsciiMapgen
 {
   public interface IDitherProvider
   {
-    Color TransformColor(int cellX, int cellY, Color c);
+    ColorF TransformColor(int cellX, int cellY, ColorF c);
     int DiscreteTargetValues { get; set; }
   }
 
@@ -38,18 +38,23 @@ namespace PetsciiMapgen
       this.strength = strength;
     }
 
-    public Color TransformColor(int cellX, int cellY, Color c)
+    public ColorF TransformColor(int cellX, int cellY, ColorF c)
     {
-      if (c == Color.Black || c == Color.White)
+      if (c.IsBlackOrWhite())// == Color.Black || c == Color.White)
         return c;// don't dither these; they're useful to be pure!
       cellX &= 7;
       cellY &= 7;
       double p = (matrix[cellX, cellY] - .5) * strength;
-      int i = (int)(255 * (p / DiscreteTargetValues));
-      return Color.FromArgb(
-        Utils.Clamp(c.R + i, 0, 255),
-        Utils.Clamp(c.G + i, 0, 255),
-        Utils.Clamp(c.B + i, 0, 255));
+      double i = (255 * (p / DiscreteTargetValues));
+
+      c = c.Add(i);
+      c = c.Clamp();
+      return c;
+
+      //return Color.FromArgb(
+      //  Utils.Clamp(c.R + i, 0, 255),
+      //  Utils.Clamp(c.G + i, 0, 255),
+      //  Utils.Clamp(c.B + i, 0, 255));
     }
   }
 
@@ -62,27 +67,29 @@ namespace PetsciiMapgen
 
   public static class ColorUtils
   {
-    public static void ToMapping(Color c, out float y, out float u, out float v)
+    public static ColorF ToMapping(ColorF c)//, out float y, out float u, out float v)
     {
       var rgb = new ColorMine.ColorSpaces.Rgb { R = c.R, G = c.G, B = c.B };
       var lab = rgb.To<ColorMine.ColorSpaces.Lab>();
       // https://github.com/hvalidi/ColorMine/blob/master/ColorMine/ColorSpaces/ColorSpaces.xml
-      y = (float)lab.L;
-      u = (float)lab.A;
-      v = (float)lab.B;
+      return ColorFUtils.FromRGB(lab.L, lab.A, lab.B);
+      //y = (float)lab.L;
+      //u = (float)lab.A;
+      //v = (float)lab.B;
     }
-    public static void ToMappingNormalized(Color c, out float y, out float u, out float v)
+    public static ColorF ToMappingNormalized(ColorF c)//, out float y, out float u, out float v)
     {
-      ToMapping(c, out y, out u, out v);
-      y = NormalizeY(y);// Utils.Clamp(y / 100, 0, 1);
-      u = NormalizeUV(u);// Utils.Clamp((u / 255) + .5f, 0, 1);
-      v = NormalizeUV(v);// Utils.Clamp((v / 255) + .5f, 0, 1);
+      ColorF ret = ToMapping(c);//, out y, out u, out v);
+      ret.R = NormalizeY(ret.R);// Utils.Clamp(y / 100, 0, 1);
+      ret.G = NormalizeUV(ret.G);// Utils.Clamp((u / 255) + .5f, 0, 1);
+      ret.B = NormalizeUV(ret.B);// Utils.Clamp((v / 255) + .5f, 0, 1);
+      return ret;
     }
-    internal static float NormalizeY(float y)
+    internal static double NormalizeY(double y)
     {
       return Utils.Clamp(y / 100, 0, 1);
     }
-    internal static float NormalizeUV(float uv)
+    internal static double NormalizeUV(double uv)
     {
       return Utils.Clamp((uv / 255) + .5f, 0, 1);
     }
@@ -102,7 +109,7 @@ namespace PetsciiMapgen
         v.YUVvalues[i] *= 100;
       }
     }
-    internal unsafe static float NormalizeElement(ValueSet v, bool usechroma, int elementToNormalize)
+    internal unsafe static double NormalizeElement(ValueSet v, bool usechroma, int elementToNormalize)
     {
       if (usechroma)
       {

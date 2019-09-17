@@ -78,7 +78,7 @@ namespace PetsciiMapgen
       List<string> items = new List<string>();
       for (int i = 0; i < o.ValuesLength; ++i)
       {
-        items.Add(o.YUVvalues[i].ToString("0.00"));
+        items.Add(o.YUVvalues[i].ToString("0.000000"));
       }
       return string.Format("[{0}]", string.Join(",", items));
     }

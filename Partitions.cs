@@ -48,7 +48,7 @@ namespace PetsciiMapgen
 
     public int GetChildIndex(ValueSet v, bool useChroma)
     {
-      float f = ColorUtils.NormalizeElement(v, useChroma, this.Dimension);
+      double f = ColorUtils.NormalizeElement(v, useChroma, this.Dimension);
       int n = (int)Math.Floor(f * children.Count);// if children=3, 0=0, .3=.9, .35 = 1.05, 1.0 = 3
       n = Utils.Clamp(n, 0, children.Count - 1);
       return n;

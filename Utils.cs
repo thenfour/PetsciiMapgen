@@ -13,6 +13,80 @@ using System.Runtime.InteropServices;
 
 namespace PetsciiMapgen
 {
+  public struct ColorF
+  {
+    public double R;
+    public double G;
+    public double B;
+
+    //public static ColorF Init { R: 0 };
+  }
+  public static class ColorFUtils
+  {
+    public static ColorF Add(this ColorF c, ColorF other)
+    {
+      c.R += other.R;
+      c.G += other.G;
+      c.B += other.B;
+      return c;
+    }
+    public static ColorF Add(this ColorF c, double other)
+    {
+      c.R += other;
+      c.G += other;
+      c.B += other;
+      return c;
+    }
+    public static ColorF Div(this ColorF c, int other)
+    {
+      c.R /= other;
+      c.G /= other;
+      c.B /= other;
+      return c;
+    }
+    public static bool IsBlackOrWhite(this ColorF c)
+    {
+      if (c.R > 2 && c.R < 253)
+        return false;
+      if (c.G > 2 && c.G < 253)
+        return false;
+      if (c.B > 2 && c.B < 253)
+        return false;
+      return true;
+    }
+    public static ColorF Clamp(this ColorF c)
+    {
+      c.R = Utils.Clamp(c.R, 0, 255);
+      c.G = Utils.Clamp(c.G, 0, 255);
+      c.B = Utils.Clamp(c.B, 0, 255);
+      return c;
+    }
+    public static ColorF From(Color c)
+    {
+      ColorF ret;
+      ret.R = c.R;
+      ret.G = c.G;
+      ret.B = c.B;
+      return ret;
+    }
+    public static ColorF FromRGB(double r, double g, double b)
+    {
+      ColorF ret;
+      ret.R = r;
+      ret.G = g;
+      ret.B = b;
+      return ret;
+    }
+    public static ColorF Init
+    {
+      get
+      { ColorF ret; ret.R = 0; ret.G = 0; ret.B = 0; return ret; }
+    }
+    public static string ToString(this ColorF c)
+    {
+      return string.Format("[{0},{1},{2}]", c.R.ToString("0.00"), c.G.ToString("0.00"), c.B.ToString("0.00"));
+    }
+  }
   public class Constants
   {
     // values are 0-1 so distances are on avg even less. (sqrt(2)/2).
@@ -161,19 +235,19 @@ namespace PetsciiMapgen
     }
 
     // assumes 24 bits per pixel RGB
-    public static unsafe Color GetPixel(this BitmapData data, long x, long y)
+    public static unsafe ColorF GetPixel(this BitmapData data, long x, long y)
     {
       byte* p = data.GetRGBPointer(x, y);
-      return Color.FromArgb(p[2], p[1], p[0]);
+      return ColorFUtils.From(Color.FromArgb(p[2], p[1], p[0]));
     }
 
     // assumes 24 bits per pixel RGB
-    public static unsafe void SetPixel(this BitmapData data, long x, long y, Color c)
+    public static unsafe void SetPixel(this BitmapData data, long x, long y, ColorF c)
     {
       byte* p = data.GetRGBPointer(x, y);
-      p[2] = c.R;
-      p[1] = c.G;
-      p[0] = c.B;
+      p[2] = (byte)c.R;
+      p[1] = (byte)c.G;
+      p[0] = (byte)c.B;
     }
 
     public static IEnumerable<TSource> DistinctBy<TSource, TKey>
@@ -223,6 +297,12 @@ namespace PetsciiMapgen
     }
 
     public static float Clamp(float v, float m, float x)
+    {
+      if (v < m) return m;
+      if (v > x) return x;
+      return v;
+    }
+    public static double Clamp(double v, double m, double x)
     {
       if (v < m) return m;
       if (v > x) return x;
