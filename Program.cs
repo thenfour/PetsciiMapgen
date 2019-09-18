@@ -26,7 +26,7 @@ namespace PetsciiMapgen
       //new Size(1, 1), 4, 1, 1, 1f, true);
 
       var map = new HybridMap2("..\\..\\img\\fonts\\emojidark12.png", new Size(12, 12),
-      new Size(1, 1), 6, 1, 1, 3, true, ditherProvider: new Bayer8DitherProvider(.5));
+      new Size(1, 1), 7, 1, 1, 2, true, ditherProvider: new Bayer8DitherProvider(.5));
 
       //var map = new HybridMap2("..\\..\\img\\fonts\\mariotiles4.png", new Size(16, 16),
       //  new Size(2, 2), 16, 2, 1.5f, false, null, true, true, 1);

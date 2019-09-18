@@ -70,6 +70,7 @@ namespace PetsciiMapgen
     public IDitherProvider ditherProvider;
     double lumaBias;
     long numDestCharacters;
+    float[] discreteValues;
 
     ColorF[] monoPalette = null;
     public IPaletteProvider paletteProvider;
@@ -96,6 +97,23 @@ namespace PetsciiMapgen
       return numYcomponents + 1;
     }
 
+
+    // takes a "real" A or B colorant and shifts it over.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal double UVShiftHack(double uv)
+    {
+      double val = discreteValues[discreteValues.Length / 2];// a center point to aim for.
+      uv = ColorUtils.NormalizeUV(uv); // 0-1
+      if (uv <= .5)
+      {
+        return ColorUtils.DenormalizeUV(uv * val / .5);
+      }
+      uv = 1.0 - uv; // now .5,1 => .5-0
+      uv *= (1.0-val) / .5;
+      uv = 1.0 - uv;
+      return ColorUtils.DenormalizeUV(uv);
+    }
+
     // key is NOT guaranteed to actually be valid CIELAB colors. they are sorta
     // estimates or something.
     // actual IS guaranteed. so in order to actually take a distance, we have to
@@ -106,6 +124,12 @@ namespace PetsciiMapgen
       double actualV = actual.YUVvalues[GetValueVIndex()];
       double keyU = key.YUVvalues[GetValueUIndex()];
       double keyV = key.YUVvalues[GetValueVIndex()];
+
+      //actualU = UVShiftHack(actualU);
+      //actualV = UVShiftHack(actualV);
+      //keyU = UVShiftHack(keyU);
+      //keyV = UVShiftHack(keyV);
+
       double acc = 0.0f;
       double m;
       for (int i = 0; i < numYcomponents; ++ i)
@@ -134,6 +158,8 @@ namespace PetsciiMapgen
 
         //if (keyY < 2 || keyY > 98)// black / white processing where UV are meaningless.
         //{
+        //  // is it really an issue when the map contains nonsense values for LAB?
+        //  // the image will never see those values anyway right?
         //  m = Math.Abs(actualU);
         //  tileAcc += m * m;
         //  m = Math.Abs(actualV);
@@ -262,7 +288,7 @@ namespace PetsciiMapgen
       Console.WriteLine("Number of source chars after palettization: " + charInfo.Count);
 
 
-      float[] discreteValues = Utils.GetDiscreteNormalizedValues(valuesPerComponent);
+      this.discreteValues = Utils.GetDiscreteNormalizedValues(valuesPerComponent);
 
       // create list of all mapkeys
       var keys = Utils.Permutate(componentsPerCell, useChroma, discreteValues); // returns sorted.
@@ -291,6 +317,10 @@ namespace PetsciiMapgen
       for (int ikey = 0; ikey < keys.Length; ++ikey)
       {
         pr.Visit(ikey);
+        if (ikey == 20)
+        {
+          int a = 0;
+        }
         var chars = pm.GetItemsInSamePartition(keys[ikey], useChroma);
         foreach (var ci in chars)
         {

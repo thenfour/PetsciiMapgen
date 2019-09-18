@@ -93,6 +93,10 @@ namespace PetsciiMapgen
     {
       return Utils.Clamp((uv / 255) + .5f, 0, 1);
     }
+    internal static double DenormalizeUV(double uv)
+    {
+      return (uv - .5) * 255;
+    }
     internal unsafe static void Denormalize(bool usechroma, ValueSet v)
     {
       // changes normalized 0-1 values to YUV-ranged values. depends on value format and stuff.
@@ -101,8 +105,8 @@ namespace PetsciiMapgen
       if (usechroma)
       {
         chromaelements = 2;
-        v.YUVvalues[n - 1] = (v.YUVvalues[n - 1] - .5f) * 255;
-        v.YUVvalues[n - 2] = (v.YUVvalues[n - 2] - .5f) * 255;
+        v.YUVvalues[n - 1] = (float)DenormalizeUV(v.YUVvalues[n - 1]);// - .5f) * 255;
+        v.YUVvalues[n - 2] = (float)DenormalizeUV(v.YUVvalues[n - 2]);// - .5f) * 255;
       }
       for (int i = 0; i < n-chromaelements; ++ i)
       {
