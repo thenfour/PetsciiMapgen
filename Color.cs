@@ -67,65 +67,65 @@ namespace PetsciiMapgen
 
   public static class ColorUtils
   {
-    public static ColorF ToMapping(ColorF c)//, out float y, out float u, out float v)
-    {
-      var rgb = new ColorMine.ColorSpaces.Rgb { R = c.R, G = c.G, B = c.B };
-      var lab = rgb.To<ColorMine.ColorSpaces.Lab>();
-      // https://github.com/hvalidi/ColorMine/blob/master/ColorMine/ColorSpaces/ColorSpaces.xml
-      return ColorFUtils.FromRGB(lab.L, lab.A, lab.B);
-      //y = (float)lab.L;
-      //u = (float)lab.A;
-      //v = (float)lab.B;
-    }
-    public static ColorF ToMappingNormalized(ColorF c)//, out float y, out float u, out float v)
-    {
-      ColorF ret = ToMapping(c);//, out y, out u, out v);
-      ret.R = NormalizeY(ret.R);// Utils.Clamp(y / 100, 0, 1);
-      ret.G = NormalizeUV(ret.G);// Utils.Clamp((u / 255) + .5f, 0, 1);
-      ret.B = NormalizeUV(ret.B);// Utils.Clamp((v / 255) + .5f, 0, 1);
-      return ret;
-    }
-    internal static double NormalizeY(double y)
-    {
-      return Utils.Clamp(y / 100, 0, 1);
-    }
-    internal static double NormalizeUV(double uv)
-    {
-      return Utils.Clamp((uv / 255) + .5f, 0, 1);
-    }
-    internal static double DenormalizeUV(double uv)
-    {
-      return (uv - .5) * 255;
-    }
-    internal unsafe static void Denormalize(bool usechroma, ValueSet v)
-    {
-      // changes normalized 0-1 values to YUV-ranged values. depends on value format and stuff.
-      int chromaelements = 0;
-      int n = v.ValuesLength;
-      if (usechroma)
-      {
-        chromaelements = 2;
-        v.YUVvalues[n - 1] = (float)DenormalizeUV(v.YUVvalues[n - 1]);// - .5f) * 255;
-        v.YUVvalues[n - 2] = (float)DenormalizeUV(v.YUVvalues[n - 2]);// - .5f) * 255;
-      }
-      for (int i = 0; i < n-chromaelements; ++ i)
-      {
-        v.YUVvalues[i] *= 100;
-      }
-    }
-    internal unsafe static double NormalizeElement(ValueSet v, bool usechroma, int elementToNormalize)
-    {
-      if (usechroma)
-      {
-        // valueCount-1 = element of V
-        // valueCount-2 = element of U
-        if (elementToNormalize >= v.ValuesLength - 2)
-        {
-          return NormalizeUV(v.YUVvalues[elementToNormalize]);
-        }
-      }
-      return NormalizeY(v.YUVvalues[elementToNormalize]);
-    }
+    //public static ColorF ToMapping(ColorF c)//, out float y, out float u, out float v)
+    //{
+    //  var rgb = new ColorMine.ColorSpaces.Rgb { R = c.R, G = c.G, B = c.B };
+    //  var lab = rgb.To<ColorMine.ColorSpaces.Lab>();
+    //  // https://github.com/hvalidi/ColorMine/blob/master/ColorMine/ColorSpaces/ColorSpaces.xml
+    //  return ColorFUtils.FromRGB(lab.L, lab.A, lab.B);
+    //  //y = (float)lab.L;
+    //  //u = (float)lab.A;
+    //  //v = (float)lab.B;
+    //}
+    //public static ColorF ToMappingNormalized(ColorF c)//, out float y, out float u, out float v)
+    //{
+    //  ColorF ret = ToMapping(c);//, out y, out u, out v);
+    //  ret.R = NormalizeY(ret.R);// Utils.Clamp(y / 100, 0, 1);
+    //  ret.G = NormalizeUV(ret.G);// Utils.Clamp((u / 255) + .5f, 0, 1);
+    //  ret.B = NormalizeUV(ret.B);// Utils.Clamp((v / 255) + .5f, 0, 1);
+    //  return ret;
+    //}
+    //internal static double NormalizeY(double y)
+    //{
+    //  return Utils.Clamp(y / 100, 0, 1);
+    //}
+    //internal static double NormalizeUV(double uv)
+    //{
+    //  return Utils.Clamp((uv / 255) + .5f, 0, 1);
+    //}
+    //internal static double DenormalizeUV(double uv)
+    //{
+    //  return (uv - .5) * 255;
+    //}
+    //internal unsafe static void Denormalize(bool usechroma, ValueSet v)
+    //{
+    //  // changes normalized 0-1 values to YUV-ranged values. depends on value format and stuff.
+    //  int chromaelements = 0;
+    //  int n = v.ValuesLength;
+    //  if (usechroma)
+    //  {
+    //    chromaelements = 2;
+    //    v.YUVvalues[n - 1] = (float)DenormalizeUV(v.YUVvalues[n - 1]);// - .5f) * 255;
+    //    v.YUVvalues[n - 2] = (float)DenormalizeUV(v.YUVvalues[n - 2]);// - .5f) * 255;
+    //  }
+    //  for (int i = 0; i < n-chromaelements; ++ i)
+    //  {
+    //    v.YUVvalues[i] *= 100;
+    //  }
+    //}
+    //internal unsafe static double NormalizeElement(ValueSet v, bool usechroma, int elementToNormalize)
+    //{
+    //  if (usechroma)
+    //  {
+    //    // valueCount-1 = element of V
+    //    // valueCount-2 = element of U
+    //    if (elementToNormalize >= v.ValuesLength - 2)
+    //    {
+    //      return NormalizeUV(v.YUVvalues[elementToNormalize]);
+    //    }
+    //  }
+    //  return NormalizeY(v.YUVvalues[elementToNormalize]);
+    //}
   }
 }
 

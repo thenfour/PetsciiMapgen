@@ -19,44 +19,26 @@ namespace PetsciiMapgen
       Timings t = new Timings();
       t.EnterTask("--- MAIN PROCESSING");
 
-      //var map = new HybridMap2("..\\..\\img\\fonts\\pantoneswatches8x8.png", new Size(8, 8),
-      //new Size(1, 1), 12, 12, 2.0f, true, null, true, true);
+      var emoji12 = new FontProvider("..\\..\\img\\fonts\\emojidark12.png", new Size(12, 12));
+      var c64font = new FontProvider("..\\..\\img\\fonts\\c64opt160.png", new Size(8, 8));
+      var flatPartition = new PartitionManager(1, 1);
 
-      //var map = new HybridMap2(new FontProvider("..\\..\\img\\fonts\\test7.png", new Size(12, 12), 0),
-      //new Size(2, 2), 4, 1, 1, 1f, true);
+      //var map = new HybridMap2(
+      //  new FontProvider("..\\..\\img\\fonts\\test7.png", new Size(12, 12)),
+      //  flatPartition,
+      //  new PixelFormatProvider(3, new Size(1, 1), true, 1));
 
-      var map = new HybridMap2(new FontProvider("..\\..\\img\\fonts\\emojidark12.png", new Size(12, 12)),
-      new Size(2, 2), 5, new PartitionManager(2, 5), 2, true);
+      var map = new HybridMap2(
+        emoji12,
+        flatPartition,
+        new PixelFormatProvider(5, new Size(2, 2), true, 2.0f));
 
-      //var map = new HybridMap2("..\\..\\img\\fonts\\mariotiles4.png", new Size(16, 16),
-      //  new Size(2, 2), 16, 2, 1.5f, false, null, true, true, 1);
-
-      //var map = new HybridMap2("..\\..\\img\\fonts\\sonic.png", new Size(24, 32),
-      //  new Size(2, 2), 16, 2, 1.5f, false, null, true, true);
-      //var map = new HybridMap2("..\\..\\img\\fonts\\mario.png", new Size(24, 24),
-      //  new Size(2, 2), 16, 2, 1.5f, false, null, true, true, 1);
-
-      //var map = new HybridMap2("..\\..\\img\\fonts\\emojiTest12.png", new Size(12, 12),
-      //  new Size(1, 1), 5, 2, 6, 1f, true);
-      //var map = new HybridMap2("..\\..\\img\\fonts\\test6.png", new Size(1, 1),
-      //        new Size(1, 1), 6, 1, 1, 1.0f, true);
-
-      //var map = new HybridMap2("..\\..\\img\\fonts\\c64opt160.png", new Size(8, 8),
-      //new Size(2, 2), 8, 2, 4, 2, true, Palettes.C64, true, true);
-
-      //var map = new HybridMap2("..\\..\\img\\fonts\\VGAboxonly45.png", new Size(8, 16),
-      //  new Size(2, 2), 8, 4, 1.5f, true, Palettes.RGBPrimariesHalftone16, true, true);
-
-      //var map = new HybridMap2("..\\..\\img\\fonts\\topaz96.gif", new Size(8, 16),
-      //  new Size(2, 2), 8, 4, 1.5f, true, Palettes.Workbench4, true, true);
-      //var map = new HybridMap2("..\\..\\img\\fonts\\VGA240.png",
-      //new Size(8, 16), new Size(2, 2), 8, 4, 1.5f, true, Palettes.Gray3, true, true);
       t.EndTask();
 
       //var map = HybridMap2.Load("..\\..\\img\\maps\\mapHybrid-emoji12x12-2x2x6.png", new Size(12, 12), new Size(2, 2), 6);
       t.EnterTask("processing images");
 
-      map.ProcessImage("..\\..\\img\\fonts\\test6.png", "..\\..\\img\\testdest-test6.png");
+      //map.ProcessImage("..\\..\\img\\fonts\\test6.png", "..\\..\\img\\testdest-test6.png");
       map.ProcessImage("..\\..\\img\\grad3.png", "..\\..\\img\\testdest-grad3.png");
       map.ProcessImage("..\\..\\img\\circle.png", "..\\..\\img\\testdest-circle.png");
       map.ProcessImage("..\\..\\img\\grad.png", "..\\..\\img\\testdest-grad.png");

@@ -135,10 +135,10 @@ namespace PetsciiMapgen
     public int srcIndex;// index from the font provider.
     public ValueSet actualValues;// N-dimension values
     public int usages = 0;
-    public UInt32 mapKeysVisited = 0;
-    public int? ifg;// only for mono palette processing, index to palette
-    public int? ibg;// only for mono palette processing
-    public int masterIdx;// index into the charInfo list
+    //public UInt32 mapKeysVisited = 0;
+    //public int? ifg;// only for mono palette processing, index to palette
+    //public int? ibg;// only for mono palette processing
+    //public int masterIdx;// index into the charInfo list
 
     public CharInfo(int dimensionsPerCharacter)
     {
@@ -147,9 +147,9 @@ namespace PetsciiMapgen
 
     public override string ToString()
     {
-      return string.Format("ID:{2} src:{0} fg:{5} bg:{6} = {1}, keysvisited:{3}, usages:{7}",
-        srcIndex, ValueSet.ToString(actualValues), masterIdx,
-        mapKeysVisited, 0, ifg, ibg, usages);
+      return string.Format("ID:{0} src:{1}, usages:{2}",
+        srcIndex, actualValues,// masterIdx,
+        usages);
       //return srcIndex.ToString();
     }
   }
@@ -413,14 +413,14 @@ namespace PetsciiMapgen
     // returns all possible combinations of tile values.
     // this sets the ID for the resulting ValueSets which is an ordered number,
     // required for the un-mapping algo to know where things are.
-    public unsafe static ValueSet[] Permutate(int numTiles, bool useChroma, float[] discreteNormalizedValuesPerTile)
+    public unsafe static ValueSet[] Permutate(int numDimensions, float[] discreteNormalizedValuesPerTile)
     {
       // we will just do this as if each value is a digit in a number. that's the analogy that drives this.
       // actually this symbolizes the # of digits in the result, PLUS the number of possible values per digit.
       long numDigits = discreteNormalizedValuesPerTile.Length;
       long theoreticalBase = numDigits;
-      long totalPermutations = Pow(numDigits, (uint)numTiles);
-      float[] normalizedValues = new float[numTiles];
+      long totalPermutations = Pow(numDigits, (uint)numDimensions);
+      float[] normalizedValues = new float[numDimensions];
 
       ValueSet[] ret = new ValueSet[totalPermutations];
       for (long i = 0; i < totalPermutations; ++i)
@@ -428,36 +428,19 @@ namespace PetsciiMapgen
         // just like digits in a number, use % and divide to shave off "digits" one by one.
         long a = i;// the value that originates from i and we shift/mod to enumerate digits
         //ValueSet n = NewValueSet(numTiles, i);
-        for (int d = 0; d < numTiles; ++d)
+        for (int d = 0; d < numDimensions; ++d)
         {
           long thisIndex = a % theoreticalBase;
           a /= theoreticalBase;
           normalizedValues[d] = discreteNormalizedValuesPerTile[(int)thisIndex];
           //ret[i].Values[d] = discreteValuesPerTile[(int)thisIndex];
         }
-        ValueSet.Init(ref ret[i], numTiles, useChroma, i, normalizedValues);
+        ValueSet.Init(ref ret[i], numDimensions, i, normalizedValues);
         //ret.Add(n);
       }
       return ret;
     }
 
-
-    public static Point GetTileOrigin(Size charSize, Size numTilesPerChar, int tx, int ty)
-    {
-      int x = (int)Math.Round(((double)tx / numTilesPerChar.Width) * charSize.Width);
-      int y = (int)Math.Round(((double)ty / numTilesPerChar.Height) * charSize.Height);
-      return new Point(x, y);
-    }
-
-    // takes tile index and returns the position and size of the tile. unified function for this to avoid
-    // rounding issues.
-    public static void GetTileInfo(Size charSize, Size numTilesPerChar, int tx, int ty, out Point origin, out Size sz)
-    {
-      Point begin = GetTileOrigin(charSize, numTilesPerChar, tx, ty);
-      Point end = GetTileOrigin(charSize, numTilesPerChar, tx + 1, ty + 1);
-      origin = begin;
-      sz = Utils.Sub(end, begin);
-    }
     public unsafe static float[] GetDiscreteNormalizedValues(int discreteValues)
     {
       // returning [0, 1] for 2 discrete values. [0,.5,1] for 3, etc.

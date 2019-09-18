@@ -15,6 +15,7 @@ namespace PetsciiMapgen
 {
   // basically wraps List<Value>.
   // simplifies code that wants to do set operations.
+  //[DebuggerDisplay("ID:{ID} [{ColorData[0]},{ColorData[1],{ColorData[2]}}]")]
   public unsafe struct ValueSet
   {
     public int ValuesLength;
@@ -23,39 +24,49 @@ namespace PetsciiMapgen
     public bool Visited;
     public double MinDistFound;
 
-#if DEBUG
-    public float[] YUVvalues;
-#else
-    public fixed float YUVvalues[11];
-#endif
+    public override string ToString()
+    {
+      List<string> items = new List<string>();
+      for (int i = 0; i < ValuesLength; ++i)
+      {
+        items.Add(string.Format("{0,6:0.00}", ColorData[i]));
+      }
+      return string.Format("[{0}]", string.Join(",", items));
+    }
+
+//#if DEBUG
+//    public float[] ColorData;
+//#else
+    public fixed float ColorData[11];
+//#endif
     //public fixed float NormValues[11];// values 0-1
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static ValueSet New(int dimensionsPerCharacter, long id)
     {
       ValueSet ret = new ValueSet();
-      Init(ref ret, dimensionsPerCharacter, false, id, null);
+      Init(ref ret, dimensionsPerCharacter, id, null);
       return ret;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void Init(ref ValueSet n, int dimensionsPerCharacter, bool useChroma, long id, float[] discreteNormalizedValues)
+    internal static void Init(ref ValueSet n, int dimensionsPerCharacter, long id, float[] normalizedValues)
     {
 #if DEBUG
-      n.YUVvalues = new float[11];
+     // n.ColorData = new float[11];
 #endif
       n.ValuesLength = dimensionsPerCharacter;
       n.ID = id;
       n.MinDistFound = double.MaxValue;// UInt32.MaxValue;
-      if (discreteNormalizedValues != null)
+      if (normalizedValues != null)
       {
-        Debug.Assert(dimensionsPerCharacter == discreteNormalizedValues.Length);
-        for (int  i = 0; i < discreteNormalizedValues.Length; ++ i)
+        Debug.Assert(dimensionsPerCharacter == normalizedValues.Length);
+        for (int  i = 0; i < normalizedValues.Length; ++ i)
         {
-          n.YUVvalues[i] = discreteNormalizedValues[i];
+          n.ColorData[i] = normalizedValues[i];
         }
-        // un-normalize these.
-        ColorUtils.Denormalize(useChroma, n);
+      //  // un-normalize these.
+      //  ColorUtils.Denormalize(useChroma, n);
       }
     }
 
@@ -66,21 +77,11 @@ namespace PetsciiMapgen
         return d;
       for (int i = 0; i < a.ValuesLength; ++i)
       {
-        d = other.YUVvalues[i].CompareTo(a.YUVvalues[i]);
+        d = other.ColorData[i].CompareTo(a.ColorData[i]);
         if (d != 0)
           return d;
       }
       return 0;
-    }
-
-    public unsafe static string ToString(ValueSet o)
-    {
-      List<string> items = new List<string>();
-      for (int i = 0; i < o.ValuesLength; ++i)
-      {
-        items.Add(o.YUVvalues[i].ToString("0.000000"));
-      }
-      return string.Format("[{0}]", string.Join(",", items));
     }
 
   }
