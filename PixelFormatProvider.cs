@@ -1,5 +1,21 @@
 ﻿//#define DUMP_IMAGEPROC_PIXELS
 
+/*
+ 
+even though LAB + euclid distance is perceptually great, there are a number of issues with
+the way i use it:
+1. i combine average luminance over an area with A*B* from other regions. I am not sure
+  it's acceptable to do this.
+2. the fact that I use such poor granularity means rounding errors are devastating. you can have
+  a font char that perfectly matches the image region, but it won't be chosen, because the
+  in-between map key is so far off, some other char matched that better.
+3. for the charsets i'm using, it's probably better to specialize somehow. for example
+  HSL may actually bet preferred with pixel-art type charsets. the problem is that
+  i think for these charsets, grayscale is much preferred over wrongly-colored. basically,
+  desaturated chars should match better.
+ 
+ */
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,10 +34,6 @@ namespace PetsciiMapgen
   // handles packing color info.
   public class PixelFormatProvider
   {
-    public Size lumaTiles;
-    public bool useChroma;
-    double lumaBias;
-
     public int DimensionCount { get; private set; } // # of dimensions (UV + Y*size)
     public int LumaComponentCount { get; private set; }
     public int ChromaComponentCount { get; private set; }
@@ -36,6 +48,10 @@ namespace PetsciiMapgen
       }
     }
 
+    private Size lumaTiles;
+    private bool useChroma;
+    private double lumaWeight;
+
     // pixel format will also determine how many entries are in the resulting map.
     public int MapEntryCount
     {
@@ -45,9 +61,11 @@ namespace PetsciiMapgen
       }
     }
 
-    public PixelFormatProvider(int valuesPerComponent, Size lumaComponents, bool useChroma, double lumaBias)
+    public PixelFormatProvider(int valuesPerComponent, Size lumaComponents, bool useChroma, double lumaWeight = .7)
     {
-      this.lumaBias = lumaBias;
+      Debug.Assert(lumaWeight >= 0);
+      Debug.Assert(lumaWeight <= 1.0);
+      this.lumaWeight = lumaWeight;
       this.useChroma = useChroma;
       this.lumaTiles = lumaComponents;
       LumaComponentCount = Utils.Product(lumaComponents);
@@ -57,6 +75,7 @@ namespace PetsciiMapgen
 
       this.DiscreteNormalizedValues = Utils.GetDiscreteNormalizedValues(valuesPerComponent);
     }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal int GetValueYIndex(int tx, int ty)
     {
@@ -73,13 +92,11 @@ namespace PetsciiMapgen
       return LumaComponentCount + 1;
     }
 
-
     public unsafe double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */)
     {
       double acc = 0.0f;
       double m;
 
-      //ValueSet key = key__;
       Denormalize(ref key);
 
       if (!useChroma)
@@ -89,7 +106,7 @@ namespace PetsciiMapgen
           double keyY = key.ColorData[i];
           double actualY = actual.ColorData[i];
           m = Math.Abs(keyY - actualY);
-          double tileAcc = m * m * lumaBias;
+          double tileAcc = m * m * lumaWeight;
           acc += Math.Sqrt(tileAcc);
         }
         return acc;
@@ -104,11 +121,11 @@ namespace PetsciiMapgen
         double keyY = key.ColorData[i];
         double actualY = actual.ColorData[i];
         m = Math.Abs(keyY - actualY);
-        double tileAcc = m * m * lumaBias;
-          m = Math.Abs(actualU - keyU);// * f;
-          tileAcc += m * m;
-          m = Math.Abs(actualV - keyV);// * f;
-          tileAcc += m * m;
+        double tileAcc = m * m * lumaWeight;
+        m = Math.Abs(actualU - keyU);// * f;
+        //tileAcc += m * m;
+        double n = Math.Abs(actualV - keyV);// * f;
+        tileAcc += (m * m + n * n) * (1.0 - lumaWeight);
 
         acc += Math.Sqrt(tileAcc);
       }

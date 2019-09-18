@@ -135,6 +135,7 @@ namespace PetsciiMapgen
     public int srcIndex;// index from the font provider.
     public ValueSet actualValues;// N-dimension values
     public int usages = 0;
+    public int refFontIndex;// index in the ref font texture
     //public UInt32 mapKeysVisited = 0;
     //public int? ifg;// only for mono palette processing, index to palette
     //public int? ibg;// only for mono palette processing

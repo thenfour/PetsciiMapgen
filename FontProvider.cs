@@ -32,7 +32,7 @@ namespace PetsciiMapgen
 
     public FontProvider(string fontFileName, Size charSize, int leftTopPadding = 0, IDitherProvider dither = null)
     {
-      this.FontFileName = FontFileName;
+      this.FontFileName = fontFileName;
       this.CharSizeNoPadding = charSize;
       this.LeftTopPadding = LeftTopPadding;
       this.DitherProvider = dither;
