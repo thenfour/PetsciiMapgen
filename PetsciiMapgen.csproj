@@ -69,6 +69,7 @@
   <ItemGroup>
     <Compile Include="Color.cs" />
     <Compile Include="FontProvider.cs" />
+    <Compile Include="HSLformatProvider.cs" />
     <Compile Include="HybridMapgen2.cs" />
     <Compile Include="Palettes.cs" />
     <Compile Include="Partitions.cs" />

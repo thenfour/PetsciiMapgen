@@ -13,12 +13,16 @@ using System.Runtime.InteropServices;
 
 namespace PetsciiMapgen
 {
-  [DebuggerDisplay("R:{R} G:{G} B:{B}")]
   public struct ColorF
   {
     public double R;
     public double G;
     public double B;
+
+    public override string ToString()
+    {
+      return string.Format("[{0},{1},{2}]", R.ToString("0.00"), G.ToString("0.00"), B.ToString("0.00"));
+    }
 
     //public static ColorF Init { R: 0 };
   }
@@ -81,11 +85,13 @@ namespace PetsciiMapgen
     public static ColorF Init
     {
       get
-      { ColorF ret; ret.R = 0; ret.G = 0; ret.B = 0; return ret; }
-    }
-    public static string ToString(this ColorF c)
-    {
-      return string.Format("[{0},{1},{2}]", c.R.ToString("0.00"), c.G.ToString("0.00"), c.B.ToString("0.00"));
+      {
+        ColorF ret;
+        ret.R = 0;
+        ret.G = 0;
+        ret.B = 0;
+        return ret;
+      }
     }
   }
   public class Constants
@@ -115,7 +121,6 @@ namespace PetsciiMapgen
       Length++;
       return Length - 1;
     }
-
     internal long PruneWhereDistGT(double maxMinDist)
     {
       var prunedMappings = Values.Take((int)this.Length).Where(o => o.dist <= maxMinDist).ToArray();
@@ -136,10 +141,15 @@ namespace PetsciiMapgen
     public ValueSet actualValues;// N-dimension values
     public int usages = 0;
     public int refFontIndex;// index in the ref font texture
-    //public UInt32 mapKeysVisited = 0;
-    //public int? ifg;// only for mono palette processing, index to palette
-    //public int? ibg;// only for mono palette processing
-    //public int masterIdx;// index into the charInfo list
+                            //public UInt32 mapKeysVisited = 0;
+                            //public int? ifg;// only for mono palette processing, index to palette
+                            //public int? ibg;// only for mono palette processing
+                            //public int masterIdx;// index into the charInfo list
+
+#if DEBUG
+    public Point fontImagePixelPos;
+    public Point fontImageCellPos;
+#endif
 
     public CharInfo(int dimensionsPerCharacter)
     {
@@ -148,9 +158,15 @@ namespace PetsciiMapgen
 
     public override string ToString()
     {
+#if DEBUG
+      return string.Format("ID:{0} src:{1}, usages:{2}, pixelpos:{3}, cellpos:{4}",
+        srcIndex, actualValues,// masterIdx,
+        usages, fontImagePixelPos, fontImageCellPos);
+#else
       return string.Format("ID:{0} src:{1}, usages:{2}",
         srcIndex, actualValues,// masterIdx,
         usages);
+#endif
       //return srcIndex.ToString();
     }
   }
@@ -373,6 +389,17 @@ namespace PetsciiMapgen
     {
       return string.Format("[{0},{1}]", s.X, s.Y);
     }
+
+    public static string ToString(this float[] vals, int count)
+    {
+      List<string> items = new List<string>();
+      for (int i = 0; i < count; ++i)
+      {
+        items.Add(string.Format("{0,6:0.00}", vals[i]));
+      }
+      return string.Format("[{0}]", string.Join(",", items));
+    }
+
     public static System.Drawing.Size Div(System.Drawing.Size a, System.Drawing.Size b)
     {
       return new System.Drawing.Size(a.Width / b.Width, a.Height / b.Height);
@@ -450,11 +477,12 @@ namespace PetsciiMapgen
       // will get mapped very loosely.
       float segSpan = 1.0f / (discreteValues - 1);
       float[] ret = new float[discreteValues];
-      int i = 0;
-      for (float v = 0; v <= 1.0001f; v += segSpan)
+      //int i = 0;
+      //for (float v = 0; v <= 1.0f; v += segSpan)
+      for (int i = 0; i < discreteValues; ++ i)
       {
-        ret[i] = v;
-        ++i;
+        ret[i] = i * 100000 / (discreteValues - 1); // using fixed precision here.
+        ret[i] /= 100000;
       }
       return ret;
 

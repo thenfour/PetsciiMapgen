@@ -64,6 +64,13 @@ namespace PetsciiMapgen
       return Utils.Add(p, LeftTopPadding);
     }
 
+    internal int GetCharIndexAtPixelPos(Point charPixPosWUT)
+    {
+      int chx = charPixPosWUT.X / CharSizeWithPadding.Width;
+      int chy = charPixPosWUT.Y / CharSizeWithPadding.Height;
+      return chx + (SizeInChars.Width * chy);
+    }
+
     public ColorF GetRegionColor(int ichar, Point topLeft, Size size, Size cellsPerChar, int cellOffsetX, int cellOffsetY)
     {
       Point oc = GetCharPosInChars(ichar);

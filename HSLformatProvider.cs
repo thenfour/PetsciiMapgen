@@ -1,30 +1,4 @@
-﻿//#define DUMP_IMAGEPROC_PIXELS
-
-/*
- 
-even though LAB + euclid distance is perceptually great, there are a number of issues with
-the way i use it:
-
-1. i combine average luminance over an area with A*B* from other regions. I am not sure
-  it's acceptable to do this.
-
-2. the fact that I use such poor granularity means rounding errors are devastating. you can have
-  a font char that perfectly matches the image region, but it won't be chosen, because the
-  in-between map key is so far off, some other char matched that better.
-
-3. for the charsets i'm using, it's probably better to specialize somehow. for example
-  HSL may actually bet preferred with pixel-art type charsets. the problem is that
-  i think for these charsets, grayscale is much preferred over wrongly-colored. basically,
-  desaturated chars should match better.
-
-  another small issue is that some map values are totally nonsense. for black and white for
-  example, there's no point in the A*B* components. we have a whole 2 dimensions there
-  which are worthless. the good news is that the mapping still works because the
-  image will map to the proper values.
- 
- */
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -39,75 +13,11 @@ using System.Runtime.InteropServices;
 
 namespace PetsciiMapgen
 {
-  // handles packing color info.
-  public interface IPixelFormatProvider
-  {
-    int DimensionCount { get; } // # of dimensions (UV + Y*size)
-    int LumaComponentCount { get; }
-    int ChromaComponentCount { get; }
-    float[] DiscreteNormalizedValues { get; }
-
-    string PixelFormatString { get; }
-
-    // pixel format will also determine how many entries are in the resulting map.
-    int MapEntryCount { get; }
-
-    //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-    //internal int GetValueYIndex(int tx, int ty)
-    //{
-    //  return (ty * lumaTiles.Width) + tx;
-    //}
-    //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-    //internal int GetValueUIndex()
-    //{
-    //  return LumaComponentCount;
-    //}
-    //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-    //internal int GetValueVIndex()
-    //{
-    //  return LumaComponentCount + 1;
-    //}
-
-    unsafe double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */
-#if DEBUG
-      , bool verboseDebugInfo = false
-#else
-#endif
-      );
-
-    unsafe void PopulateCharColorData(CharInfo ci, FontProvider font);
-
-    //internal unsafe void Denormalize(ref ValueSet v);
-    unsafe double NormalizeElement(ValueSet v, int elementToNormalize);
-    //{
-    //  if (useChroma)
-    //  {
-    //    // valueCount-1 = element of V
-    //    // valueCount-2 = element of U
-    //    if (elementToNormalize >= DimensionCount - 2)
-    //    {
-    //      return NormalizeUV(v.ColorData[elementToNormalize]);
-    //    }
-    //  }
-    //  return NormalizeY(v.ColorData[elementToNormalize]);
-    //}
-
-
-    int NormalizedValueSetToMapID(float[] vals);
-
-    int DebugGetMapIndexOfColor(ColorF charRGB);
-
-    int GetMapIndexOfRegion(Bitmap img, int x, int y, Size sz);
-  }
-
-
-
-  // handles packing color info.
-  public class LABPixelFormat : IPixelFormatProvider
+  public class HSLPixelFormat : IPixelFormatProvider
   {
     public int DimensionCount { get; private set; } // # of dimensions (UV + Y*size)
     public int LumaComponentCount { get; private set; }
-    public int ChromaComponentCount { get; private set; }
+    public int ChromaComponentCount { get; private set; } // actually hue + saturation, not chroma
     public float[] DiscreteNormalizedValues { get; private set; }
 
     public string PixelFormatString
@@ -115,13 +25,12 @@ namespace PetsciiMapgen
       get
       {
         // 5xx(3x3+2)
-        return string.Format("LAB{0}xx({1}x{2}+{3})", DiscreteNormalizedValues.Length, lumaTiles.Width, lumaTiles.Height, useChroma ? 2 : 0);
+        return string.Format("HSL{0}xx({1}x{2}+{3})", DiscreteNormalizedValues.Length, lumaTiles.Width, lumaTiles.Height, useChroma ? 2 : 0);
       }
     }
 
     private Size lumaTiles;
     private bool useChroma;
-    private double lumaWeight;
 
     // pixel format will also determine how many entries are in the resulting map.
     public int MapEntryCount
@@ -132,11 +41,8 @@ namespace PetsciiMapgen
       }
     }
 
-    public LABPixelFormat(int valuesPerComponent, Size lumaComponents, bool useChroma, double lumaWeight = .75)
+    public HSLPixelFormat(int valuesPerComponent, Size lumaComponents, bool useChroma)
     {
-      Debug.Assert(lumaWeight >= 0);
-      Debug.Assert(lumaWeight <= 1.0);
-      this.lumaWeight = lumaWeight;
       this.useChroma = useChroma;
       this.lumaTiles = lumaComponents;
       LumaComponentCount = Utils.Product(lumaComponents);
@@ -155,17 +61,17 @@ namespace PetsciiMapgen
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal int GetValueYIndex(int tx, int ty)
+    internal int GetValueLIndex(int tx, int ty)
     {
       return (ty * lumaTiles.Width) + tx;
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal int GetValueUIndex()
+    internal int GetValueHIndex()
     {
       return LumaComponentCount;
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal int GetValueVIndex()
+    internal int GetValueSIndex()
     {
       return LumaComponentCount + 1;
     }
@@ -202,16 +108,14 @@ namespace PetsciiMapgen
           double actualY = actual.ColorData[i];
           m = Math.Abs(keyY - actualY);
 
-          double tileAcc = m * m * lumaWeight;
+          double tileAcc = m * m;
           acc += Math.Sqrt(tileAcc);
 
           if (verboseDebugInfo)
           {
             Console.WriteLine("      : Luma component {0}", i);
-            Console.WriteLine("      :   dist between Y {0} and {1}", keyY, actualY);
+            Console.WriteLine("      :   dist between L {0} and {1}", keyY, actualY);
             Console.WriteLine("      :   m={0}; m*m={1}", m, m * m);
-            Console.WriteLine("      :   *lumaWeight = {0}", m * m * lumaWeight);
-            Console.WriteLine("      :   Sqrt = {0}", Math.Sqrt(m * m * lumaWeight));
             Console.WriteLine("      :   acc = " + acc);
           }
         }
@@ -221,21 +125,48 @@ namespace PetsciiMapgen
         }
         return acc;
       }
-      double actualU = actual.ColorData[GetValueUIndex()];
-      double actualV = actual.ColorData[GetValueVIndex()];
-      double keyU = key.ColorData[GetValueUIndex()];
-      double keyV = key.ColorData[GetValueVIndex()];
+
+      double actualH = actual.ColorData[GetValueHIndex()];
+      double actualS = actual.ColorData[GetValueSIndex()];
+      double keyH = key.ColorData[GetValueHIndex()];
+      double keyS = key.ColorData[GetValueSIndex()];
 
       for (int i = 0; i < LumaComponentCount; ++i)
       {
-        double keyY = key.ColorData[i];
-        double actualY = actual.ColorData[i];
-        double dY = Math.Abs(keyY - actualY);
-        double tileAcc = dY * dY * lumaWeight;
-        double dU = Math.Abs(actualU - keyU);// * f;
+        double keyL = key.ColorData[i];
+        double actualL = actual.ColorData[i];
+
+        // we need to ignore hue when approaching black (L) or white (L) or gray (S)
+        double Sfact = 1;// Math.Min(actualL, 100 - actualL) / 100; // ignore saturation around black / white.
+        if (actualL < 5 || actualL > 95)
+          Sfact = 0;
+        //double SfactKey = Math.Min(keyL, 100 - keyL) / 200; // ignore saturation around black / white
+        //double Sfact = Math.Min(SfactKey, SfactActual);
+
+        //double hueFactActual = Math.Min(actualS / 100, SfactActual);
+        //double hueFactKey = Math.Min(keyS / 100, SfactKey);
+        //double hueFactor = Math.Min(hueFactKey, hueFactActual); // and ignore hue when saturation is low or we're around black/white
+        //hueFactor = .5;
+        //Sfact = .5;
+
+        double hueFactor = Sfact;
+        if (actualS < 5)
+          hueFactor = 0;
+
+        double lfact = 2;
+
+        double dL = Math.Abs(keyL - actualL) * lfact;
+        double tileAcc = dL * dL;
+
+        // hue is circular. take the min of several permutations
+        double dh1 = Math.Abs(actualH - keyH);
+        double dh2 = Math.Abs(actualH - keyH + 1);
+        double dh3 = Math.Abs(actualH - keyH - 1);
+        double dH = Math.Min(Math.Min(dh1, dh2), dh3) * hueFactor;
+
         //tileAcc += m * m;
-        double dV = Math.Abs(actualV - keyV);// * f;
-        double chromaComponent = (dU * dU + dV * dV) * (1.0 - lumaWeight);
+        double dS = Math.Abs(actualS - keyS) * Sfact;// * f;
+        double chromaComponent = (dH * dH + dS * dS);
         tileAcc += chromaComponent;
 
         acc += Math.Sqrt(tileAcc);
@@ -243,13 +174,11 @@ namespace PetsciiMapgen
         if (verboseDebugInfo)
         {
           Console.WriteLine("      : Luma component {0}", i);
-          Console.WriteLine("      :   dist between Y {0} and {1}", keyY, actualY);
-          Console.WriteLine("      :   dY={0}; dY*dY={1}", dY, dY * dY);
-          Console.WriteLine("      :   dU={0}; dU*dU={1}", dU, dU * dU);
-          Console.WriteLine("      :   dV={0}; dV*dV={1}", dV, dV * dV);
-          Console.WriteLine("      :   du+dv*1-lw={0}", chromaComponent);
-          Console.WriteLine("      :   dy+du+dv={0}", tileAcc);
-          Console.WriteLine("      :   Sqrt = {0}", Math.Sqrt(tileAcc));
+          Console.WriteLine("      :   sfact: {0} huefact: {1}", Sfact, hueFactor);
+          Console.WriteLine("      :   dist between Y {0} and {1}", keyL, actualL);
+          Console.WriteLine("      :   dH={0}; dH*dH={1}", dH, dH * dH);
+          Console.WriteLine("      :   dS={0}; dS*dS={1}", dS, dS * dS);
+          Console.WriteLine("      :   dL={0}; dL*dL={1}", dL, dL * dL);
           Console.WriteLine("      :   acc = " + acc);
         }
       }
@@ -276,78 +205,79 @@ namespace PetsciiMapgen
           ColorF tileRGB = font.GetRegionColor(ci.srcIndex, tilePos, tileSize, lumaTiles, tx, ty);
 
           charRGB = charRGB.Add(tileRGB);
-          ColorF tileLAB = RGBToLAB(tileRGB);
-          ci.actualValues.ColorData[GetValueYIndex(tx, ty)] = (float)tileLAB.R;
+          ColorF tileHSL = RGBToHSL(tileRGB);
+          ci.actualValues.ColorData[GetValueLIndex(tx, ty)] = (float)tileHSL.B;
         }
       }
 
       if (useChroma)
       {
         charRGB = charRGB.Div(Utils.Product(lumaTiles));
-        ColorF charLAB = RGBToLAB(charRGB);
-        ci.actualValues.ColorData[GetValueUIndex()] = (float)charLAB.G;
-        ci.actualValues.ColorData[GetValueVIndex()] = (float)charLAB.B;
+        ColorF charLAB = RGBToHSL(charRGB);
+        ci.actualValues.ColorData[GetValueHIndex()] = (float)charLAB.R;
+        ci.actualValues.ColorData[GetValueSIndex()] = (float)charLAB.G;
       }
     }
 
 
 
-    public static ColorF RGBToLAB(ColorF c)//, out float y, out float u, out float v)
+    public static ColorF RGBToHSL(ColorF c)//, out float y, out float u, out float v)
     {
-      var rgb = new ColorMine.ColorSpaces.Rgb { R = c.R, G = c.G, B = c.B };
-      var lab = rgb.To<ColorMine.ColorSpaces.Lab>();
+      var rgb = new ColorMine.ColorSpaces.Rgb{ R = c.R, G = c.G, B = c.B };
+      var lab = rgb.To<ColorMine.ColorSpaces.Hsl>();
       // https://github.com/hvalidi/ColorMine/blob/master/ColorMine/ColorSpaces/ColorSpaces.xml
-      return ColorFUtils.FromRGB(lab.L, lab.A, lab.B);
+      return ColorFUtils.FromRGB(lab.H, lab.S, lab.L);
     }
-    public static ColorF RGBToNormalizedLAB(ColorF c)
+    public static ColorF RGBToNormalizedHSL(ColorF c)
     {
-      ColorF ret = RGBToLAB(c);
-      ret.R = NormalizeY(ret.R);
-      ret.G = NormalizeUV(ret.G);
-      ret.B = NormalizeUV(ret.B);
+      ColorF ret = RGBToHSL(c);
+      ret.R = NormalizeH(ret.R);
+      ret.G = NormalizeSL(ret.G);
+      ret.B = NormalizeSL(ret.B);
       return ret;
     }
-    internal static double NormalizeY(double y)
+    internal static double NormalizeH(double y)
     {
-      return Utils.Clamp(y / 100, 0, 1);
+      return Utils.Clamp(y / 360, 0, 1);
     }
-    internal static double NormalizeUV(double uv)
+    internal static double NormalizeSL(double v)
     {
-      return Utils.Clamp((uv / 255) + .5f, 0, 1);
+      return Utils.Clamp(v / 100, 0, 1);
     }
-    internal static double DenormalizeUV(double uv)
+    internal static double DenormalizeSL(double uv)
     {
-      return (uv - .5) * 255;
+      return uv * 100;
+    }
+    internal static double DenormalizeH(double uv)
+    {
+      return uv * 360;
     }
     internal unsafe void Denormalize(ref ValueSet v)
     {
       // changes normalized 0-1 values to YUV-ranged values. depends on value format and stuff.
       int chromaelements = 0;
-      //int n = v.ValuesLength;
       int n = DimensionCount;
       if (useChroma)
       {
         chromaelements = 2;
-        v.ColorData[DimensionCount - 1] = (float)DenormalizeUV(v.ColorData[n - 1]);// - .5f) * 255;
-        v.ColorData[DimensionCount - 2] = (float)DenormalizeUV(v.ColorData[n - 2]);// - .5f) * 255;
+        v.ColorData[DimensionCount - 1] = (float)DenormalizeSL(v.ColorData[n - 1]);// hue
+        v.ColorData[DimensionCount - 2] = (float)DenormalizeH(v.ColorData[n - 2]);// sat
       }
       for (int i = 0; i < DimensionCount - chromaelements; ++i)
       {
-        v.ColorData[i] *= 100;
+        v.ColorData[i] = (float)DenormalizeSL(v.ColorData[i]);//*= 100;
       }
     }
     public unsafe double NormalizeElement(ValueSet v, int elementToNormalize)
     {
       if (useChroma)
       {
-        // valueCount-1 = element of V
-        // valueCount-2 = element of U
-        if (elementToNormalize >= DimensionCount - 2)
+        if (elementToNormalize == DimensionCount - 2)
         {
-          return NormalizeUV(v.ColorData[elementToNormalize]);
+          return NormalizeH(v.ColorData[elementToNormalize]);
         }
       }
-      return NormalizeY(v.ColorData[elementToNormalize]);
+      return NormalizeSL(v.ColorData[elementToNormalize]);
     }
 
 
@@ -398,15 +328,15 @@ namespace PetsciiMapgen
     // poooosibly not needed but so far helpful i think for diagnostics.
     public int DebugGetMapIndexOfColor(ColorF charRGB)
     {
-      var norm = RGBToNormalizedLAB(charRGB);
+      var norm = RGBToNormalizedHSL(charRGB);
       Console.WriteLine("  norm: " + norm);
       float[] vals = new float[DimensionCount];
       for (int i = 0; i < LumaComponentCount; ++ i)
       {
-        vals[i] = (float)norm.R;
+        vals[i] = (float)norm.B;
       }
-      vals[GetValueUIndex()] = (float)norm.G;
-      vals[GetValueVIndex()] = (float)norm.B;
+      vals[GetValueHIndex()] = (float)norm.R;
+      vals[GetValueSIndex()] = (float)norm.G;
       Console.WriteLine("  norm valset: " + Utils.ToString(vals, vals.Length));
 
       int ID = NormalizedValueSetToMapID(vals);
@@ -416,7 +346,7 @@ namespace PetsciiMapgen
     public int GetMapIndexOfRegion(Bitmap img, int x, int y, Size sz)
     {
       ColorF rgb = ColorFUtils.Init;
-      ColorF lab = ColorFUtils.Init;
+      ColorF hsl = ColorFUtils.Init;
       ColorF norm = ColorFUtils.Init;
       float[] vals = new float[DimensionCount];
       ColorF charRGB = ColorFUtils.Init;
@@ -427,10 +357,10 @@ namespace PetsciiMapgen
           Point tilePos = GetTileOrigin(sz, lumaTiles, tx, ty);
           // YES this just gets 1 pixel per char-sized area.
           rgb = ColorFUtils.From(img.GetPixel(x + tilePos.X, y + tilePos.Y));
-          lab = RGBToLAB(rgb);
+          hsl = RGBToHSL(rgb);
 
-          norm = RGBToNormalizedLAB(rgb);
-          vals[GetValueYIndex(tx, ty)] = (float)norm.R;
+          norm = RGBToNormalizedHSL(rgb);
+          vals[GetValueLIndex(tx, ty)] = (float)norm.B;
           charRGB = charRGB.Add(rgb);
         }
       }
@@ -439,9 +369,9 @@ namespace PetsciiMapgen
       {
         int numTiles = Utils.Product(lumaTiles);
         charRGB = charRGB.Div(numTiles);
-        norm = RGBToNormalizedLAB(charRGB);
-        vals[GetValueUIndex()] = (float)norm.G;
-        vals[GetValueVIndex()] = (float)norm.B;
+        norm = RGBToNormalizedHSL(charRGB);
+        vals[GetValueHIndex()] = (float)norm.R;
+        vals[GetValueSIndex()] = (float)norm.G;
       }
 
       int ID = NormalizedValueSetToMapID(vals);

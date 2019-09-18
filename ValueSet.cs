@@ -13,9 +13,6 @@ using System.Runtime.InteropServices;
 
 namespace PetsciiMapgen
 {
-  // basically wraps List<Value>.
-  // simplifies code that wants to do set operations.
-  //[DebuggerDisplay("ID:{ID} [{ColorData[0]},{ColorData[1],{ColorData[2]}}]")]
   public unsafe struct ValueSet
   {
     public int ValuesLength;
@@ -35,6 +32,7 @@ namespace PetsciiMapgen
     }
 
 //#if DEBUG
+// DONT DO THIS because it will cause issues with references vs. copies to this field.
 //    public float[] ColorData;
 //#else
     public fixed float ColorData[11];
