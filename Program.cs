@@ -19,7 +19,7 @@ namespace PetsciiMapgen
       Timings t = new Timings();
       t.EnterTask("--- MAIN PROCESSING");
 
-      var emoji12 = new FontProvider("..\\..\\img\\fonts\\emojidark12.png", new Size(12, 12), dither: new Bayer8DitherProvider(.25));
+      var emoji12 = new FontProvider("..\\..\\img\\fonts\\emojidark12.png", new Size(12, 12), dither: new Bayer8DitherProvider(.1));
       var c64font = new FontProvider("..\\..\\img\\fonts\\c64opt160.png", new Size(8, 8));
       var noPartition = new PartitionManager(1, 1);
       var partition = new PartitionManager(2, 6);
@@ -32,15 +32,15 @@ namespace PetsciiMapgen
       var map = new HybridMap2(
         emoji12,
         partition,
-        new HSLPixelFormat(7, new Size(2, 2), true));
+        new LABPixelFormat(5, new Size(2, 2), true));
 
       t.EndTask();
 
-      map.TestColor(ColorFUtils.FromRGB(0, 0, 0), new Point(468,264));
+      map.TestColor(ColorFUtils.FromRGB(0, 0, 0), new Point(468, 264));
       map.TestColor(ColorFUtils.FromRGB(128, 0, 0));
       map.TestColor(ColorFUtils.FromRGB(128, 128, 128));
-      map.TestColor(ColorFUtils.FromRGB(0, 128, 0));
-      map.TestColor(ColorFUtils.FromRGB(0, 0, 128));
+      map.TestColor(ColorFUtils.FromRGB(0, 128, 0), new Point(468, 264));
+      map.TestColor(ColorFUtils.FromRGB(0, 0, 128), new Point(372, 252));
       map.TestColor(ColorFUtils.FromRGB(255, 255, 255), new Point(385, 277));
 
       //var map = HybridMap2.Load("..\\..\\img\\maps\\mapHybrid-emoji12x12-2x2x6.png", new Size(12, 12), new Size(2, 2), 6);

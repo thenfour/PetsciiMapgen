@@ -132,7 +132,7 @@ namespace PetsciiMapgen
       }
     }
 
-    public LABPixelFormat(int valuesPerComponent, Size lumaComponents, bool useChroma, double lumaWeight = .75)
+    public LABPixelFormat(int valuesPerComponent, Size lumaComponents, bool useChroma, double lumaWeight = .7)
     {
       Debug.Assert(lumaWeight >= 0);
       Debug.Assert(lumaWeight <= 1.0);

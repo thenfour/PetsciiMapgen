@@ -1,4 +1,16 @@
-﻿using System;
+﻿/*
+ * so a problem with HSL is .. well we already know it's not meant for comparing.
+ * but the values are such that it's even worse from a practical standpoint than LAB.
+ * in LAB, it's easy for things to hover around 0,.5,.5 for grayish. but HSL,
+ * hue becomes 0-360 easily. hm well is it really any different once it's normalized?
+ * 
+ * the difference is that LAB saturation scales with black/whiteness. so colors
+ * close to black will be black.
+ * 
+ * and overall the results are not better than LAB. so i would really stick with LAB.
+ */
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -138,7 +150,7 @@ namespace PetsciiMapgen
 
         // we need to ignore hue when approaching black (L) or white (L) or gray (S)
         double Sfact = 1;// Math.Min(actualL, 100 - actualL) / 100; // ignore saturation around black / white.
-        if (actualL < 5 || actualL > 95)
+        if (actualL < 2 || actualL > 98)
           Sfact = 0;
         //double SfactKey = Math.Min(keyL, 100 - keyL) / 200; // ignore saturation around black / white
         //double Sfact = Math.Min(SfactKey, SfactActual);
@@ -150,7 +162,7 @@ namespace PetsciiMapgen
         //Sfact = .5;
 
         double hueFactor = Sfact;
-        if (actualS < 5)
+        if (actualS < 2)
           hueFactor = 0;
 
         double lfact = 2;
