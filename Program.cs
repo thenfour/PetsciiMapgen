@@ -22,11 +22,11 @@ namespace PetsciiMapgen
       //var map = new HybridMap2("..\\..\\img\\fonts\\pantoneswatches8x8.png", new Size(8, 8),
       //new Size(1, 1), 12, 12, 2.0f, true, null, true, true);
 
-      //var map = new HybridMap2("..\\..\\img\\fonts\\test7.png", new Size(12, 12),
-      //new Size(1, 1), 4, 1, 1, 1f, true);
+      //var map = new HybridMap2(new FontProvider("..\\..\\img\\fonts\\test7.png", new Size(12, 12), 0),
+      //new Size(2, 2), 4, 1, 1, 1f, true);
 
-      var map = new HybridMap2("..\\..\\img\\fonts\\emojidark12.png", new Size(12, 12),
-      new Size(1, 1), 7, 1, 1, 2, true, ditherProvider: new Bayer8DitherProvider(.5));
+      var map = new HybridMap2(new FontProvider("..\\..\\img\\fonts\\emojidark12.png", new Size(12, 12)),
+      new Size(2, 2), 5, new PartitionManager(2, 5), 2, true);
 
       //var map = new HybridMap2("..\\..\\img\\fonts\\mariotiles4.png", new Size(16, 16),
       //  new Size(2, 2), 16, 2, 1.5f, false, null, true, true, 1);
@@ -56,11 +56,9 @@ namespace PetsciiMapgen
       //var map = HybridMap2.Load("..\\..\\img\\maps\\mapHybrid-emoji12x12-2x2x6.png", new Size(12, 12), new Size(2, 2), 6);
       t.EnterTask("processing images");
 
-      //map.ProcessImage("..\\..\\img\\fonts\\test6.png", "..\\..\\img\\testdest-test6.png");
+      map.ProcessImage("..\\..\\img\\fonts\\test6.png", "..\\..\\img\\testdest-test6.png");
       map.ProcessImage("..\\..\\img\\grad3.png", "..\\..\\img\\testdest-grad3.png");
-
       map.ProcessImage("..\\..\\img\\circle.png", "..\\..\\img\\testdest-circle.png");
-      //map.ProcessImage("..\\..\\img\\sega.png", "..\\..\\img\\testdest-sega.png");
       map.ProcessImage("..\\..\\img\\grad.png", "..\\..\\img\\testdest-grad.png");
       map.ProcessImage("..\\..\\img\\airplane.jpg", "..\\..\\img\\testdest-airplane.png");
       map.ProcessImage("..\\..\\img\\balloon600.jpg", "..\\..\\img\\testdest-balloon600.png");

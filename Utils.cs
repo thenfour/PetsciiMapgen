@@ -13,6 +13,7 @@ using System.Runtime.InteropServices;
 
 namespace PetsciiMapgen
 {
+  [DebuggerDisplay("R:{R} G:{G} B:{B}")]
   public struct ColorF
   {
     public double R;
@@ -131,13 +132,13 @@ namespace PetsciiMapgen
 
   public class CharInfo
   {
-    public System.Drawing.Point srcIndex;
+    public int srcIndex;// index from the font provider.
     public ValueSet actualValues;// N-dimension values
     public int usages = 0;
     public UInt32 mapKeysVisited = 0;
     public int? ifg;// only for mono palette processing, index to palette
     public int? ibg;// only for mono palette processing
-    public int masterIdx;
+    public int masterIdx;// index into the charInfo list
 
     public CharInfo(int dimensionsPerCharacter)
     {
@@ -248,6 +249,13 @@ namespace PetsciiMapgen
       p[2] = (byte)c.R;
       p[1] = (byte)c.G;
       p[0] = (byte)c.B;
+    }
+    public static unsafe void SetPixel(this BitmapData data, long x, long y, Color c)
+    {
+      byte* p = data.GetRGBPointer(x, y);
+      p[2] = c.R;
+      p[1] = c.G;
+      p[0] = c.B;
     }
 
     public static IEnumerable<TSource> DistinctBy<TSource, TKey>
@@ -371,6 +379,22 @@ namespace PetsciiMapgen
     public static int Product(System.Drawing.Size a)
     {
       return a.Height * a.Width;
+    }
+    public static Point Mul(Point a, Size b)
+    {
+      return new Point(a.X * b.Width, a.Y * b.Height);
+    }
+    public static Size Mul(Size a, int b)
+    {
+      return new Size(a.Width * b, a.Height * b);
+    }
+    public static Point Add(Point a, int o)
+    {
+      return new Point(a.X + o, a.Y + o);
+    }
+    public static Point Add(Point a, Point o)
+    {
+      return new Point(a.X + o.X, a.Y + o.Y);
     }
     public static Size Sub(Point end, Point begin)
     {
