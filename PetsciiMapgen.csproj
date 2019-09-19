@@ -67,6 +67,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BigArray.cs" />
     <Compile Include="Color.cs" />
     <Compile Include="FontProvider.cs" />
     <Compile Include="HSLformatProvider.cs" />

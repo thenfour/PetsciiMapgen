@@ -68,6 +68,8 @@ namespace PetsciiMapgen
       {
         for (int bgidx = 0; bgidx < Palette.Length; ++bgidx)
         {
+          //if (bgidx == fgidx)
+          //  continue;
           for (int ch = 0; ch < OrigCharCount; ++ ch) // important that this is the bottom of the stack so the 1st CharCount indices are all unique chars. makes reverse lookup simpler.
           {
             CharMapping m;

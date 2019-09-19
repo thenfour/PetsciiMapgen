@@ -1,4 +1,7 @@
-﻿using System;
+﻿// NB:
+// partitioning does cause issues at high partitions. it shows when you start seeing good ref images but the converted images have noisy black & white.
+// choosing partition size is important. if you have an even # of valuespercomponent, then you should probably have odd partitioning.
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,31 +19,68 @@ namespace PetsciiMapgen
   {
     static void Main(string[] args)
     {
+      //List<Color> s = new List<Color>();
+
+      //var b = Palettes.C64.OrderBy(c => {
+      //  var rgb = new ColorMine.ColorSpaces.Rgb();
+      //  rgb.R = c.R;
+      //  rgb.G = c.G;
+      //  rgb.B = c.B;
+      //  var hsl = rgb.To<ColorMine.ColorSpaces.Hsl>();
+      //  return hsl.L;
+      //});
+      //foreach (var c in b)
+      //{
+      //  var rgb = new ColorMine.ColorSpaces.Rgb();
+      //  rgb.R = c.R;
+      //  rgb.G = c.G;
+      //  rgb.B = c.B;
+      //  var hsl = rgb.To<ColorMine.ColorSpaces.Hsl>();
+      //  Console.WriteLine("Color.FromArgb({0}, {1}, {2}), // luminance: {3}",
+      //    c.R, c.G, c.B, hsl.L);
+      //}
+
+
       Timings t = new Timings();
       t.EnterTask("--- MAIN PROCESSING");
 
       var emoji12 = new FontProvider("..\\..\\img\\fonts\\emojidark12.png", new Size(12, 12));//, dither: new Bayer8DitherProvider(.1));
-      var c64font = new MonoPaletteFontProvider("..\\..\\img\\fonts\\c64opt160.png", new Size(8, 8), Palettes.C64);
+      var emoji24 = new FontProvider("..\\..\\img\\fonts\\emojidark24.png", new Size(24, 24));//, dither: new Bayer8DitherProvider(.1));
+      var emoji32 = new FontProvider("..\\..\\img\\fonts\\emojidark32.png", new Size(32, 32));//, dither: new Bayer8DitherProvider(.1));
+      var c64font = new MonoPaletteFontProvider("..\\..\\img\\fonts\\c64opt160.png", new Size(8, 8), Palettes.C64Grays);
+      var mzFont = new MonoPaletteFontProvider("..\\..\\img\\fonts\\mz700.png", new Size(16, 16), Palettes.BlackAndWhite);
+      var topaz = new MonoPaletteFontProvider("..\\..\\img\\fonts\\topaz96.gif", new Size(8, 16), Palettes.Workbench134);
+
       var noPartition = new PartitionManager(1, 1);
-      var partition = new PartitionManager(2, 10);
+      var partition = new PartitionManager(3, 9);// i have the feeling partitioning in 3 is actually better
+
+      // if we have a large array, we could do 3^4x4+0 mapping. but not before then.
 
       var map = new HybridMap2(
-        c64font,
+        emoji24,
         partition,
-        new NaiveYUVPixelFormat(5, new Size(2, 2), true));
+        new NaiveYUVPixelFormat(5, new Size(3,3), false));
 
       t.EndTask();
 
-      map.TestColor(ColorFUtils.FromRGB(0, 0, 0), new Point(468, 264), new Point(288, 0), new Point(0, 264));
+      //var emoji12ShouldBeBlack = new Point(468, 264);
+      //map.TestColor(ColorFUtils.FromRGB(0, 0, 0), emoji12ShouldBeBlack);//, new Point(468, 264), new Point(288, 0), new Point(0, 264));
       //map.TestColor(ColorFUtils.FromRGB(128, 0, 0));
       //map.TestColor(ColorFUtils.FromRGB(128, 128, 128));
       //map.TestColor(ColorFUtils.FromRGB(0, 128, 0), new Point(468, 264));
       //map.TestColor(ColorFUtils.FromRGB(0, 0, 128), new Point(372, 252));
-      //map.TestColor(ColorFUtils.FromRGB(255, 255, 255), new Point(385, 277));
+      //map.TestColor(ColorFUtils.FromRGB(255, 255, 255));//, new Point(385, 277));
 
       t.EnterTask("processing images");
 
-      map.ProcessImageUsingRef("..\\..\\img\\fonts\\test6.png", "..\\..\\img\\testdest-test6.png");
+      //Bitmap testBmp = new Bitmap(100, 100);
+      //using (Graphics g = Graphics.FromImage(testBmp))
+      //{
+      //  g.Clear(Color.Black);
+      //}
+
+      //map.ProcessImageUsingRef("..\\..\\img\\BLACK.png", testBmp, testBmp, "..\\..\\img\\testdest-BLACK.png");
+
       map.ProcessImageUsingRef("..\\..\\img\\grad3.png", "..\\..\\img\\testdest-grad3.png");
       map.ProcessImageUsingRef("..\\..\\img\\circle.png", "..\\..\\img\\testdest-circle.png");
       map.ProcessImageUsingRef("..\\..\\img\\grad.png", "..\\..\\img\\testdest-grad.png");

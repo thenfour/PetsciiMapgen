@@ -279,8 +279,8 @@ namespace PetsciiMapgen
     // top char matches, and outputs an image showing the chars found.
     public void TestColor(ColorF rgb, params Point[] charPixPosWUT)
     {
-      const int charsToOutputToImage = 50;
-      const int charsToOutputInConsole = 40;
+      const int charsToOutputToImage = 100;
+      const int charsToOutputInConsole = 20;
       const int detailedCharOutput = 3;
 
       List<int> WUTcharIndex = new List<int>();
@@ -521,12 +521,17 @@ namespace PetsciiMapgen
 
     public unsafe void ProcessImageUsingRef(string srcImagePath, string destImagePath)
     {
+      var testImg = Image.FromFile(srcImagePath);
+      Bitmap testBmp = new Bitmap(testImg);
+      ProcessImageUsingRef(srcImagePath, testImg, testBmp, destImagePath);
+    }
+
+    public unsafe void ProcessImageUsingRef(string srcImagePath, Image testImg, Bitmap testBmp, string destImagePath)
+    {
       Console.WriteLine("  tranfsorm image using REF: " + srcImagePath);
       var refMapImage = Image.FromFile(MapRefPath);
       Bitmap refMapBitmap = new Bitmap(refMapImage);
       var refFontImage = Image.FromFile(MapRefFontPath);
-      var testImg = Image.FromFile(srcImagePath);
-      Bitmap testBmp = new Bitmap(testImg);
       Bitmap destImg = new Bitmap(testBmp.Width, testBmp.Height, PixelFormat.Format32bppArgb);
 
       int fontCellsX = refFontImage.Width / FontProvider.CharSizeNoPadding.Width;
