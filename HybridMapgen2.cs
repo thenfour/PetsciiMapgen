@@ -18,13 +18,13 @@ namespace PetsciiMapgen
 {
   public class HybridMap2
   {
-    public FontProvider FontProvider { get; private set; }
     public Bitmap FullMapBitmap;
     public CharInfo[] DistinctMappedChars;
     public ValueSet[] Keys { get; private set; }
     public List<CharInfo> CharInfo { get; private set; }
     public Dictionary<long, CharInfo> Map { get; private set; }// maps key index to charinfo
 
+    public IFontProvider FontProvider { get; private set; }
     public IPixelFormatProvider PixelFormatProvider { get; private set; }
 
     public string MapFullPath
@@ -61,7 +61,7 @@ namespace PetsciiMapgen
     {
     }
 
-    public unsafe HybridMap2(FontProvider fontProvider,
+    public unsafe HybridMap2(IFontProvider fontProvider,
       PartitionManager pm, IPixelFormatProvider pixelFormatProvider, bool outputFullMap = true, bool outputRefMapAndFont = true)
     {
       Timings timings = new Timings();
@@ -93,7 +93,7 @@ namespace PetsciiMapgen
       timings.EnterTask("Analyze incoming font");
       this.CharInfo = new List<CharInfo>();
 
-      for (int ichar = 0; ichar < FontProvider.Length; ++ichar)
+      for (int ichar = 0; ichar < FontProvider.CharCount; ++ichar)
       {
         var ci = new CharInfo(PixelFormatProvider.DimensionCount)
         {
@@ -277,19 +277,24 @@ namespace PetsciiMapgen
 
     // when a color looks wrong, let's try and trace it back. outputs mapping information for this color,
     // top char matches, and outputs an image showing the chars found.
-    public void TestColor(ColorF rgb, Point? charPixPosWUT = null)
+    public void TestColor(ColorF rgb, params Point[] charPixPosWUT)
     {
-      const int charsToOutput = 100;
-      int WUTcharIndex = -1;
-      if (charPixPosWUT.HasValue)
-        WUTcharIndex = this.FontProvider.GetCharIndexAtPixelPos(charPixPosWUT.Value);
+      const int charsToOutputToImage = 50;
+      const int charsToOutputInConsole = 40;
+      const int detailedCharOutput = 3;
+
+      List<int> WUTcharIndex = new List<int>();
+      foreach(Point p in charPixPosWUT)
+      {
+        WUTcharIndex.Add(this.FontProvider.GetCharIndexAtPixelPos(p));
+      }
 
       Console.WriteLine("Displaying debug info about color");
       Console.WriteLine("  src : " + rgb);
       int mapid = this.PixelFormatProvider.DebugGetMapIndexOfColor(rgb);
       Console.WriteLine("  which lands in mapID: " + mapid);
       Console.WriteLine("   -> " + this.Keys[mapid]);
-      Console.WriteLine("   -> mapped to char: " + this.Map[mapid]);
+//      Console.WriteLine("   -> mapped to char: " + this.Map[mapid]);
 
       // now display top 10 characters for that mapid.
       MappingArray m = new MappingArray();
@@ -302,7 +307,7 @@ namespace PetsciiMapgen
         m.Values[imap].dist = PixelFormatProvider.CalcKeyToColorDist(this.Keys[mapid], ci.actualValues);
         r.Visit(m.Values[imap].dist);
 
-        if (ci.srcIndex == WUTcharIndex)
+        if (WUTcharIndex.Contains(ci.srcIndex))
         {
           Console.WriteLine("      You want data about char {0} well here it is:", ci);
           Console.WriteLine("        dist: {0,6:0.00} to char {1}", m.Values[imap].dist, ci);
@@ -312,7 +317,7 @@ namespace PetsciiMapgen
       m.PruneWhereDistGT(r.MaxValue);//essential so the sort doesn't operate on like 30 million items
       m.SortByDist();
 
-      Bitmap bmp = new Bitmap(FontProvider.CharSizeNoPadding.Width * charsToOutput, FontProvider.CharSizeNoPadding.Height * 2);
+      Bitmap bmp = new Bitmap(FontProvider.CharSizeNoPadding.Width * charsToOutputToImage, FontProvider.CharSizeNoPadding.Height * 2);
 
       using (Graphics g = Graphics.FromImage(bmp))
       {
@@ -321,14 +326,14 @@ namespace PetsciiMapgen
 
       BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, bmp.Width, FontProvider.CharSizeNoPadding.Height), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
 
-      Console.WriteLine("    listing top 10 closest characters to that map key:");
-      for (int i = 0; i < charsToOutput; ++ i)
+      Console.WriteLine("    listing top {0} closest characters to that map key:", charsToOutputInConsole);
+      for (int i = 0; i < charsToOutputToImage; ++ i)
       {
         var mapping = m.Values[i];
-        if (i < 10)
+        if (i < charsToOutputInConsole)
         {
           Console.WriteLine("      dist: {0,6:0.00} to char {1}", mapping.dist, this.CharInfo[mapping.icharInfo]);
-          double dist = PixelFormatProvider.CalcKeyToColorDist(this.Keys[mapid], this.CharInfo[mapping.icharInfo].actualValues, i < 3);
+          double dist = PixelFormatProvider.CalcKeyToColorDist(this.Keys[mapid], this.CharInfo[mapping.icharInfo].actualValues, i < detailedCharOutput);
         }
         FontProvider.BlitCharacter(mapping.icharInfo, bmpData, FontProvider.CharSizeNoPadding.Width * i, 0);
       }
@@ -414,7 +419,7 @@ namespace PetsciiMapgen
 
       fontBmp.Save(MapRefFontPath);
 
-      // NOW generate the ref map. since we aim to support >65k fonts, we can't just use
+      // NOW generate the small ref map. since we aim to support >65k fonts, we can't just use
       // a single R/G/B val for an index. there's just not enough precision. The most precise PNG format is 16-bit grayscale.
       // we should just aim to use RGB as 8-bit values, so each pixel is an encoded
       // 24-bit char index.

@@ -13,7 +13,20 @@ using System.Runtime.InteropServices;
 
 namespace PetsciiMapgen
 {
-  public class FontProvider
+  public interface IFontProvider
+  {
+    string FontFileName { get; }
+    void Init(int DiscreteTargetValues);
+    int CharCount { get; }
+    Point GetCharPosInChars(int ichar);
+    Point GetCharOriginInPixels(int ichar);
+    int GetCharIndexAtPixelPos(Point charPixPosWUT);
+    Size CharSizeNoPadding { get; }
+    void BlitCharacter(int ichar, BitmapData data, long destX, long destY);
+    ColorF GetRegionColor(int ichar, Point topLeft, Size size, Size cellsPerChar, int cellOffsetX, int cellOffsetY);
+  }
+
+  public class FontProvider : IFontProvider
   {
     public string FontFileName { get; private set; }
     public Size CharSizeNoPadding { get; private set; }
@@ -25,8 +38,6 @@ namespace PetsciiMapgen
     public Size CharSizeWithPadding { get; private set; }
     public Size SizeInChars { get; private set; }
     public int CharCount { get; private set; }
-
-    public int Length { get { return CharCount; } }
 
     public IDitherProvider DitherProvider { get; private set; }
 
@@ -64,7 +75,7 @@ namespace PetsciiMapgen
       return Utils.Add(p, LeftTopPadding);
     }
 
-    internal int GetCharIndexAtPixelPos(Point charPixPosWUT)
+    public int GetCharIndexAtPixelPos(Point charPixPosWUT)
     {
       int chx = charPixPosWUT.X / CharSizeWithPadding.Width;
       int chy = charPixPosWUT.Y / CharSizeWithPadding.Height;
@@ -98,7 +109,7 @@ namespace PetsciiMapgen
       return tileC.Div(tilePixelCount);
     }
 
-    internal void BlitCharacter(int ichar, BitmapData data, long destX, long destY)
+    public void BlitCharacter(int ichar, BitmapData data, long destX, long destY)
     {
       Point o = GetCharOriginInPixels(ichar);
       for (int y = 0; y < CharSizeNoPadding.Height; ++y)

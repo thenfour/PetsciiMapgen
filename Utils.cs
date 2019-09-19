@@ -23,9 +23,36 @@ namespace PetsciiMapgen
     {
       return string.Format("[{0},{1},{2}]", R.ToString("0.00"), G.ToString("0.00"), B.ToString("0.00"));
     }
-
-    //public static ColorF Init { R: 0 };
   }
+
+  public interface IColor
+  {
+    double colorant1 { get; }
+    double colorant2 { get; }
+    double colorant3 { get; }
+  }
+  public struct LCCColor : IColor
+  {
+    public double L;
+    public double C1;
+    public double C2;
+    public double colorant1 { get { return L; } }
+    public double colorant2 { get { return C1; } }
+    public double colorant3 { get { return C2; } }
+
+    public static LCCColor Init
+    {
+      get
+      {
+        LCCColor ret;
+        ret.L = 0;
+        ret.C1 = 0;
+        ret.C2 = 0;
+        return ret;
+      }
+    }
+  }
+
   public static class ColorFUtils
   {
     public static ColorF Add(this ColorF c, ColorF other)
@@ -94,26 +121,16 @@ namespace PetsciiMapgen
       }
     }
   }
-  public class Constants
-  {
-    // values are 0-1 so distances are on avg even less. (sqrt(2)/2).
-    // actual pixel values are 0-255 so i can just multiply by 255/(sqrt(2)/2) to make "real" sameness be equal here.
-    // funny that's actually 360. no relation to angles/radians.
-    //public static ulong DistanceRange { get { return 1000; } }
-
-    public const long AllocGranularity = 30000000;
-    //public const long AllocGranularityPartitions = 1000;
-  }
 
   public class MappingArray
   {
-    public Mapping[] Values = new Mapping[Constants.AllocGranularity]; // RESERVED values therefore don't use Values.Length!
+    public Mapping[] Values = new Mapping[30000000]; // RESERVED values therefore don't use Values.Length or do set operations like Values.sort()
     public long Length { get; private set; } = 0;
     public long Add() // returns an index
     {
       if (Values.Length <= Length)
       {
-        Mapping[] t = new Mapping[Length + Constants.AllocGranularity];
+        Mapping[] t = new Mapping[Length * 2];
         Console.WriteLine("!!! Dynamic allocation");
         Array.Copy(this.Values, t, this.Length);
         this.Values = t;
@@ -131,6 +148,7 @@ namespace PetsciiMapgen
     }
     public void SortByDist()
     {
+      Debug.Assert(this.Values.LongLength == this.Length);
       Array.Sort<Mapping>(this.Values, (a, b) => a.dist.CompareTo(b.dist));
     }
   }

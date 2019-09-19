@@ -39,91 +39,53 @@ using System.Runtime.InteropServices;
 
 namespace PetsciiMapgen
 {
-  // handles packing color info.
   public interface IPixelFormatProvider
   {
     int DimensionCount { get; } // # of dimensions (UV + Y*size)
-    int LumaComponentCount { get; }
-    int ChromaComponentCount { get; }
     float[] DiscreteNormalizedValues { get; }
-
     string PixelFormatString { get; }
-
-    // pixel format will also determine how many entries are in the resulting map.
-    int MapEntryCount { get; }
-
-    //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-    //internal int GetValueYIndex(int tx, int ty)
-    //{
-    //  return (ty * lumaTiles.Width) + tx;
-    //}
-    //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-    //internal int GetValueUIndex()
-    //{
-    //  return LumaComponentCount;
-    //}
-    //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-    //internal int GetValueVIndex()
-    //{
-    //  return LumaComponentCount + 1;
-    //}
-
-    unsafe double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */
-#if DEBUG
-      , bool verboseDebugInfo = false
-#else
-#endif
-      );
-
-    unsafe void PopulateCharColorData(CharInfo ci, FontProvider font);
-
-    //internal unsafe void Denormalize(ref ValueSet v);
-    unsafe double NormalizeElement(ValueSet v, int elementToNormalize);
-    //{
-    //  if (useChroma)
-    //  {
-    //    // valueCount-1 = element of V
-    //    // valueCount-2 = element of U
-    //    if (elementToNormalize >= DimensionCount - 2)
-    //    {
-    //      return NormalizeUV(v.ColorData[elementToNormalize]);
-    //    }
-    //  }
-    //  return NormalizeY(v.ColorData[elementToNormalize]);
-    //}
-
-
+    int MapEntryCount { get; }// pixel format will also determine how many entries are in the resulting map.
+    double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, bool verboseDebugInfo = false);
+    void PopulateCharColorData(CharInfo ci, IFontProvider font);
+    double NormalizeElement(ValueSet v, int elementToNormalize);
     int NormalizedValueSetToMapID(float[] vals);
-
     int DebugGetMapIndexOfColor(ColorF charRGB);
-
     int GetMapIndexOfRegion(Bitmap img, int x, int y, Size sz);
   }
 
 
 
-  // handles packing color info.
-  public class LABPixelFormat : IPixelFormatProvider
+  // base class for pixel formats using colorspace represented by separate luminance + 2 chroma-ish colorants
+  public abstract class LCCPixelFormatProvider : IPixelFormatProvider
   {
+    // abstract stuff:
+    protected abstract string FormatID { get; }
+    public abstract double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, bool verboseDebugInfo = false);
+    protected abstract LCCColor RGBToHCL(ColorF c);
+    protected abstract double NormalizeL(double x);
+    protected abstract double NormalizeC1(double x);
+    protected abstract double NormalizeC2(double x);
+    protected abstract double DenormalizeL(double x);
+    protected abstract double DenormalizeC1(double x);
+    protected abstract double DenormalizeC2(double x);
+
     public int DimensionCount { get; private set; } // # of dimensions (UV + Y*size)
-    public int LumaComponentCount { get; private set; }
-    public int ChromaComponentCount { get; private set; }
     public float[] DiscreteNormalizedValues { get; private set; }
+
+    protected int LumaComponentCount { get; private set; }
+    protected int ChromaComponentCount { get; private set; }
 
     public string PixelFormatString
     {
       get
       {
-        // 5xx(3x3+2)
-        return string.Format("LAB{0}xx({1}x{2}+{3})", DiscreteNormalizedValues.Length, lumaTiles.Width, lumaTiles.Height, useChroma ? 2 : 0);
+        return string.Format("{4}{0}xx({1}x{2}+{3})", DiscreteNormalizedValues.Length, LumaTiles.Width, LumaTiles.Height, UseChroma ? 2 : 0, FormatID);
       }
     }
 
-    private Size lumaTiles;
-    private bool useChroma;
-    private double lumaWeight;
+    protected Size LumaTiles { get; private set; }
+    protected bool UseChroma { get; private set; }
 
-    // pixel format will also determine how many entries are in the resulting map.
     public int MapEntryCount
     {
       get
@@ -132,13 +94,10 @@ namespace PetsciiMapgen
       }
     }
 
-    public LABPixelFormat(int valuesPerComponent, Size lumaComponents, bool useChroma, double lumaWeight = .7)
+    public LCCPixelFormatProvider(int valuesPerComponent, Size lumaComponents, bool useChroma)
     {
-      Debug.Assert(lumaWeight >= 0);
-      Debug.Assert(lumaWeight <= 1.0);
-      this.lumaWeight = lumaWeight;
-      this.useChroma = useChroma;
-      this.lumaTiles = lumaComponents;
+      this.UseChroma = useChroma;
+      this.LumaTiles = lumaComponents;
       LumaComponentCount = Utils.Product(lumaComponents);
       ChromaComponentCount = (useChroma ? 2 : 0);
 
@@ -155,201 +114,86 @@ namespace PetsciiMapgen
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal int GetValueYIndex(int tx, int ty)
+    internal int GetValueLIndex(int tx, int ty)
     {
-      return (ty * lumaTiles.Width) + tx;
+      return (ty * LumaTiles.Width) + tx;
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal int GetValueUIndex()
+    internal int GetValueC1Index()
     {
       return LumaComponentCount;
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal int GetValueVIndex()
+    internal int GetValueC2Index()
     {
       return LumaComponentCount + 1;
     }
 
-    public unsafe double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */
-#if DEBUG
-      , bool verboseDebugInfo = false)
-    {
-#else
-      )
-    {
-      const bool verboseDebugInfo = false;
-#endif
-      double acc = 0.0f;
-      double m;
-      if (verboseDebugInfo)
-      {
-        Console.WriteLine("      : Calculating distance between");
-        Console.WriteLine("      : denormalized actual values: " + actual);
-        Console.WriteLine("      : normalized key: " + key);
-      }
-
-      Denormalize(ref key);
-      if (verboseDebugInfo)
-      {
-        Console.WriteLine("      : denormalized key: " + key);
-      }
-
-      if (!useChroma)
-      {
-        for (int i = 0; i < LumaComponentCount; ++i)
-        {
-          double keyY = key.ColorData[i];
-          double actualY = actual.ColorData[i];
-          m = Math.Abs(keyY - actualY);
-
-          double tileAcc = m * m * lumaWeight;
-          acc += Math.Sqrt(tileAcc);
-
-          if (verboseDebugInfo)
-          {
-            Console.WriteLine("      : Luma component {0}", i);
-            Console.WriteLine("      :   dist between Y {0} and {1}", keyY, actualY);
-            Console.WriteLine("      :   m={0}; m*m={1}", m, m * m);
-            Console.WriteLine("      :   *lumaWeight = {0}", m * m * lumaWeight);
-            Console.WriteLine("      :   Sqrt = {0}", Math.Sqrt(m * m * lumaWeight));
-            Console.WriteLine("      :   acc = " + acc);
-          }
-        }
-        if (verboseDebugInfo)
-        {
-          Console.WriteLine("      : retdist={0}", acc);
-        }
-        return acc;
-      }
-      double actualU = actual.ColorData[GetValueUIndex()];
-      double actualV = actual.ColorData[GetValueVIndex()];
-      double keyU = key.ColorData[GetValueUIndex()];
-      double keyV = key.ColorData[GetValueVIndex()];
-
-      for (int i = 0; i < LumaComponentCount; ++i)
-      {
-        double keyY = key.ColorData[i];
-        double actualY = actual.ColorData[i];
-        double dY = Math.Abs(keyY - actualY);
-        double tileAcc = dY * dY * lumaWeight;
-        double dU = Math.Abs(actualU - keyU);// * f;
-        //tileAcc += m * m;
-        double dV = Math.Abs(actualV - keyV);// * f;
-        double chromaComponent = (dU * dU + dV * dV) * (1.0 - lumaWeight);
-        tileAcc += chromaComponent;
-
-        acc += Math.Sqrt(tileAcc);
-
-        if (verboseDebugInfo)
-        {
-          Console.WriteLine("      : Luma component {0}", i);
-          Console.WriteLine("      :   dist between Y {0} and {1}", keyY, actualY);
-          Console.WriteLine("      :   dY={0}; dY*dY={1}", dY, dY * dY);
-          Console.WriteLine("      :   dU={0}; dU*dU={1}", dU, dU * dU);
-          Console.WriteLine("      :   dV={0}; dV*dV={1}", dV, dV * dV);
-          Console.WriteLine("      :   du+dv*1-lw={0}", chromaComponent);
-          Console.WriteLine("      :   dy+du+dv={0}", tileAcc);
-          Console.WriteLine("      :   Sqrt = {0}", Math.Sqrt(tileAcc));
-          Console.WriteLine("      :   acc = " + acc);
-        }
-      }
-      if (verboseDebugInfo)
-      {
-        Console.WriteLine("      : retdist={0}", acc);
-      }
-      return acc;
-    }
-
-    public unsafe void PopulateCharColorData(CharInfo ci, FontProvider font)
+    public unsafe void PopulateCharColorData(CharInfo ci, IFontProvider font)
     {
       ColorF charRGB = ColorFUtils.Init;
-      for (int ty = 0; ty < lumaTiles.Height; ++ty)
+      for (int ty = 0; ty < LumaTiles.Height; ++ty)
       {
-        for (int tx = 0; tx < lumaTiles.Width; ++tx)
+        for (int tx = 0; tx < LumaTiles.Width; ++tx)
         {
           Size tileSize;
           Point tilePos;
 
-          GetTileInfo(font.CharSizeNoPadding, lumaTiles, tx, ty, out tilePos, out tileSize);
+          GetTileInfo(font.CharSizeNoPadding, LumaTiles, tx, ty, out tilePos, out tileSize);
           // process this single tile of this char.
           // grab all pixels for this tile and calculate Y component for each
-          ColorF tileRGB = font.GetRegionColor(ci.srcIndex, tilePos, tileSize, lumaTiles, tx, ty);
+          ColorF tileRGB = font.GetRegionColor(ci.srcIndex, tilePos, tileSize, LumaTiles, tx, ty);
 
           charRGB = charRGB.Add(tileRGB);
-          ColorF tileLAB = RGBToLAB(tileRGB);
-          ci.actualValues.ColorData[GetValueYIndex(tx, ty)] = (float)tileLAB.R;
+          LCCColor tileLAB = RGBToHCL(tileRGB);
+          ci.actualValues.ColorData[GetValueLIndex(tx, ty)] = (float)tileLAB.L;
         }
       }
 
-      if (useChroma)
+      if (UseChroma)
       {
-        charRGB = charRGB.Div(Utils.Product(lumaTiles));
-        ColorF charLAB = RGBToLAB(charRGB);
-        ci.actualValues.ColorData[GetValueUIndex()] = (float)charLAB.G;
-        ci.actualValues.ColorData[GetValueVIndex()] = (float)charLAB.B;
+        charRGB = charRGB.Div(Utils.Product(LumaTiles));
+        LCCColor charLAB = RGBToHCL(charRGB);
+        ci.actualValues.ColorData[GetValueC1Index()] = (float)charLAB.C1;
+        ci.actualValues.ColorData[GetValueC2Index()] = (float)charLAB.C2;
       }
     }
 
 
 
-    public static ColorF RGBToLAB(ColorF c)//, out float y, out float u, out float v)
+    public LCCColor RGBToNormalizedHCL(ColorF c)
     {
-      var rgb = new ColorMine.ColorSpaces.Rgb { R = c.R, G = c.G, B = c.B };
-      var lab = rgb.To<ColorMine.ColorSpaces.Lab>();
-      // https://github.com/hvalidi/ColorMine/blob/master/ColorMine/ColorSpaces/ColorSpaces.xml
-      return ColorFUtils.FromRGB(lab.L, lab.A, lab.B);
-    }
-    public static ColorF RGBToNormalizedLAB(ColorF c)
-    {
-      ColorF ret = RGBToLAB(c);
-      ret.R = NormalizeY(ret.R);
-      ret.G = NormalizeUV(ret.G);
-      ret.B = NormalizeUV(ret.B);
+      LCCColor ret = RGBToHCL(c);
+      ret.L = NormalizeL(ret.L);
+      ret.C1 = NormalizeC1(ret.C1);
+      ret.C2 = NormalizeC2(ret.C2);
       return ret;
     }
-    internal static double NormalizeY(double y)
-    {
-      return Utils.Clamp(y / 100, 0, 1);
-    }
-    internal static double NormalizeUV(double uv)
-    {
-      return Utils.Clamp((uv / 255) + .5f, 0, 1);
-    }
-    internal static double DenormalizeUV(double uv)
-    {
-      return (uv - .5) * 255;
-    }
+
     internal unsafe void Denormalize(ref ValueSet v)
     {
       // changes normalized 0-1 values to YUV-ranged values. depends on value format and stuff.
-      int chromaelements = 0;
-      //int n = v.ValuesLength;
-      int n = DimensionCount;
-      if (useChroma)
+      if (UseChroma)
       {
-        chromaelements = 2;
-        v.ColorData[DimensionCount - 1] = (float)DenormalizeUV(v.ColorData[n - 1]);// - .5f) * 255;
-        v.ColorData[DimensionCount - 2] = (float)DenormalizeUV(v.ColorData[n - 2]);// - .5f) * 255;
+        v.ColorData[GetValueC1Index()] = (float)DenormalizeC1(v.ColorData[GetValueC1Index()]);
+        v.ColorData[GetValueC2Index()] = (float)DenormalizeC2(v.ColorData[GetValueC2Index()]);
       }
-      for (int i = 0; i < DimensionCount - chromaelements; ++i)
+      for (int i = 0; i < LumaComponentCount; ++ i)
       {
-        v.ColorData[i] *= 100;
+        v.ColorData[i] = (float)DenormalizeL(v.ColorData[i]);
       }
     }
     public unsafe double NormalizeElement(ValueSet v, int elementToNormalize)
     {
-      if (useChroma)
+      if (UseChroma)
       {
-        // valueCount-1 = element of V
-        // valueCount-2 = element of U
-        if (elementToNormalize >= DimensionCount - 2)
-        {
-          return NormalizeUV(v.ColorData[elementToNormalize]);
-        }
+        if (elementToNormalize == GetValueC1Index())
+          return NormalizeC1(v.ColorData[elementToNormalize]);
+        if (elementToNormalize == GetValueC2Index())
+          return NormalizeC2(v.ColorData[elementToNormalize]);
       }
-      return NormalizeY(v.ColorData[elementToNormalize]);
+      return NormalizeL(v.ColorData[elementToNormalize]);
     }
-
 
     public static Point GetTileOrigin(Size charSize, Size numTilesPerChar, int tx, int ty)
     {
@@ -395,18 +239,20 @@ namespace PetsciiMapgen
       return ID;
     }
 
-    // poooosibly not needed but so far helpful i think for diagnostics.
     public int DebugGetMapIndexOfColor(ColorF charRGB)
     {
-      var norm = RGBToNormalizedLAB(charRGB);
+      var norm = RGBToNormalizedHCL(charRGB);
       Console.WriteLine("  norm: " + norm);
       float[] vals = new float[DimensionCount];
       for (int i = 0; i < LumaComponentCount; ++ i)
       {
-        vals[i] = (float)norm.R;
+        vals[i] = (float)norm.L;
       }
-      vals[GetValueUIndex()] = (float)norm.G;
-      vals[GetValueVIndex()] = (float)norm.B;
+      if (UseChroma)
+      {
+        vals[GetValueC1Index()] = (float)norm.C1;
+        vals[GetValueC2Index()] = (float)norm.C2;
+      }
       Console.WriteLine("  norm valset: " + Utils.ToString(vals, vals.Length));
 
       int ID = NormalizedValueSetToMapID(vals);
@@ -416,32 +262,32 @@ namespace PetsciiMapgen
     public int GetMapIndexOfRegion(Bitmap img, int x, int y, Size sz)
     {
       ColorF rgb = ColorFUtils.Init;
-      ColorF lab = ColorFUtils.Init;
-      ColorF norm = ColorFUtils.Init;
+      LCCColor lab = LCCColor.Init;
+      LCCColor norm = LCCColor.Init;
       float[] vals = new float[DimensionCount];
       ColorF charRGB = ColorFUtils.Init;
-      for (int ty = lumaTiles.Height - 1; ty >= 0; --ty)
+      for (int ty = LumaTiles.Height - 1; ty >= 0; --ty)
       {
-        for (int tx = lumaTiles.Width - 1; tx >= 0; --tx)
+        for (int tx = LumaTiles.Width - 1; tx >= 0; --tx)
         {
-          Point tilePos = GetTileOrigin(sz, lumaTiles, tx, ty);
+          Point tilePos = GetTileOrigin(sz, LumaTiles, tx, ty);
           // YES this just gets 1 pixel per char-sized area.
           rgb = ColorFUtils.From(img.GetPixel(x + tilePos.X, y + tilePos.Y));
-          lab = RGBToLAB(rgb);
+          lab = this.RGBToHCL(rgb);
 
-          norm = RGBToNormalizedLAB(rgb);
-          vals[GetValueYIndex(tx, ty)] = (float)norm.R;
+          norm = RGBToNormalizedHCL(rgb);
+          vals[GetValueLIndex(tx, ty)] = (float)norm.L;
           charRGB = charRGB.Add(rgb);
         }
       }
 
-      if (useChroma)
+      if (UseChroma)
       {
-        int numTiles = Utils.Product(lumaTiles);
+        int numTiles = Utils.Product(LumaTiles);
         charRGB = charRGB.Div(numTiles);
-        norm = RGBToNormalizedLAB(charRGB);
-        vals[GetValueUIndex()] = (float)norm.G;
-        vals[GetValueVIndex()] = (float)norm.B;
+        norm = RGBToNormalizedHCL(charRGB);
+        vals[GetValueC1Index()] = (float)norm.C1;
+        vals[GetValueC2Index()] = (float)norm.C2;
       }
 
       int ID = NormalizedValueSetToMapID(vals);

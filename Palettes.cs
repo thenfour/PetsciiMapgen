@@ -51,21 +51,21 @@ namespace PetsciiMapgen
 
         Color.FromArgb( 98,  98,  98),//gray1
         //Color.FromArgb(137, 137, 137),// gray2
-        //Color.FromArgb(173, 173, 173),//gray3
+        Color.FromArgb(173, 173, 173),//gray3
 
         Color.FromArgb(159,  78,  68),// brick red
         Color.FromArgb(203, 126, 117),// light red
-        //Color.FromArgb(109,  84,  18),// dkbrown
-        //Color.FromArgb(161, 104,  60),// light brown
+        Color.FromArgb(109,  84,  18),// dkbrown
+        Color.FromArgb(161, 104,  60),// light brown
         
-        //Color.FromArgb(201, 212, 135),// yellowish
+        Color.FromArgb(201, 212, 135),// yellowish
         Color.FromArgb(154, 226, 155),// bright green
         Color.FromArgb( 92, 171,  94),// darker green
-        //Color.FromArgb(106, 191, 198),// cyan
+        Color.FromArgb(106, 191, 198),// cyan
         
         Color.FromArgb(136, 126, 203),// light purple
         Color.FromArgb( 80,  69, 155),// dark purple
-        //Color.FromArgb(160,  87, 163),// violet
+        Color.FromArgb(160,  87, 163),// violet
       };
       }
     }
