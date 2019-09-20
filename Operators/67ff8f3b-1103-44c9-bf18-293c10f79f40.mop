@@ -1,0 +1,336 @@
+{
+  "Name": "LoadRefMapAndFont",
+  "_id": "67ff8f3b-1103-44c9-bf18-293c10f79f40",
+  "Namespace": "user.tenfour",
+  "Description": "",
+  "Inputs": [
+    {
+      "Name": "RefImagePath",
+      "MetaInstanceID": "d09729a7-b614-4565-b166-a8f8c5174ba1",
+      "DefaultValue": {
+        "Type": "Text",
+        "Value": "assets-common/image/chipmunk.jpg"
+      },
+      "MetaID": "c522a66e-3260-4692-b3e3-79fd0361fa3d",
+      "IsMultiInput": "False",
+      "Relevance": "Relevant",
+      "Description": "",
+      "Min": "-100000",
+      "Max": "100000",
+      "Scale": "1",
+      "ScaleType": "Linear",
+      "EnumValues": []
+    },
+    {
+      "Name": "FontImagePath",
+      "MetaInstanceID": "5c1d7142-2cc6-4130-85d3-2b4c4ac97de4",
+      "DefaultValue": {
+        "Type": "Text",
+        "Value": "assets-common/image/chipmunk.jpg"
+      },
+      "MetaID": "c522a66e-3260-4692-b3e3-79fd0361fa3d",
+      "IsMultiInput": "False",
+      "Relevance": "Required",
+      "Description": "",
+      "Min": "-100000",
+      "Max": "100000",
+      "Scale": "0.1",
+      "ScaleType": "Linear",
+      "EnumValues": []
+    },
+    {
+      "Name": "CharSize.X",
+      "MetaInstanceID": "36cb8b81-3ecc-4f62-b844-2af2c3cc639b",
+      "DefaultValue": {
+        "Type": "Float",
+        "Value": "8"
+      },
+      "MetaID": "3f76dee3-3897-44ac-82d6-25ce9f53a506",
+      "IsMultiInput": "False",
+      "Relevance": "Optional",
+      "Description": "",
+      "Min": "1",
+      "Max": "10000",
+      "Scale": "1",
+      "ScaleType": "Linear",
+      "EnumValues": []
+    },
+    {
+      "Name": "CharSize.Y",
+      "MetaInstanceID": "2541896f-ffd3-4a95-866b-824b9154c2c8",
+      "DefaultValue": {
+        "Type": "Float",
+        "Value": "8"
+      },
+      "MetaID": "3f76dee3-3897-44ac-82d6-25ce9f53a506",
+      "IsMultiInput": "False",
+      "Relevance": "Optional",
+      "Description": "",
+      "Min": "1",
+      "Max": "10000",
+      "Scale": "1",
+      "ScaleType": "Linear",
+      "EnumValues": []
+    },
+    {
+      "Name": "ValuesPerTile",
+      "MetaInstanceID": "9f8a1cfa-2c49-426f-a9ab-9debbd7c64bf",
+      "DefaultValue": {
+        "Type": "Float",
+        "Value": "16"
+      },
+      "MetaID": "3f76dee3-3897-44ac-82d6-25ce9f53a506",
+      "IsMultiInput": "False",
+      "Relevance": "Optional",
+      "Description": "",
+      "Min": "-10000",
+      "Max": "10000",
+      "Scale": "0.1",
+      "ScaleType": "Linear",
+      "EnumValues": []
+    },
+    {
+      "Name": "LuminanceTiles.X",
+      "MetaInstanceID": "46d50bf5-51ad-425b-ba9a-d4e36d3e1b12",
+      "DefaultValue": {
+        "Type": "Float",
+        "Value": "1"
+      },
+      "MetaID": "3f76dee3-3897-44ac-82d6-25ce9f53a506",
+      "IsMultiInput": "False",
+      "Relevance": "Optional",
+      "Description": "",
+      "Min": "0",
+      "Max": "10000",
+      "Scale": "1",
+      "ScaleType": "Linear",
+      "EnumValues": []
+    },
+    {
+      "Name": "LuminanceTiles.Y",
+      "MetaInstanceID": "8a92256b-5c4b-41b9-9f83-7b7783670227",
+      "DefaultValue": {
+        "Type": "Float",
+        "Value": "1"
+      },
+      "MetaID": "3f76dee3-3897-44ac-82d6-25ce9f53a506",
+      "IsMultiInput": "False",
+      "Relevance": "Optional",
+      "Description": "",
+      "Min": "0",
+      "Max": "10000",
+      "Scale": "1",
+      "ScaleType": "Linear",
+      "EnumValues": []
+    },
+    {
+      "Name": "ChromaElements",
+      "MetaInstanceID": "ffe7bd61-c15c-43e1-9b06-eddf50a4d522",
+      "DefaultValue": {
+        "Type": "Float",
+        "Value": "2"
+      },
+      "MetaID": "3f76dee3-3897-44ac-82d6-25ce9f53a506",
+      "IsMultiInput": "False",
+      "Relevance": "Optional",
+      "Description": "",
+      "Min": "0",
+      "Max": "2",
+      "Scale": "2",
+      "ScaleType": "Linear",
+      "EnumValues": []
+    }
+  ],
+  "Outputs": [
+    {
+      "Name": "Image",
+      "MetaInstanceID": "a9ec29a0-dedf-41bc-b689-8193d50d8e45",
+      "MetaID": "9701d534-b3ff-4889-a250-84aece4a7d76"
+    }
+  ],
+  "OperatorParts": [
+    {
+      "MetaInstanceID": "9fb18e91-1ce4-4678-b7d9-b1d1cc729450",
+      "MetaID": "4a903549-5a68-4e69-ac82-1cd6ed186f54",
+      "Name": "LoadRefMapAndFontFunc",
+      "Version": "c9260233-d0bc-4b2b-9fe3-7018aeb0367e",
+      "Type": "Float",
+      "IsMultiInput": "True",
+      "Script": [
+        "//>>> _using",
+        "using System;",
+        "using System.Collections.Generic;",
+        "using System.Linq;",
+        "using System.Text;",
+        "using SharpDX;",
+        "using SharpDX.Direct3D11;",
+        "using SharpDX.Windows;",
+        "//<<< _using",
+        "using System.IO;",
+        "",
+        "namespace Framefield.Core.ID4a903549_5a68_4e69_ac82_1cd6ed186f54",
+        "{",
+        "    public class Class_LoadRefMapAndFont : OperatorPart.Function",
+        "    {",
+        "        //>>> _inputids",
+        "        private enum InputId",
+        "        {",
+        "            RefImagePath = 0,",
+        "            CharSizeX = 1,",
+        "            CharSizeY = 2,",
+        "            ValuesPerTile = 3,",
+        "            LuminanceTilesX = 4,",
+        "            LuminanceTilesY = 5,",
+        "            FontImagePath = 6,",
+        "            ChromaElements = 7",
+        "        }",
+        "        //<<< _inputids",
+        "",
+        "        //>>> _outputids",
+        "        private enum OutputId",
+        "        {",
+        "            Image = 0",
+        "        }",
+        "        //<<< _outputids",
+        "",
+        "        public override void Dispose() {",
+        "            Utilities.DisposeObj(ref _refImageResource);",
+        "            Utilities.DisposeObj(ref _fontImageResource);",
+        "        }",
+        "",
+        "        public override OperatorPartContext Eval(OperatorPartContext context, List<OperatorPart> inputs, int outputIdx) ",
+        "        {",
+        "            //>>> _params",
+        "            var RefImagePath = inputs[(int)InputId.RefImagePath].Eval(context).Text;",
+        "            var CharSizeX = inputs[(int)InputId.CharSizeX].Eval(context).Value;",
+        "            var CharSizeY = inputs[(int)InputId.CharSizeY].Eval(context).Value;",
+        "            var CharSize = new Vector2(CharSizeX, CharSizeY);",
+        "            var ValuesPerTile = inputs[(int)InputId.ValuesPerTile].Eval(context).Value;",
+        "            var LuminanceTilesX = inputs[(int)InputId.LuminanceTilesX].Eval(context).Value;",
+        "            var LuminanceTilesY = inputs[(int)InputId.LuminanceTilesY].Eval(context).Value;",
+        "            var LuminanceTiles = new Vector2(LuminanceTilesX, LuminanceTilesY);",
+        "            var FontImagePath = inputs[(int)InputId.FontImagePath].Eval(context).Text;",
+        "            var ChromaElements = inputs[(int)InputId.ChromaElements].Eval(context).Value;",
+        "            //<<< _params",
+        "            ",
+        "            if ((RefImagePath == _lastRefImagePath) && (FontImagePath == _lastFontImagePath))",
+        "            {",
+        "                Changed = false;",
+        "            }",
+        "",
+        "            _lastRefImagePath = RefImagePath;",
+        "            _lastFontImagePath = FontImagePath;",
+        "",
+        "            if (Changed)",
+        "            {",
+        "                Dispose();",
+        "                if (File.Exists(RefImagePath))",
+        "                {",
+        "                    _refImageResource = ResourceManager.ReadImage(RefImagePath);  ",
+        "                }",
+        "                else",
+        "                {",
+        "                    Logger.Error(this,\"RefImagefile not found '{0}'\", RefImagePath);",
+        "                }",
+        "",
+        "                if (File.Exists(FontImagePath))",
+        "                {",
+        "                    _fontImageResource = ResourceManager.ReadImage(FontImagePath);  ",
+        "                }",
+        "                else",
+        "                {",
+        "                    Logger.Error(this,\"FontImagePath not found '{0}'\", FontImagePath);",
+        "                }",
+        "",
+        "                Changed = false;",
+        "            }",
+        "",
+        "            if (_refImageResource != null && _fontImageResource != null)",
+        "            {",
+        "                context.Dynamic = new Dictionary<string, object>();",
+        "                context.Dynamic[\"RefImage\"] = _refImageResource.Image;",
+        "                context.Dynamic[\"FontImage\"] = _fontImageResource.Image;",
+        "                context.Dynamic[\"CharSize\"] = CharSize;",
+        "                context.Dynamic[\"ValuesPerTile\"] = ValuesPerTile;",
+        "                context.Dynamic[\"LuminanceTiles\"] = LuminanceTiles;",
+        "                context.Dynamic[\"ChromaElements\"] = ChromaElements;",
+        "                ",
+        "            }",
+        "            else",
+        "            {",
+        "                context.Dynamic = null;",
+        "            }",
+        "",
+        "            return context;",
+        "        }",
+        "",
+        "        ImageResource _refImageResource;",
+        "        ImageResource _fontImageResource;",
+        "        String _lastRefImagePath = String.Empty; // prevent loading",
+        "        String _lastFontImagePath = String.Empty; // prevent loading",
+        "    }",
+        "}",
+        "",
+        ""
+      ],
+      "AdditionalAssemblies": []
+    }
+  ],
+  "Operators": [],
+  "Connections": [
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "d09729a7-b614-4565-b166-a8f8c5174ba1",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "9fb18e91-1ce4-4678-b7d9-b1d1cc729450"
+    },
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "36cb8b81-3ecc-4f62-b844-2af2c3cc639b",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "9fb18e91-1ce4-4678-b7d9-b1d1cc729450"
+    },
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "2541896f-ffd3-4a95-866b-824b9154c2c8",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "9fb18e91-1ce4-4678-b7d9-b1d1cc729450"
+    },
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "9f8a1cfa-2c49-426f-a9ab-9debbd7c64bf",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "9fb18e91-1ce4-4678-b7d9-b1d1cc729450"
+    },
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "46d50bf5-51ad-425b-ba9a-d4e36d3e1b12",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "9fb18e91-1ce4-4678-b7d9-b1d1cc729450"
+    },
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "8a92256b-5c4b-41b9-9f83-7b7783670227",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "9fb18e91-1ce4-4678-b7d9-b1d1cc729450"
+    },
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "5c1d7142-2cc6-4130-85d3-2b4c4ac97de4",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "9fb18e91-1ce4-4678-b7d9-b1d1cc729450"
+    },
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "ffe7bd61-c15c-43e1-9b06-eddf50a4d522",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "9fb18e91-1ce4-4678-b7d9-b1d1cc729450"
+    },
+    {
+      "SourceOp": "00000000-0000-0000-0000-000000000000",
+      "SourceOpPart": "9fb18e91-1ce4-4678-b7d9-b1d1cc729450",
+      "TargetOp": "00000000-0000-0000-0000-000000000000",
+      "TargetOpPart": "a9ec29a0-dedf-41bc-b689-8193d50d8e45"
+    }
+  ]
+}

@@ -15,7 +15,7 @@ namespace PetsciiMapgen
 {
   public interface IFontProvider
   {
-    string FontFileName { get; }
+    string DisplayName { get; }
     void Init(int DiscreteTargetValues);
     int CharCount { get; }
     Point GetCharPosInChars(int ichar);
@@ -28,7 +28,7 @@ namespace PetsciiMapgen
 
   public class FontProvider : IFontProvider
   {
-    public string FontFileName { get; private set; }
+    private string FontFileName { get; set; }
     public Size CharSizeNoPadding { get; private set; }
     public int LeftTopPadding { get; private set; }
     public Size ImageSize { get; private set; }
@@ -40,6 +40,12 @@ namespace PetsciiMapgen
     public int CharCount { get; private set; }
 
     public IDitherProvider DitherProvider { get; private set; }
+
+    public string DisplayName { get
+      {
+        return string.Format("{0}", System.IO.Path.GetFileNameWithoutExtension(FontFileName));
+      }
+    }
 
     public FontProvider(string fontFileName, Size charSize, int leftTopPadding = 0, IDitherProvider dither = null)
     {
@@ -53,6 +59,36 @@ namespace PetsciiMapgen
       this.CharSizeWithPadding = new Size(charSize.Width + leftTopPadding, charSize.Height + leftTopPadding);
       this.SizeInChars = Utils.Div(this.Image.Size, this.CharSizeWithPadding);
       this.CharCount = Utils.Product(this.SizeInChars);
+    }
+
+    public static FontProvider ProcessArgs(string[] args)
+    {
+      // -fontImage "emojidark12.png" -charSize "8x9" -dither 0
+      string fontImagePath = "";
+      Size charSize = new Size(8, 8);
+      IDitherProvider dither = null;
+      args.ProcessArg("-fontimage", s =>
+      {
+        fontImagePath = s;
+      });
+      args.ProcessArg("-charsize", s =>
+      {
+        charSize = new Size(int.Parse(s.Split('x')[0]), int.Parse(s.Split('x')[1]));
+      });
+      args.ProcessArg("-dither", s =>
+      {
+        double amt = double.Parse(s);
+        if (amt > 0)
+        {
+          dither = new Bayer8DitherProvider(amt);
+        }
+        else
+        {
+          Log.WriteLine("Ignoring dither value: {0}", s);
+        }
+      });
+
+      return new FontProvider(fontImagePath, charSize, 0, dither);
     }
 
     public void Init(int DiscreteTargetValues)

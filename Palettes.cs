@@ -82,7 +82,7 @@ namespace PetsciiMapgen
       }
     }
 
-    public static Color[] C64
+    public static Color[] C64Color
     {
       get
       {

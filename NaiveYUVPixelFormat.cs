@@ -45,7 +45,7 @@ namespace PetsciiMapgen
       ret.C2 = c.R - c.B;
       return ret;
     }
-    protected override string FormatID { get { return "NaiveYUV"; } }
+    protected override string FormatID { get { return "YUV"; } }
     protected override double NormalizeL(double x) { return Utils.Clamp(x, 0, 1); }
     protected override double NormalizeC1(double x) { return Utils.Clamp((x / 2)+ .5, 0, 1); }
     protected override double NormalizeC2(double x) { return NormalizeC1(x); }
@@ -64,21 +64,30 @@ namespace PetsciiMapgen
       this.chromaMult = chromaMult;
     }
 
+    public static NaiveYUVPixelFormat ProcessArgs(string[] args)
+    {
+      int valuesPerComponent;
+      bool useChroma;
+      Size lumaTiles;
+      LCCPixelFormatProvider.ProcessArgs(args, out valuesPerComponent, out lumaTiles, out useChroma);
+      return new NaiveYUVPixelFormat(valuesPerComponent, lumaTiles, useChroma);
+    }
+
     public override unsafe double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, bool verboseDebugInfo = false)
     {
       double acc = 0.0f;
       double m;
       if (verboseDebugInfo)
       {
-        Console.WriteLine("      : Calculating distance between");
-        Console.WriteLine("      : denormalized actual values: " + actual);
-        Console.WriteLine("      : normalized key: " + key);
+        Log.WriteLine("      : Calculating distance between");
+        Log.WriteLine("      : denormalized actual values: " + actual);
+        Log.WriteLine("      : normalized key: " + key);
       }
 
       Denormalize(ref key);
       if (verboseDebugInfo)
       {
-        Console.WriteLine("      : denormalized key: " + key);
+        Log.WriteLine("      : denormalized key: " + key);
       }
 
       if (!UseChroma)
@@ -94,15 +103,15 @@ namespace PetsciiMapgen
 
           if (verboseDebugInfo)
           {
-            Console.WriteLine("      : Luma component {0}", i);
-            Console.WriteLine("      :   dist between Y {0} and {1}", keyY, actualY);
-            Console.WriteLine("      :   m={0}; m*m={1}", m, m * m);
-            Console.WriteLine("      :   acc = " + acc);
+            Log.WriteLine("      : Luma component {0}", i);
+            Log.WriteLine("      :   dist between Y {0} and {1}", keyY, actualY);
+            Log.WriteLine("      :   m={0}; m*m={1}", m, m * m);
+            Log.WriteLine("      :   acc = " + acc);
           }
         }
         if (verboseDebugInfo)
         {
-          Console.WriteLine("      : retdist={0}", acc);
+          Log.WriteLine("      : retdist={0}", acc);
         }
         return acc;
       }
@@ -127,20 +136,20 @@ namespace PetsciiMapgen
 
         if (verboseDebugInfo)
         {
-          Console.WriteLine("      : Luma component {0}", i);
-          Console.WriteLine("      :   dist between Y {0} and {1}", keyY, actualY);
-          Console.WriteLine("      :   dY={0}; dY*dY={1}", dY, dY * dY);
-          Console.WriteLine("      :   dU={0}; dU*dU={1}", dU, dU * dU);
-          Console.WriteLine("      :   dV={0}; dV*dV={1}", dV, dV * dV);
-          Console.WriteLine("      :   du+dv*1-lw={0}", chromaComponent);
-          Console.WriteLine("      :   dy+du+dv={0}", tileAcc);
-          Console.WriteLine("      :   Sqrt = {0}", Math.Sqrt(tileAcc));
-          Console.WriteLine("      :   acc = " + acc);
+          Log.WriteLine("      : Luma component {0}", i);
+          Log.WriteLine("      :   dist between Y {0} and {1}", keyY, actualY);
+          Log.WriteLine("      :   dY={0}; dY*dY={1}", dY, dY * dY);
+          Log.WriteLine("      :   dU={0}; dU*dU={1}", dU, dU * dU);
+          Log.WriteLine("      :   dV={0}; dV*dV={1}", dV, dV * dV);
+          Log.WriteLine("      :   du+dv*1-lw={0}", chromaComponent);
+          Log.WriteLine("      :   dy+du+dv={0}", tileAcc);
+          Log.WriteLine("      :   Sqrt = {0}", Math.Sqrt(tileAcc));
+          Log.WriteLine("      :   acc = " + acc);
         }
       }
       if (verboseDebugInfo)
       {
-        Console.WriteLine("      : retdist={0}", acc);
+        Log.WriteLine("      : retdist={0}", acc);
       }
       return acc;
     }

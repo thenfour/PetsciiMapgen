@@ -1,6 +1,10 @@
 ﻿// NB:
 // partitioning does cause issues at high partitions. it shows when you start seeing good ref images but the converted images have noisy black & white.
-// choosing partition size is important. if you have an even # of valuespercomponent, then you should probably have odd partitioning.
+// choosing partition size is important.
+// you want partition boundaries to fall on discrete value boundaries as well. with 2 discrete values, [0,1], then the midpoint is .5,
+// where you want the partition seam. thus, 2 partitions.
+// that's a tempting approach but distances then are more like taxicab distances. you will still get plenty of error because of
+// distance in other dimensions. so at least make it a divisor of discrete values.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,67 +23,200 @@ namespace PetsciiMapgen
   {
     static void Main(string[] args)
     {
+      Log.WriteLine("----------------------------------------");
+
+      args = new string[] {
+        "-listpalettes",
+        "-outdir", "C:\\temp\\xyz",
+        "-fonttype", "Normal",
+        "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\c64opt160.png",
+        "-charsize", "8x8",
+        "-pf", "yuv",
+        "-pfargs", "7v2x2+2",
+        "-partitions", "2x3",
+        "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      };
+
+      PartitionManager partitionManager = new PartitionManager(1, 1);
+      IPixelFormatProvider pixelFormat = null;
+      IFontProvider fontProvider = null;
+      string outputDir = null;
+      string processImagesInDir = null;
+      int coresToUtilize = System.Environment.ProcessorCount;
+
+      args.ProcessArg("-listpalettes", s =>
+      {
+        Log.WriteLine("Listing palettes:");
+        foreach(var p in typeof(Palettes).GetProperties())
+        {
+          Log.WriteLine("  {0}", p.Name);
+        }
+      });
+
+      args.ProcessArg("-partitions", s =>
+      {
+        partitionManager = new PartitionManager(int.Parse(s.Split('x')[0]), int.Parse(s.Split('x')[1]));
+      });
+      args.ProcessArg("-pf", s =>
+      {
+        switch (s.ToLowerInvariant())
+        {
+          case "yuv":
+            pixelFormat = NaiveYUVPixelFormat.ProcessArgs(args);
+            break;
+          case "hsl":
+            pixelFormat = HSLPixelFormat.ProcessArgs(args);
+            break;
+          case "lab":
+            pixelFormat = LABPixelFormat.ProcessArgs(args);
+            break;
+          default:
+            throw new Exception("Unknown pixel format: " + s);
+        }
+      });
+
+      args.ProcessArg("-fonttype", s =>
+      {
+        switch (s.ToLowerInvariant())
+        {
+          case "mono":
+            fontProvider = MonoPaletteFontProvider.ProcessArgs(args);
+            break;
+          case "normal":
+            fontProvider = FontProvider.ProcessArgs(args);
+            break;
+          default:
+            throw new Exception("Unknown font type: " + s);
+        }
+      });
+
+      args.ProcessArg("-outdir", o =>
+      {
+        outputDir = o;
+      });
+
+      args.ProcessArg("-processImagesInDir", o =>
+      {
+        processImagesInDir = o;
+      });
+
+      args.ProcessArg("-cores", o =>
+      {
+        int a = int.Parse(o);
+        if (a < 1)
+          a = System.Environment.ProcessorCount - a;
+        coresToUtilize = a;
+      });
+
+      if (outputDir == null)
+      {
+        Log.WriteLine("No output directory was specified.");
+        return;
+      }
+      outputDir = System.IO.Path.GetFullPath(outputDir);
+      Log.WriteLine("Output directory: {0}", outputDir);
+
+      if (!System.IO.Directory.Exists(outputDir))
+      {
+        Log.WriteLine("Output directory doesn't exist.");
+        return;
+      }
+
+      // emoji12-C64_YUV-2v5x5+2
+      if (fontProvider == null)
+      {
+        Log.WriteLine("Font information not specified.");
+        return;
+      }
+      if (pixelFormat == null)
+      {
+        Log.WriteLine("Pixel format not specified.");
+        return;
+      }
+      if (partitionManager == null)
+      {
+        Log.WriteLine("Space partitioning unspecified");
+        return;
+      }
+      string configTag = string.Format("{0}_{1}_{2}", fontProvider.DisplayName, pixelFormat.PixelFormatString, partitionManager);
+      outputDir = System.IO.Path.Combine(outputDir, configTag);
+      Log.WriteLine("Creating directory: {0}", outputDir);
+      System.IO.Directory.CreateDirectory(outputDir);
+
+      string logPath = System.IO.Path.Combine(outputDir, "log.txt");
+
+      Log.SetLogFile(logPath);
 
       Timings t = new Timings();
-      t.EnterTask("--- MAIN PROCESSING");
+      t.EnterTask("--- MAP GENERATION");
 
-      var emoji12 = new FontProvider("..\\..\\img\\fonts\\emojidark12.png", new Size(12, 12));//, dither: new Bayer8DitherProvider(.1));
-      var emoji16 = new FontProvider("..\\..\\img\\fonts\\emojidark16.png", new Size(16, 16));//, dither: new Bayer8DitherProvider(.1));
-      var emoji24 = new FontProvider("..\\..\\img\\fonts\\emojidark24.png", new Size(24, 24));//, dither: new Bayer8DitherProvider(.1));
-      var emoji32 = new FontProvider("..\\..\\img\\fonts\\emojidark32.png", new Size(32, 32));//, dither: new Bayer8DitherProvider(.1));
-      var c64font = new MonoPaletteFontProvider("..\\..\\img\\fonts\\c64opt160.png", new Size(8, 8), Palettes.C64Gray8);
-      var mzFont = new MonoPaletteFontProvider("..\\..\\img\\fonts\\mz700.png", new Size(16, 16), Palettes.BlackAndWhite);
-      var topaz = new MonoPaletteFontProvider("..\\..\\img\\fonts\\topaz96.gif", new Size(8, 16), Palettes.Workbench134);
+      string mapFullPath = System.IO.Path.Combine(outputDir, string.Format("mapfull_{0}.png", configTag));
+      string mapRefPath = System.IO.Path.Combine(outputDir, string.Format("mapref_{0}.png", configTag));
+      string mapFontPath = System.IO.Path.Combine(outputDir, string.Format("mapfont_{0}.png", configTag));
 
-      var noPartition = new PartitionManager(1, 1);
-      var partition = new PartitionManager(3, 9);// i have the feeling partitioning in 3 is actually better
-
-      // if we have a large array, we could do 3^4x4+0 mapping. but not before then.
-
-      var map = new HybridMap2(
-        emoji12,
-        partition,
-        new NaiveYUVPixelFormat(7, new Size(3,2), true), false, true);
+      var map = new HybridMap2(fontProvider, partitionManager, pixelFormat,
+        mapFullPath,
+        mapRefPath,
+        mapFontPath,
+        coresToUtilize);
 
       t.EndTask();
 
-      //var emoji12ShouldBeBlack = new Point(468, 264);
-      //map.TestColor(ColorFUtils.FromRGB(0, 0, 0), emoji12ShouldBeBlack);//, new Point(468, 264), new Point(288, 0), new Point(0, 264));
-      //map.TestColor(ColorFUtils.FromRGB(128, 0, 0));
-      //map.TestColor(ColorFUtils.FromRGB(128, 128, 128));
-      //map.TestColor(ColorFUtils.FromRGB(0, 128, 0), new Point(468, 264));
-      //map.TestColor(ColorFUtils.FromRGB(0, 0, 128), new Point(372, 252));
-      //map.TestColor(ColorFUtils.FromRGB(255, 255, 255));//, new Point(385, 277));
+      ////var emoji12ShouldBeBlack = new Point(468, 264);
+      ////map.TestColor(ColorFUtils.FromRGB(0, 0, 0), emoji12ShouldBeBlack);//, new Point(468, 264), new Point(288, 0), new Point(0, 264));
+      ////map.TestColor(ColorFUtils.FromRGB(128, 0, 0));
+      ////map.TestColor(ColorFUtils.FromRGB(128, 128, 128));
+      ////map.TestColor(ColorFUtils.FromRGB(0, 128, 0), new Point(468, 264));
+      ////map.TestColor(ColorFUtils.FromRGB(0, 0, 128), new Point(372, 252));
+      ////map.TestColor(ColorFUtils.FromRGB(255, 255, 255));//, new Point(385, 277));
 
-      t.EnterTask("processing images");
+      if (processImagesInDir != null && System.IO.Directory.Exists(processImagesInDir))
+      {
+        t.EnterTask("processing images");
 
-      ////Bitmap testBmp = new Bitmap(100, 100);
-      ////using (Graphics g = Graphics.FromImage(testBmp))
-      ////{
-      ////  g.Clear(Color.Black);
-      ////}
+        var files = System.IO.Directory.EnumerateFiles(processImagesInDir, "*", System.IO.SearchOption.TopDirectoryOnly);
+        foreach (var file in files)
+        {
+          Log.WriteLine("Processing {0}", file);
+          string destFile = string.Format("test-{0}.png", System.IO.Path.GetFileNameWithoutExtension(file));
+          string destfullp = System.IO.Path.Combine(outputDir, destFile);
+          map.ProcessImageUsingRef(mapRefPath, mapFontPath, file, destfullp);
+        }
 
-      ////map.ProcessImageUsingRef("..\\..\\img\\BLACK.png", testBmp, testBmp, "..\\..\\img\\testdest-BLACK.png");
+        t.EndTask();
+      }
 
-      map.ProcessImageUsingRef("..\\..\\img\\grad3.png", "..\\..\\img\\testdest-grad3.png");
-      map.ProcessImageUsingRef("..\\..\\img\\circle.png", "..\\..\\img\\testdest-circle.png");
-      map.ProcessImageUsingRef("..\\..\\img\\grad.png", "..\\..\\img\\testdest-grad.png");
-      map.ProcessImageUsingRef("..\\..\\img\\airplane.jpg", "..\\..\\img\\testdest-airplane.png");
-      map.ProcessImageUsingRef("..\\..\\img\\balloon600.jpg", "..\\..\\img\\testdest-balloon600.png");
-      map.ProcessImageUsingRef("..\\..\\img\\david.jpg", "..\\..\\img\\testdest-david.png");
-      map.ProcessImageUsingRef("..\\..\\img\\david192.jpg", "..\\..\\img\\testdest-david192.png");
-      map.ProcessImageUsingRef("..\\..\\img\\lisa1024.jpg", "..\\..\\img\\testdest-lisa1024.png");
-      map.ProcessImageUsingRef("..\\..\\img\\lisa512.jpg", "..\\..\\img\\testdest-lisa512.png");
-      map.ProcessImageUsingRef("..\\..\\img\\atomium.jpg", "..\\..\\img\\testdest-atomium.png");
-      map.ProcessImageUsingRef("..\\..\\img\\grad.png", "..\\..\\img\\testdest-grad.png");
-      map.ProcessImageUsingRef("..\\..\\img\\grad2.png", "..\\..\\img\\testdest-grad2.png");
-      map.ProcessImageUsingRef("..\\..\\img\\gtorus.png", "..\\..\\img\\testdest-gtorus.png");
-      map.ProcessImageUsingRef("..\\..\\img\\balloon1200.jpg", "..\\..\\img\\testdest-balloon1200.png");
 
-      t.EndTask();
+      //t.EnterTask("processing images");
 
-      Console.WriteLine("Press a key to continue...");
-      Console.ReadKey();
+      //////Bitmap testBmp = new Bitmap(100, 100);
+      //////using (Graphics g = Graphics.FromImage(testBmp))
+      //////{
+      //////  g.Clear(Color.Black);
+      //////}
+
+      //////map.ProcessImageUsingRef("..\\..\\img\\BLACK.png", testBmp, testBmp, "..\\..\\img\\testdest-BLACK.png");
+
+      //map.ProcessImageUsingRef("..\\..\\img\\grad3.png", "..\\..\\img\\testdest-grad3.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\circles.png", "..\\..\\img\\testdest-circles.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\circle.png", "..\\..\\img\\testdest-circle.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\grad.png", "..\\..\\img\\testdest-grad.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\airplane.jpg", "..\\..\\img\\testdest-airplane.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\balloon600.jpg", "..\\..\\img\\testdest-balloon600.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\david.jpg", "..\\..\\img\\testdest-david.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\david192.jpg", "..\\..\\img\\testdest-david192.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\lisa1024.jpg", "..\\..\\img\\testdest-lisa1024.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\lisa512.jpg", "..\\..\\img\\testdest-lisa512.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\atomium.jpg", "..\\..\\img\\testdest-atomium.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\grad.png", "..\\..\\img\\testdest-grad.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\grad2.png", "..\\..\\img\\testdest-grad2.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\gtorus.png", "..\\..\\img\\testdest-gtorus.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\balloon1200.jpg", "..\\..\\img\\testdest-balloon1200.png");
+
+      //t.EndTask();
+
+      //Log.WriteLine("Press a key to continue...");
+      //Console.ReadKey();
     }
   }
 }

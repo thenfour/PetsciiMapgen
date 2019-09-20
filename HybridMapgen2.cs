@@ -17,49 +17,46 @@ using System.Drawing.Imaging;
 
 namespace PetsciiMapgen
 {
-  using MappingArrayX = HugeArray;// MappingArray HugeArray
-
   public class HybridMap2
   {
     public Bitmap FullMapBitmap;
     public CharInfo[] DistinctMappedChars;
     public ValueSet[] Keys { get; private set; }
     public List<CharInfo> CharInfo { get; private set; }
-    //public Dictionary<long, CharInfo> Map { get; private set; }// maps key index to charinfo
     public Mapping[] Map;
 
     public IFontProvider FontProvider { get; private set; }
     public IPixelFormatProvider PixelFormatProvider { get; private set; }
 
-    public string MapFullPath
-    {
-      get
-      {
-        return string.Format("..\\..\\img\\mapFull-{0}-{1}.png",
-                System.IO.Path.GetFileNameWithoutExtension(FontProvider.FontFileName),
-                this.PixelFormatProvider.PixelFormatString);
-      }
-    }
+    //public string MapFullPath
+    //{
+    //  get
+    //  {
+    //    return string.Format("..\\..\\img\\mapFull-{0}-{1}.png",
+    //            System.IO.Path.GetFileNameWithoutExtension(FontProvider.FontFileName),
+    //            this.PixelFormatProvider.PixelFormatString);
+    //  }
+    //}
 
-    public string MapRefPath
-    {
-      get
-      {
-        return string.Format("..\\..\\img\\mapRef-{0}-{1}.png",
-                System.IO.Path.GetFileNameWithoutExtension(FontProvider.FontFileName),
-                this.PixelFormatProvider.PixelFormatString);
-      }
-    }
+    //public string MapRefPath
+    //{
+    //  get
+    //  {
+    //    return string.Format("..\\..\\img\\mapRef-{0}-{1}.png",
+    //            System.IO.Path.GetFileNameWithoutExtension(FontProvider.FontFileName),
+    //            this.PixelFormatProvider.PixelFormatString);
+    //  }
+    //}
 
-    public string MapRefFontPath
-    {
-      get
-      {
-        return string.Format("..\\..\\img\\mapRefFont-{0}-{1}.png",
-                System.IO.Path.GetFileNameWithoutExtension(FontProvider.FontFileName),
-                this.PixelFormatProvider.PixelFormatString);
-      }
-    }
+    //public string MapRefFontPath
+    //{
+    //  get
+    //  {
+    //    return string.Format("..\\..\\img\\mapRefFont-{0}-{1}.png",
+    //            System.IO.Path.GetFileNameWithoutExtension(FontProvider.FontFileName),
+    //            this.PixelFormatProvider.PixelFormatString);
+    //  }
+    //}
 
     private HybridMap2()
     {
@@ -67,35 +64,25 @@ namespace PetsciiMapgen
 
     public unsafe HybridMap2(IFontProvider fontProvider,
       PartitionManager pm, IPixelFormatProvider pixelFormatProvider,
-      bool outputFullMap = true, bool outputRefMapAndFont = true, int BatchCount = -1)
+      string fullMapPath, string refMapPath, string refFontPath,
+      int BatchCount)
     {
       Timings timings = new Timings();
 
-      if (BatchCount < 0)
-        BatchCount = System.Environment.ProcessorCount;
+      if (BatchCount < 1)
+        BatchCount = System.Environment.ProcessorCount - BatchCount;
 
       this.FontProvider = fontProvider;
       this.PixelFormatProvider = pixelFormatProvider;
       this.FontProvider.Init(this.PixelFormatProvider.DiscreteNormalizedValues.Length);
       pm.Init(this.PixelFormatProvider);
 
-      Console.WriteLine("Number of source chars (1d): " + this.FontProvider.CharCount.ToString("N0"));
-      Console.WriteLine("Chosen values per tile: " + pixelFormatProvider.DiscreteNormalizedValues.Length);
-      Console.WriteLine("Dimensions: " + PixelFormatProvider.DimensionCount);
-      Console.WriteLine("Resulting map will have this many entries: " + pixelFormatProvider.MapEntryCount.ToString("N0"));
+      Log.WriteLine("Number of source chars (1d): " + this.FontProvider.CharCount.ToString("N0"));
+      Log.WriteLine("Chosen values per tile: " + pixelFormatProvider.DiscreteNormalizedValues.Length);
+      Log.WriteLine("Dimensions: " + PixelFormatProvider.DimensionCount);
+      Log.WriteLine("Resulting map will have this many entries: " + pixelFormatProvider.MapEntryCount.ToString("N0"));
       long mapdimpix = (long)Math.Sqrt(pixelFormatProvider.MapEntryCount);
-      Console.WriteLine("Resulting map will be about: [" + mapdimpix.ToString("N0") + ", " + mapdimpix.ToString("N0") + "]");
-
-      //if (mapdimpix > 17000)
-      //{
-      //  // a healthy safe amount.
-      //  // https://stackoverflow.com/questions/29175585/what-is-the-maximum-resolution-of-c-sharp-net-bitmap
-      //  //Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-      //  //Console.WriteLine("!!! full map generation will not be possible; too big.");
-      //  //Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-      //  //Console.WriteLine("press a key to continue anyway.");
-      //  //Console.ReadKey();
-      //}
+      Log.WriteLine("Resulting map will be about: [" + mapdimpix.ToString("N0") + ", " + mapdimpix.ToString("N0") + "]");
 
       // fill in char source info (actual tile values)
       timings.EnterTask("Analyze incoming font");
@@ -111,16 +98,16 @@ namespace PetsciiMapgen
           fontImagePixelPos = FontProvider.GetCharOriginInPixels(ichar),
 #endif
         };
-          pixelFormatProvider.PopulateCharColorData(ci, fontProvider);
+        pixelFormatProvider.PopulateCharColorData(ci, fontProvider);
         this.CharInfo.Add(ci);
       }
 
-      Console.WriteLine("Number of source chars: " + this.CharInfo.Count);
+      Log.WriteLine("Number of source chars: " + this.CharInfo.Count);
 
       // create list of all mapkeys
       this.Keys = Utils.Permutate(PixelFormatProvider.DimensionCount, pixelFormatProvider.DiscreteNormalizedValues); // returns sorted.
 
-      Console.WriteLine("  Key count: " + this.Keys.Length);
+      Log.WriteLine("  Key count: " + this.Keys.Length);
 
       foreach (var ci in this.CharInfo)
       {
@@ -132,19 +119,8 @@ namespace PetsciiMapgen
 
       // - generate a list of mappings and their distances
       ulong theoreticalMappings = (ulong)this.CharInfo.Count * (ulong)pixelFormatProvider.MapEntryCount;
-      Console.WriteLine("  Partition count: " + pm.PartitionCount.ToString("N0"));
-      Console.WriteLine("  Theoretical mapping count: " + theoreticalMappings.ToString("N0"));
-      //ulong estMappings = theoreticalMappings / (ulong)pm.PartitionCount;
-      //Console.WriteLine("  Estimated mappings to perform after partitioning: " + estMappings.ToString("N0"));
-      //ulong chunkSize = estMappings / (ulong)Environment.ProcessorCount;
-      //chunkSize = Math.Min(chunkSize, 1000000000UL);// 1 billion.
-      //chunkSize = Math.Max(chunkSize, (ulong)minChunkSize);
-      //Console.WriteLine("  Chunksize: {0}", chunkSize.ToString("N0"));
-
-      //HugeArray allMappings = new HugeArray((int)chunkSize);
-
-      //long comparisonsMade = 0;
-      //ProgressReporter pr = new ProgressReporter((ulong)this.Keys.Length);
+      Log.WriteLine("  Partition count: " + pm.PartitionCount.ToString("N0"));
+      Log.WriteLine("  Theoretical mapping count: " + theoreticalMappings.ToString("N0"));
 
       List<Task> comparisonBatches = new List<Task>();
       List<MappingArray> allMappingsArray = new List<MappingArray>(BatchCount);
@@ -167,11 +143,9 @@ namespace PetsciiMapgen
 
         comparisonBatches.Add(Task.Run(() =>
         {
-          //Utils.ValueRangeInspector distanceRange = new Utils.ValueRangeInspector();
-          //MappingArrayX allMappings = new MappingArrayX((int)chunkSize);
           int mapEntriesToPopulate = (int)keyEnd - (int)keyBegin;
           MappingArray allMappings = allMappingsArray[batchID];// new MappingArray(0);
-          Console.WriteLine("    Batch processing idx {0:N0} to {1:N0}", keyBegin, keyEnd);
+          Log.WriteLine("    Batch processing idx {0:N0} to {1:N0}", keyBegin, keyEnd);
           var pr = (batchID == BatchCount - 1) ? new ProgressReporter((ulong)mapEntriesToPopulate) : null;
           for (int ikey = (int)keyBegin; ikey < (int)keyEnd; ++ikey)
           {
@@ -188,32 +162,17 @@ namespace PetsciiMapgen
               n.dist = fdist;
               allMappings.Add(n, p);
 
-              //distanceRange.Visit(fdist);
               this.Keys[ikey].MinDistFound = Math.Min(this.Keys[ikey].MinDistFound, fdist);
               this.Keys[ikey].Visited = true;
-              //long imap = allMappings.Add();
-              //comparisonsMade++;
             }
           }
 
-          Console.WriteLine("    Mappings generated: {0}", allMappings.Length.ToString("N0"));
+          Log.WriteLine("    Mappings generated: {0}. Now sorting them.", allMappings.Length.ToString("N0"));
 
-          //double maxMinDist = 0;
-          //foreach (var mapKey in this.Keys)
-          //{
-          //  if (mapKey.Visited)
-          //    maxMinDist = Math.Max(maxMinDist, mapKey.MinDistFound);
-          //}
-          //Console.WriteLine("  Max minimum distance found: {0}", maxMinDist);
+          allMappings.Sort();
 
-          //timings.EnterTask("Prune & Sort mappings");
-          ulong itemsRemoved = allMappings.SortAndPrune(0/*maxMinDist*/);
+          Log.WriteLine("    Sorted batch {0}. Now enumerating and filling in map.", batchID);
 
-          //Console.WriteLine("   {0} items removed", itemsRemoved);
-          //Console.WriteLine("   {0} mappings left to choose from", allMappings.Length.ToString("N0"));
-          Console.WriteLine("    Sorted batch {0}. Now enumerating and filling in map.", batchID);
-
-          //timings.EndTask();
           ulong i = 0;
           int mapEntriesPopulated = 0;
           pr = (batchID == BatchCount - 1) ? new ProgressReporter((ulong)allMappings.Length) : null;
@@ -221,114 +180,24 @@ namespace PetsciiMapgen
           {
             pr?.Visit(i++);
             if (Keys[m.imapKey].Mapped)
-            //if (this.Keys[allMappings.Values[imap].imapKey].Mapped)
             {
               continue;
             }
 
-            //var m = allMappings.Values[imap];
             CharInfo thisCh = this.CharInfo[m.icharInfo];
 
-            Map[m.imapKey] = m;//.icharInfo =  = thisCh;
+            Map[m.imapKey] = m;
             this.Keys[m.imapKey].Mapped = true;
             thisCh.usages++;
             mapEntriesPopulated++;
             if (mapEntriesPopulated == mapEntriesToPopulate)
               break;
           }
-          //timings.EndTask();
 
         }));
       }
       Task.WaitAll(comparisonBatches.ToArray());
       timings.EndTask();
-
-      //for (int ikey = 0; ikey < this.Keys.Length; ++ikey)
-      //{
-      //  pr.Visit((ulong)ikey);
-      //  var chars = pm.GetItemsInSamePartition(this.Keys[ikey], true);
-      //  foreach (var ci in chars)
-      //  {
-      //    Mapping n;
-      //    n.icharInfo = ci.srcIndex;
-      //    n.imapKey = ikey;
-      //    double fdist = pixelFormatProvider.CalcKeyToColorDist(this.Keys[ikey], ci.actualValues);
-      //    n.dist = fdist;
-      //    allMappings.Add(n);
-
-      //    distanceRange.Visit(fdist);
-      //    this.Keys[ikey].MinDistFound = Math.Min(this.Keys[ikey].MinDistFound, fdist);
-      //    this.Keys[ikey].Visited = true;
-      //    //long imap = allMappings.Add();
-      //    comparisonsMade++;
-      //  }
-      //}
-
-      //Console.WriteLine("  Mappings generated: {0}", allMappings.Length.ToString("N0"));
-      //Console.WriteLine("  Comparisons made: {0}", comparisonsMade.ToString("N0"));
-      //Console.WriteLine("  Distance range encountered: {0}", distanceRange);
-
-      //double maxMinDist = 0;
-      //foreach (var mapKey in this.Keys)
-      //{
-      //  if (mapKey.Visited)
-      //    maxMinDist = Math.Max(maxMinDist, mapKey.MinDistFound);
-      //}
-      //Console.WriteLine("Max minimum distance found: {0}", maxMinDist);
-
-      //timings.EndTask();
-
-
-
-      //timings.EnterTask("Prune & Sort mappings");
-      //ulong itemsRemoved = allMappings.SortAndPrune(maxMinDist);
-
-      //Console.WriteLine("   {0} items removed", itemsRemoved);
-      //Console.WriteLine("   {0} mappings left to choose from", allMappings.Length.ToString("N0"));
-
-      //timings.EndTask();
-
-
-      //timings.EnterTask("Pruning out mappings");
-      //long itemsRemoved = allMappings.PruneWhereDistGT(maxMinDist);
-
-      //Console.WriteLine("   {0} items removed", itemsRemoved);
-      //Console.WriteLine("   {0} mappings left to choose from", allMappings.Length.ToString("N0"));
-
-      //timings.EndTask();
-      //timings.EnterTask("Sorting mappings");
-
-      //allMappings.SortByDist();
-
-      //timings.EndTask();
-      //timings.EnterTask("Select mappings for map");
-
-      // now walk through and fill in mappings from top to bottom.
-      // maps key index to charinfo
-      //this.Map = new Dictionary<long, CharInfo>((int)pixelFormatProvider.MapEntryCount);
-
-      //for (ulong imap = 0; imap < allMappings.Length; ++imap)
-      //pr = new ProgressReporter(allMappings.Length);
-      //ulong i = 0;
-      //foreach (var m in allMappings.GetEnumerator())
-      //{
-      //  pr.Visit(i++);
-      //  if (this.Keys[m.imapKey].Mapped)
-      //  //if (this.Keys[allMappings.Values[imap].imapKey].Mapped)
-      //  {
-      //    continue;
-      //  }
-
-      //  //var m = allMappings.Values[imap];
-      //  CharInfo thisCh = this.CharInfo[m.icharInfo];
-
-      //  this.Map[this.Keys[m.imapKey].ID] = thisCh;
-      //  this.Keys[m.imapKey].Mapped = true;
-      //  this.CharInfo[m.icharInfo].usages++;
-      //  if (this.Map.Count == pixelFormatProvider.MapEntryCount)
-      //    break;
-      //}
-      //timings.EndTask();
 
       int numCharsUsed = 0;
       int numCharsUsedOnce = 0;
@@ -350,14 +219,14 @@ namespace PetsciiMapgen
 
       // massive dump.
 #if DUMP_CHARINFO
-      Console.WriteLine("ALL CHAR INFO:");
+      Log.WriteLine("ALL CHAR INFO:");
       foreach (CharInfo ci in charInfo)
       {
-        Console.WriteLine("  {0}", ci);
+        Log.WriteLine("  {0}", ci);
       }
 #endif
 #if DUMP_MAPINFO
-      Console.WriteLine("ALL MAPPING INFO:");
+      Log.WriteLine("ALL MAPPING INFO:");
       foreach (var k in keys)
       {
         CharInfo ci = null;
@@ -366,7 +235,7 @@ namespace PetsciiMapgen
           continue;
         }
 
-        Console.WriteLine("  id:{1} key:{0} mindist:{2} mappedtoCharSrc:{3}",
+        Log.WriteLine("  id:{1} key:{0} mindist:{2} mappedtoCharSrc:{3}",
           k, k.ID, k.MinDistFound, ci.srcIndex);
 
 #if DUMP_MAPCHARINFO
@@ -374,35 +243,30 @@ namespace PetsciiMapgen
         {
           //double fdist = CalcCellDistance(k, ci2.actualValues);
           double fdist = pixelFormatProvider.CalcKeyToColorDist(k, ci2.actualValues);
-          Console.WriteLine("    dist {0,6:0.00} to char {1}", fdist, ci2);
+          Log.WriteLine("    dist {0,6:0.00} to char {1}", fdist, ci2);
         }
 #endif
       }
 #endif
 
-      if (outputFullMap)
-      {
-        OutputFullMap();
-      }
-      if (outputRefMapAndFont)
-      {
-        this.DistinctMappedChars = this.Map.DistinctBy(o => o.icharInfo).Select(o => this.CharInfo[o.icharInfo]).ToArray();
-        for (int ichar = 0; ichar < DistinctMappedChars.Length; ++ichar)
-        {
-          CharInfo ci = DistinctMappedChars[ichar];
-          Debug.Assert(ci != null);
-          ci.refFontIndex = ichar;
-        }
+      OutputFullMap(fullMapPath);
 
-        OutputRefMapAndFont();
+      this.DistinctMappedChars = this.Map.DistinctBy(o => o.icharInfo).Select(o => this.CharInfo[o.icharInfo]).ToArray();
+      for (int ichar = 0; ichar < DistinctMappedChars.Length; ++ichar)
+      {
+        CharInfo ci = DistinctMappedChars[ichar];
+        Debug.Assert(ci != null);
+        ci.refFontIndex = ichar;
       }
 
-      Console.WriteLine("Post-map stats:");
-      Console.WriteLine("  Used char count: " + numCharsUsed);
-      Console.WriteLine("  Number of unused char: " + (this.CharInfo.Count - numCharsUsed));
-      Console.WriteLine("  Number of chars used exactly once: " + numCharsUsedOnce);
-      Console.WriteLine("  Most-used char: " + mostUsedChar + " (" + mostUsedChar.usages + ") usages");
-      Console.WriteLine("  Number of total char repetitions: " + numRepetitions);
+      OutputRefMapAndFont(refMapPath, refFontPath);
+
+      Log.WriteLine("Post-map stats:");
+      Log.WriteLine("  Used char count: " + numCharsUsed);
+      Log.WriteLine("  Number of unused char: " + (this.CharInfo.Count - numCharsUsed));
+      Log.WriteLine("  Number of chars used exactly once: " + numCharsUsedOnce);
+      Log.WriteLine("  Most-used char: " + mostUsedChar + " (" + mostUsedChar.usages + ") usages");
+      Log.WriteLine("  Number of total char repetitions: " + numRepetitions);
     }
 
     // when a color looks wrong, let's try and trace it back. outputs mapping information for this color,
@@ -419,19 +283,17 @@ namespace PetsciiMapgen
         WUTcharIndex.Add(this.FontProvider.GetCharIndexAtPixelPos(p));
       }
 
-      Console.WriteLine("Displaying debug info about color");
-      Console.WriteLine("  src : " + rgb);
+      Log.WriteLine("Displaying debug info about color");
+      Log.WriteLine("  src : " + rgb);
       int mapid = this.PixelFormatProvider.DebugGetMapIndexOfColor(rgb);
-      Console.WriteLine("  which lands in mapID: " + mapid);
-      Console.WriteLine("   -> " + this.Keys[mapid]);
-      //      Console.WriteLine("   -> mapped to char: " + this.Map[mapid]);
+      Log.WriteLine("  which lands in mapID: " + mapid);
+      Log.WriteLine("   -> " + this.Keys[mapid]);
 
       // now display top 10 characters for that mapid.
       MappingArray marr = new MappingArray(1000000);
       Utils.ValueRangeInspector r = new Utils.ValueRangeInspector();
       foreach (CharInfo ci in this.CharInfo)
       {
-        //long imap = m.Add();
         Mapping m;
         m.icharInfo = ci.srcIndex;
         m.imapKey = mapid;
@@ -440,15 +302,15 @@ namespace PetsciiMapgen
 
         if (WUTcharIndex.Contains(ci.srcIndex))
         {
-          Console.WriteLine("      You want data about char {0} well here it is:", ci);
-          Console.WriteLine("        dist: {0,6:0.00} to char {1}", m.dist, ci);
+          Log.WriteLine("      You want data about char {0} well here it is:", ci);
+          Log.WriteLine("        dist: {0,6:0.00} to char {1}", m.dist, ci);
           double trash = PixelFormatProvider.CalcKeyToColorDist(this.Keys[mapid], ci.actualValues, true);
         }
 
         marr.Add(m);
       }
 
-      marr.SortAndPrune(r.MaxValue);
+      marr.Sort();
 
       Bitmap bmp = new Bitmap(FontProvider.CharSizeNoPadding.Width * charsToOutputToImage, FontProvider.CharSizeNoPadding.Height * 2);
 
@@ -459,15 +321,13 @@ namespace PetsciiMapgen
 
       BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, bmp.Width, FontProvider.CharSizeNoPadding.Height), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
 
-      Console.WriteLine("    listing top {0} closest characters to that map key:", charsToOutputInConsole);
-      //for (int i = 0; i < charsToOutputToImage; ++ i)
+      Log.WriteLine("    listing top {0} closest characters to that map key:", charsToOutputInConsole);
       int i = 0;
       foreach (var mapping in marr.GetEnumerator())
       {
-        //var mapping = m.Values[i];
         if (i < charsToOutputInConsole)
         {
-          Console.WriteLine("      dist: {0,6:0.00} to char {1}", mapping.dist, this.CharInfo[mapping.icharInfo]);
+          Log.WriteLine("      dist: {0,6:0.00} to char {1}", mapping.dist, this.CharInfo[mapping.icharInfo]);
           double dist = PixelFormatProvider.CalcKeyToColorDist(this.Keys[mapid], this.CharInfo[mapping.icharInfo].actualValues, i < detailedCharOutput);
         }
         if (i >= charsToOutputToImage)
@@ -478,26 +338,26 @@ namespace PetsciiMapgen
       bmp.UnlockBits(bmpData);
 
       string path = string.Format("..\\..\\img\\TESTVIS {0}.png", rgb);
-      Console.WriteLine("    Output chars to :" + path);
+      Log.WriteLine("    Output chars to :" + path);
       bmp.Save(path);
     }
 
-    internal void OutputFullMap()
+    internal void OutputFullMap(string MapFullPath)
     {
       int numCellsX = (int)Math.Ceiling(Math.Sqrt(this.Keys.Count()));
-      Size mapImageSize = Utils.Mul(FontProvider.CharSizeNoPadding, numCellsX);// new Size(numCellsX * charSize.Width, numCellsX * charSize.Height);
+      Size mapImageSize = Utils.Mul(FontProvider.CharSizeNoPadding, numCellsX);
 
-      Console.WriteLine("MAP image generation...");
-      Console.WriteLine("  Cells: [" + numCellsX + ", " + numCellsX + "]");
-      Console.WriteLine("  Image size: [" + mapImageSize.Width + ", " + mapImageSize.Height + "]");
+      Log.WriteLine("MAP image generation...");
+      Log.WriteLine("  Cells: [" + numCellsX + ", " + numCellsX + "]");
+      Log.WriteLine("  Image size: [" + mapImageSize.Width + ", " + mapImageSize.Height + "]");
 
       if (mapImageSize.Width > 17000)
       {
         // a healthy safe amount.
         // https://stackoverflow.com/questions/29175585/what-is-the-maximum-resolution-of-c-sharp-net-bitmap
-        Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        Console.WriteLine("!!! full map generation not possible; too big.");
-        Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        Log.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        Log.WriteLine("!!! full map generation not possible; too big.");
+        Log.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         return;
       }
 
@@ -507,7 +367,6 @@ namespace PetsciiMapgen
       foreach (ValueSet k in Keys)
       {
         CharInfo ci = this.CharInfo[Map[k.ID].icharInfo];
-        //Keys.TryGetValue(k.ID, out ci);
 
         long cellY = k.ID / numCellsX;
         long cellX = k.ID - (numCellsX * cellY);
@@ -522,24 +381,23 @@ namespace PetsciiMapgen
 
     // each R,G,B value of the resulting image is a mapping. the inserted value 0-1 refers to a character
     // in the font texture.
-    internal unsafe void OutputRefMapAndFont()
+    internal unsafe void OutputRefMapAndFont(string MapRefPath, string MapRefFontPath)
     {
-      Console.WriteLine("FONT MAP image generation...");
+      Log.WriteLine("FONT MAP image generation...");
       float fontMapCharCount = DistinctMappedChars.Length;
-      Console.WriteLine("  Entries linear: " + fontMapCharCount);
+      Log.WriteLine("  Entries linear: " + fontMapCharCount);
       long fontImgPixels = DistinctMappedChars.Length * FontProvider.CharSizeNoPadding.Width * FontProvider.CharSizeNoPadding.Height;
-      Console.WriteLine("  Total pixels: " + fontImgPixels);
+      Log.WriteLine("  Total pixels: " + fontImgPixels);
       int fontImgWidthChars = (int)Math.Ceiling(Math.Sqrt(fontImgPixels) / FontProvider.CharSizeNoPadding.Width);
       int fontImgWidthPixels = fontImgWidthChars * FontProvider.CharSizeNoPadding.Width;
       int fontImgHeightChars = (int)Math.Ceiling((double)fontImgPixels / fontImgWidthPixels / FontProvider.CharSizeNoPadding.Height);
       int fontImgHeightPixels = fontImgHeightChars * FontProvider.CharSizeNoPadding.Height;
-      Console.WriteLine("  Image size chars: [" + fontImgWidthChars + ", " + fontImgHeightChars + "]");
-      Console.WriteLine("  Image size pixels: [" + fontImgWidthPixels + ", " + fontImgHeightPixels + "]");
+      Log.WriteLine("  Image size chars: [" + fontImgWidthChars + ", " + fontImgHeightChars + "]");
+      Log.WriteLine("  Image size pixels: [" + fontImgWidthPixels + ", " + fontImgHeightPixels + "]");
 
       var fontBmp = new Bitmap(fontImgWidthPixels, fontImgHeightPixels, PixelFormat.Format24bppRgb);
       BitmapData destFontData = fontBmp.LockBits(new Rectangle(0, 0, fontImgWidthPixels, fontImgHeightPixels), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
 
-      //for (int ichar = 0; ichar < distinctMappedChars.Length; ++ ichar)
       foreach(var ci in DistinctMappedChars)
       {
         long cellY = ci.refFontIndex / fontImgWidthChars;
@@ -562,8 +420,8 @@ namespace PetsciiMapgen
       int mapWidthPixels = (int)Math.Ceiling(Math.Sqrt(pixelCountD));
       int mapHeightPixels = (int)Math.Ceiling(pixelCountD / mapWidthPixels);
 
-      Console.WriteLine("REF MAP image generation...");
-      Console.WriteLine("  Image size: [" + mapWidthPixels + ", " + mapHeightPixels + "]");
+      Log.WriteLine("REF MAP image generation...");
+      Log.WriteLine("  Image size: [" + mapWidthPixels + ", " + mapHeightPixels + "]");
 
       var refMapBmp = new Bitmap(mapWidthPixels, mapHeightPixels, PixelFormat.Format24bppRgb);
       BitmapData destData = refMapBmp.LockBits(new Rectangle(0, 0, mapWidthPixels, mapHeightPixels), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
@@ -571,15 +429,9 @@ namespace PetsciiMapgen
       for (int i = 0; i < Keys.Length; ++ i)
       {
         CharInfo ci = this.CharInfo[Map[i].icharInfo];
-        //if (!map.TryGetValue(i, out ci))
-        //{
-        //  Debug.Assert(false);
-        //}
         int y = i / mapWidthPixels;
         int x = i- (y * mapWidthPixels);
-        //byte* p = destData.GetRGBPointer(x, y);
         Color c = RefFontIndexToColor(ci.refFontIndex);
-        //p[0] = 
         destData.SetPixel(x, y, c);
       }
 
@@ -610,7 +462,7 @@ namespace PetsciiMapgen
 
     public unsafe void ProcessImage(string srcImagePath, string destImagePath)
     {
-      Console.WriteLine("  tranfsorm image + " + srcImagePath);
+      Log.WriteLine("  tranfsorm image + " + srcImagePath);
       var testImg = Image.FromFile(srcImagePath);
       Bitmap testBmp = new Bitmap(testImg);
       Bitmap destImg = new Bitmap(testBmp.Width, testBmp.Height, PixelFormat.Format32bppArgb);
@@ -652,16 +504,16 @@ namespace PetsciiMapgen
       destImg.Save(destImagePath);
     }
 
-    public unsafe void ProcessImageUsingRef(string srcImagePath, string destImagePath)
+    public unsafe void ProcessImageUsingRef(string MapRefPath, string MapRefFontPath, string srcImagePath, string destImagePath)
     {
       var testImg = Image.FromFile(srcImagePath);
       Bitmap testBmp = new Bitmap(testImg);
-      ProcessImageUsingRef(srcImagePath, testImg, testBmp, destImagePath);
+      ProcessImageUsingRef(MapRefPath, MapRefFontPath, srcImagePath, testImg, testBmp, destImagePath);
     }
 
-    public unsafe void ProcessImageUsingRef(string srcImagePath, Image testImg, Bitmap testBmp, string destImagePath)
+    public unsafe void ProcessImageUsingRef(string MapRefPath, string MapRefFontPath, string srcImagePath, Image testImg, Bitmap testBmp, string destImagePath)
     {
-      Console.WriteLine("  tranfsorm image using REF: " + srcImagePath);
+      Log.WriteLine("  tranfsorm image using REF: " + srcImagePath);
       var refMapImage = Image.FromFile(MapRefPath);
       Bitmap refMapBitmap = new Bitmap(refMapImage);
       var refFontImage = Image.FromFile(MapRefFontPath);
@@ -686,7 +538,7 @@ namespace PetsciiMapgen
               );
 
             int mapCellY = ID / refMapBitmap.Width;
-            int mapCellX = ID % refMapBitmap.Width;// - (mapCellY * refMapBitmap.Width);
+            int mapCellX = ID % refMapBitmap.Width;
 
             // get ref
             Color refColor = refMapBitmap.GetPixel(mapCellX, mapCellY);
@@ -695,7 +547,7 @@ namespace PetsciiMapgen
             int fontID = ColorToRefFontIndex(refColor);
             // split into fontcells
             int fontCellY = fontID / fontCellsX;
-            int fontCellX = fontID % fontCellsX;// - (fontCellY * fontCellsX);
+            int fontCellX = fontID % fontCellsX;
 
             // blit from map img.
             Rectangle srcRect = new Rectangle(

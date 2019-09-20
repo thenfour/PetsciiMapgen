@@ -52,21 +52,30 @@ namespace PetsciiMapgen
     {
     }
 
+    public static HSLPixelFormat ProcessArgs(string[] args)
+    {
+      int valuesPerComponent;
+      bool useChroma;
+      Size lumaTiles;
+      LABPixelFormat.ProcessArgs(args, out valuesPerComponent, out lumaTiles, out useChroma);
+      return new HSLPixelFormat(valuesPerComponent, lumaTiles, useChroma);
+    }
+
     public override unsafe double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, bool verboseDebugInfo = false)
     {
       double acc = 0.0f;
       double m;
       if (verboseDebugInfo)
       {
-        Console.WriteLine("      : Calculating distance between");
-        Console.WriteLine("      : denormalized actual values: " + actual);
-        Console.WriteLine("      : normalized key: " + key);
+        Log.WriteLine("      : Calculating distance between");
+        Log.WriteLine("      : denormalized actual values: " + actual);
+        Log.WriteLine("      : normalized key: " + key);
       }
 
       Denormalize(ref key);
       if (verboseDebugInfo)
       {
-        Console.WriteLine("      : denormalized key: " + key);
+        Log.WriteLine("      : denormalized key: " + key);
       }
 
       if (!UseChroma)
@@ -82,15 +91,15 @@ namespace PetsciiMapgen
 
           if (verboseDebugInfo)
           {
-            Console.WriteLine("      : Luma component {0}", i);
-            Console.WriteLine("      :   dist between L {0} and {1}", keyY, actualY);
-            Console.WriteLine("      :   m={0}; m*m={1}", m, m * m);
-            Console.WriteLine("      :   acc = " + acc);
+            Log.WriteLine("      : Luma component {0}", i);
+            Log.WriteLine("      :   dist between L {0} and {1}", keyY, actualY);
+            Log.WriteLine("      :   m={0}; m*m={1}", m, m * m);
+            Log.WriteLine("      :   acc = " + acc);
           }
         }
         if (verboseDebugInfo)
         {
-          Console.WriteLine("      : retdist={0}", acc);
+          Log.WriteLine("      : retdist={0}", acc);
         }
         return acc;
       }
@@ -142,18 +151,18 @@ namespace PetsciiMapgen
 
         if (verboseDebugInfo)
         {
-          Console.WriteLine("      : Luma component {0}", i);
-          Console.WriteLine("      :   sfact: {0} huefact: {1}", Sfact, hueFactor);
-          Console.WriteLine("      :   dist between Y {0} and {1}", keyL, actualL);
-          Console.WriteLine("      :   dH={0}; dH*dH={1}", dH, dH * dH);
-          Console.WriteLine("      :   dS={0}; dS*dS={1}", dS, dS * dS);
-          Console.WriteLine("      :   dL={0}; dL*dL={1}", dL, dL * dL);
-          Console.WriteLine("      :   acc = " + acc);
+          Log.WriteLine("      : Luma component {0}", i);
+          Log.WriteLine("      :   sfact: {0} huefact: {1}", Sfact, hueFactor);
+          Log.WriteLine("      :   dist between Y {0} and {1}", keyL, actualL);
+          Log.WriteLine("      :   dH={0}; dH*dH={1}", dH, dH * dH);
+          Log.WriteLine("      :   dS={0}; dS*dS={1}", dS, dS * dS);
+          Log.WriteLine("      :   dL={0}; dL*dL={1}", dL, dL * dL);
+          Log.WriteLine("      :   acc = " + acc);
         }
       }
       if (verboseDebugInfo)
       {
-        Console.WriteLine("      : retdist={0}", acc);
+        Log.WriteLine("      : retdist={0}", acc);
       }
       return acc;
     }

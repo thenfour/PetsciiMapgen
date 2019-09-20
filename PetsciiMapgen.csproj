@@ -74,6 +74,7 @@
     <Compile Include="HybridMapgen2.cs" />
     <Compile Include="KeyedFontProvider.cs" />
     <Compile Include="LABformatProvider.cs" />
+    <Compile Include="Log.cs" />
     <Compile Include="NaiveYUVPixelFormat.cs" />
     <Compile Include="Palettes.cs" />
     <Compile Include="Partitions.cs" />

@@ -182,7 +182,7 @@ namespace PetsciiMapgen
       double totalEst = elapsedSec / p;
       //double estRemaining = (double)swtotal.ElapsedMilliseconds / (1.0-p);
       double estRemaining = totalEst - elapsedSec;
-      Console.WriteLine("  Progress: {0}% (est remaining: {1} sec)", (p*100).ToString("0.00"), estRemaining.ToString("0.00"));
+      Log.WriteLine("  Progress: {0}% (est remaining: {1} sec)", (p*100).ToString("0.00"), estRemaining.ToString("0.00"));
     }
   }
 
@@ -196,7 +196,7 @@ namespace PetsciiMapgen
     Stack<Task> tasks = new Stack<Task>();
     public void EnterTask(string s)
     {
-      Console.WriteLine("==> Enter task {0}", s);
+      Log.WriteLine("==> Enter task {0}", s);
       Task n;
       if (!tasks.Any())
       {
@@ -219,7 +219,7 @@ namespace PetsciiMapgen
     {
       Task n = this.tasks.Pop();
       TimeSpan ts = n.sw.Elapsed;
-      Console.WriteLine("<== {1} (end {0})", n.name, ts);
+      Log.WriteLine("<== {1} (end {0})", n.name, ts);
     }
   }
 
@@ -490,7 +490,7 @@ namespace PetsciiMapgen
     //  }
     //}
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    //[MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static long Pow(long x, uint pow)
     {
       long ret = 1;
@@ -504,11 +504,26 @@ namespace PetsciiMapgen
       return ret;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static float Mix(float v0, float v1, float t)
+    public static void ProcessArg(this string[] args, string key, Action<string> tr)
     {
-      return (1 - t) * v0 + t * v1;
+      for (int i = 0; i < args.Length; i ++)
+      {
+        if (args[i].Equals(key, StringComparison.InvariantCultureIgnoreCase))
+        {
+          if (i < args.Length - 1)
+            tr(args[i + 1]);
+          else
+            tr(null);
+        }
+      }
     }
+
+
+    //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+    //internal static float Mix(float v0, float v1, float t)
+    //{
+    //  return (1 - t) * v0 + t * v1;
+    //}
   }
 }
 

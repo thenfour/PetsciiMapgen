@@ -79,9 +79,29 @@ namespace PetsciiMapgen
     {
       get
       {
-        return string.Format("{4}{0}xx({1}x{2}+{3})", DiscreteNormalizedValues.Length, LumaTiles.Width, LumaTiles.Height, UseChroma ? 2 : 0, FormatID);
+        return string.Format("{4}{0}v{1}x{2}+{3}", DiscreteNormalizedValues.Length, LumaTiles.Width, LumaTiles.Height, UseChroma ? 2 : 0, FormatID);
       }
     }
+
+    public static void ProcessArgs(string[] args, out int valuesPerComponent, out Size lumaTiles, out bool useChroma)
+    {
+      int valuesPerComponent_ = 255;
+      Size lumaTiles_ = new Size(1, 1);
+      bool useChroma_ = false;
+      args.ProcessArg("-pfargs", o =>
+      {
+        // 1v2x3+2
+        valuesPerComponent_ = int.Parse(o.Split('v')[0]);
+        o = o.Split('v')[1];// 2x3+2
+        useChroma_ = int.Parse(o.Split('+')[1]) == 2;
+        o = o.Split('+')[0];// 2x3
+        lumaTiles_ = new Size(int.Parse(o.Split('x')[0]), int.Parse(o.Split('x')[1]));
+      });
+      valuesPerComponent = valuesPerComponent_;
+      lumaTiles = lumaTiles_;
+      useChroma = useChroma_;
+    }
+
 
     protected Size LumaTiles { get; private set; }
     protected bool UseChroma { get; private set; }
@@ -105,10 +125,21 @@ namespace PetsciiMapgen
 
       this.DiscreteNormalizedValues = Utils.GetDiscreteNormalizedValues(valuesPerComponent);
 
-      Console.WriteLine("  DiscreteNormalizedValues:");
+      Log.WriteLine("  DiscreteNormalizedValues:");
+      bool foundSuitableMidpoint = false;
       for (int i = 0; i < this.DiscreteNormalizedValues.Length; ++ i)
       {
-        Console.WriteLine("    {0}: {1,10:0.00}", i, this.DiscreteNormalizedValues[i]);
+        Log.WriteLine("    {0}: {1,10:0.00}", i, this.DiscreteNormalizedValues[i]);
+        if (Math.Abs(this.DiscreteNormalizedValues[i] - 0.5) < 0.0001)
+          foundSuitableMidpoint = true;
+      }
+
+      if (!foundSuitableMidpoint)
+      {
+        Log.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!");
+        Log.WriteLine("!!!  no 0.5 point was found in discrete values.");
+        Log.WriteLine("!!!  it means you're likely to have very bad quality matches for black & white points.");
+        Log.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!");
       }
 
     }
@@ -242,7 +273,7 @@ namespace PetsciiMapgen
     public int DebugGetMapIndexOfColor(ColorF charRGB)
     {
       var norm = RGBToNormalizedHCL(charRGB);
-      Console.WriteLine("  norm: " + norm);
+      Log.WriteLine("  norm: " + norm);
       float[] vals = new float[DimensionCount];
       for (int i = 0; i < LumaComponentCount; ++ i)
       {
@@ -253,7 +284,7 @@ namespace PetsciiMapgen
         vals[GetValueC1Index()] = (float)norm.C1;
         vals[GetValueC2Index()] = (float)norm.C2;
       }
-      Console.WriteLine("  norm valset: " + Utils.ToString(vals, vals.Length));
+      Log.WriteLine("  norm valset: " + Utils.ToString(vals, vals.Length));
 
       int ID = NormalizedValueSetToMapID(vals);
       return ID;
@@ -293,7 +324,7 @@ namespace PetsciiMapgen
       int ID = NormalizedValueSetToMapID(vals);
 
 #if DUMP_IMAGEPROC_PIXELS
-            Console.WriteLine(" Pixel: rgb:{0} lab:[{1}] norm:[{2}] vals:[{3}] => MapID {4}",
+            Log.WriteLine(" Pixel: rgb:{0} lab:[{1}] norm:[{2}] vals:[{3}] => MapID {4}",
               ColorFUtils.ToString(rgb),
               ColorFUtils.ToString(lab),
               ColorFUtils.ToString(norm),

@@ -124,5 +124,10 @@ namespace PetsciiMapgen
     {
       return this.Root.GetItemsInSamePartition(v, isNormalized);
     }
+
+    public override string ToString()
+    {
+      return string.Format("p{0}x{1}", this.PartitionsPerDimension, this.Depth);
+    }
   }
 }

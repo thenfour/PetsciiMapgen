@@ -34,13 +34,13 @@ namespace PetsciiMapgen
 
     List<CharMapping> map = new List<CharMapping>();
 
-    public MonoPaletteFontProvider(string fontFileName, Size charSize, Color[] palette)
+    public MonoPaletteFontProvider(string fontFileName, Size charSize, Color[] palette, string paletteName)
     {
       this.FontFileName = fontFileName;
       this.Image = Image.FromFile(fontFileName);
       this.Bitmap = new Bitmap(this.Image);
       this.CharSizeNoPadding = charSize;
-
+      this.PaletteName = paletteName;
       this.Palette = palette;
 
       this.OrigSizeInChars = Utils.Div(this.Image.Size, this.CharSizeNoPadding);
@@ -66,6 +66,41 @@ namespace PetsciiMapgen
       }
 
       this.CharCount = this.map.Count;
+    }
+
+    public string DisplayName
+    {
+      get
+      {
+        return string.Format("{0}-{1}", System.IO.Path.GetFileNameWithoutExtension(FontFileName), PaletteName);
+      }
+    }
+
+    public string PaletteName { get; private set; }
+
+    public static MonoPaletteFontProvider ProcessArgs(string[] args)
+    {
+      //- fontImage "emojidark12.png"
+      string fontImagePath = "";
+      Size charSize = new Size(8,8);
+      string paletteName = "";
+      Color[] palette = Palettes.RGBPrimariesHalftone16;
+      args.ProcessArg("-fontimage", s =>
+      {
+        fontImagePath = s;
+      });
+      args.ProcessArg("-charsize", s =>
+      {
+        charSize = new Size(int.Parse(s.Split('x')[0]), int.Parse(s.Split('y')[1]));
+      });
+      args.ProcessArg("-palette", s =>
+      {
+        paletteName = s;
+        var ti = typeof(Palettes).GetProperty(s).GetValue(null);
+        palette = (Color[])ti;
+      });
+
+      return new MonoPaletteFontProvider(fontImagePath, charSize, palette, paletteName);
     }
 
     public void Init(int DiscreteTargetValues) { }
