@@ -13,18 +13,10 @@ using System.Runtime.InteropServices;
 
 namespace PetsciiMapgen
 {
-  //// defines a keycolor => multiple palette colors mapping.
-  //public class ColorKey
-  //{
-  //  Color key;
-  //  Color[] palette;
-  //}
-
   public class MonoPaletteFontProvider : IFontProvider
   {
     public string FontFileName { get; private set; }
     public Size CharSizeNoPadding { get; private set; }
-    //public Size ImageSize { get; private set; }
     public Bitmap Bitmap { get; private set; }
     public Image Image { get; private set; }
     public int CharCount { get; private set; }
@@ -41,15 +33,6 @@ namespace PetsciiMapgen
     }
 
     List<CharMapping> map = new List<CharMapping>();
-
-    //void GetCharInfo(int ichar, out int origIndex, out int fgIdx, out int bgIdx)
-    //{
-      
-    //}
-    //int ConstructCharID(int origIdx, int fgIdx, int bgIdx)
-    //{
-    //  //return origIdx * fgIdx * Palette.Length + 
-    //}
 
     public MonoPaletteFontProvider(string fontFileName, Size charSize, Color[] palette)
     {
@@ -68,8 +51,8 @@ namespace PetsciiMapgen
       {
         for (int bgidx = 0; bgidx < Palette.Length; ++bgidx)
         {
-          //if (bgidx == fgidx)
-          //  continue;
+          if (bgidx == fgidx)
+            continue;
           for (int ch = 0; ch < OrigCharCount; ++ ch) // important that this is the bottom of the stack so the 1st CharCount indices are all unique chars. makes reverse lookup simpler.
           {
             CharMapping m;

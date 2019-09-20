@@ -25,7 +25,8 @@ namespace PetsciiMapgen
     public CharInfo[] DistinctMappedChars;
     public ValueSet[] Keys { get; private set; }
     public List<CharInfo> CharInfo { get; private set; }
-    public Dictionary<long, CharInfo> Map { get; private set; }// maps key index to charinfo
+    //public Dictionary<long, CharInfo> Map { get; private set; }// maps key index to charinfo
+    public Mapping[] Map;
 
     public IFontProvider FontProvider { get; private set; }
     public IPixelFormatProvider PixelFormatProvider { get; private set; }
@@ -66,9 +67,12 @@ namespace PetsciiMapgen
 
     public unsafe HybridMap2(IFontProvider fontProvider,
       PartitionManager pm, IPixelFormatProvider pixelFormatProvider,
-      bool outputFullMap = true, bool outputRefMapAndFont = true, int minChunkSize = 20000000)
+      bool outputFullMap = true, bool outputRefMapAndFont = true, int BatchCount = -1)
     {
       Timings timings = new Timings();
+
+      if (BatchCount < 0)
+        BatchCount = System.Environment.ProcessorCount;
 
       this.FontProvider = fontProvider;
       this.PixelFormatProvider = pixelFormatProvider;
@@ -130,63 +134,159 @@ namespace PetsciiMapgen
       ulong theoreticalMappings = (ulong)this.CharInfo.Count * (ulong)pixelFormatProvider.MapEntryCount;
       Console.WriteLine("  Partition count: " + pm.PartitionCount.ToString("N0"));
       Console.WriteLine("  Theoretical mapping count: " + theoreticalMappings.ToString("N0"));
-      ulong estMappings = theoreticalMappings / (ulong)pm.PartitionCount;
-      Console.WriteLine("  Estimated mappings to perform after partitioning: " + estMappings.ToString("N0"));
-      ulong chunkSize = estMappings / (ulong)Environment.ProcessorCount;
-      chunkSize = Math.Min(chunkSize, 1000000000UL);// 1 billion.
-      chunkSize = Math.Max(chunkSize, (ulong)minChunkSize);
-      Console.WriteLine("  Chunksize: {0}", chunkSize.ToString("N0"));
+      //ulong estMappings = theoreticalMappings / (ulong)pm.PartitionCount;
+      //Console.WriteLine("  Estimated mappings to perform after partitioning: " + estMappings.ToString("N0"));
+      //ulong chunkSize = estMappings / (ulong)Environment.ProcessorCount;
+      //chunkSize = Math.Min(chunkSize, 1000000000UL);// 1 billion.
+      //chunkSize = Math.Max(chunkSize, (ulong)minChunkSize);
+      //Console.WriteLine("  Chunksize: {0}", chunkSize.ToString("N0"));
 
-      Utils.ValueRangeInspector distanceRange = new Utils.ValueRangeInspector();
-      MappingArrayX allMappings = new MappingArrayX((int)chunkSize);
       //HugeArray allMappings = new HugeArray((int)chunkSize);
 
-      long comparisonsMade = 0;
-      ProgressReporter pr = new ProgressReporter((ulong)this.Keys.Length);
-      for (int ikey = 0; ikey < this.Keys.Length; ++ikey)
+      //long comparisonsMade = 0;
+      //ProgressReporter pr = new ProgressReporter((ulong)this.Keys.Length);
+
+      List<Task> comparisonBatches = new List<Task>();
+      List<MappingArray> allMappingsArray = new List<MappingArray>(BatchCount);
+      this.Map = new Mapping[Keys.Length];// indices need to be synchronized with Keys.
+
+      for (int ibatch = 0; ibatch < BatchCount; ++ibatch)
       {
-        pr.Visit((ulong)ikey);
-        var chars = pm.GetItemsInSamePartition(this.Keys[ikey], true);
-        foreach (var ci in chars)
+        allMappingsArray.Add(new MappingArray(0));
+
+        // create a task to process a segment of keys
+        ulong keyBegin = (ulong)ibatch;
+        keyBegin *= (ulong)Keys.Length;
+        keyBegin /= (ulong)BatchCount;
+
+        ulong keyEnd = (ulong)ibatch + 1;
+        keyEnd *= (ulong)Keys.Length;
+        keyEnd /= (ulong)BatchCount;
+
+        int batchID = ibatch;
+
+        comparisonBatches.Add(Task.Run(() =>
         {
-          Mapping n;
-          n.icharInfo = ci.srcIndex;
-          n.imapKey = ikey;
-          double fdist = pixelFormatProvider.CalcKeyToColorDist(this.Keys[ikey], ci.actualValues);
-          n.dist = fdist;
-          allMappings.Add(n);
+          //Utils.ValueRangeInspector distanceRange = new Utils.ValueRangeInspector();
+          //MappingArrayX allMappings = new MappingArrayX((int)chunkSize);
+          int mapEntriesToPopulate = (int)keyEnd - (int)keyBegin;
+          MappingArray allMappings = allMappingsArray[batchID];// new MappingArray(0);
+          Console.WriteLine("    Batch processing idx {0:N0} to {1:N0}", keyBegin, keyEnd);
+          var pr = (batchID == BatchCount - 1) ? new ProgressReporter((ulong)mapEntriesToPopulate) : null;
+          for (int ikey = (int)keyBegin; ikey < (int)keyEnd; ++ikey)
+          {
+            pr?.Visit((ulong)ikey - keyBegin);
+            var chars = pm.GetItemsInSamePartition(this.Keys[ikey], true);
+            double p = ikey - (int)keyBegin;
+            p /= keyEnd - keyBegin;
+            foreach (var ci in chars)
+            {
+              Mapping n;
+              n.icharInfo = ci.srcIndex;
+              n.imapKey = ikey;
+              double fdist = pixelFormatProvider.CalcKeyToColorDist(this.Keys[ikey], ci.actualValues);
+              n.dist = fdist;
+              allMappings.Add(n, p);
 
-          distanceRange.Visit(fdist);
-          this.Keys[ikey].MinDistFound = Math.Min(this.Keys[ikey].MinDistFound, fdist);
-          this.Keys[ikey].Visited = true;
-          //long imap = allMappings.Add();
-          comparisonsMade++;
-        }
+              //distanceRange.Visit(fdist);
+              this.Keys[ikey].MinDistFound = Math.Min(this.Keys[ikey].MinDistFound, fdist);
+              this.Keys[ikey].Visited = true;
+              //long imap = allMappings.Add();
+              //comparisonsMade++;
+            }
+          }
+
+          Console.WriteLine("    Mappings generated: {0}", allMappings.Length.ToString("N0"));
+
+          //double maxMinDist = 0;
+          //foreach (var mapKey in this.Keys)
+          //{
+          //  if (mapKey.Visited)
+          //    maxMinDist = Math.Max(maxMinDist, mapKey.MinDistFound);
+          //}
+          //Console.WriteLine("  Max minimum distance found: {0}", maxMinDist);
+
+          //timings.EnterTask("Prune & Sort mappings");
+          ulong itemsRemoved = allMappings.SortAndPrune(0/*maxMinDist*/);
+
+          //Console.WriteLine("   {0} items removed", itemsRemoved);
+          //Console.WriteLine("   {0} mappings left to choose from", allMappings.Length.ToString("N0"));
+          Console.WriteLine("    Sorted batch {0}. Now enumerating and filling in map.", batchID);
+
+          //timings.EndTask();
+          ulong i = 0;
+          int mapEntriesPopulated = 0;
+          pr = (batchID == BatchCount - 1) ? new ProgressReporter((ulong)allMappings.Length) : null;
+          foreach (var m in allMappings.GetEnumerator())
+          {
+            pr?.Visit(i++);
+            if (Keys[m.imapKey].Mapped)
+            //if (this.Keys[allMappings.Values[imap].imapKey].Mapped)
+            {
+              continue;
+            }
+
+            //var m = allMappings.Values[imap];
+            CharInfo thisCh = this.CharInfo[m.icharInfo];
+
+            Map[m.imapKey] = m;//.icharInfo =  = thisCh;
+            this.Keys[m.imapKey].Mapped = true;
+            thisCh.usages++;
+            mapEntriesPopulated++;
+            if (mapEntriesPopulated == mapEntriesToPopulate)
+              break;
+          }
+          //timings.EndTask();
+
+        }));
       }
-
-      Console.WriteLine("  Mappings generated: {0}", allMappings.Length.ToString("N0"));
-      Console.WriteLine("  Comparisons made: {0}", comparisonsMade.ToString("N0"));
-      Console.WriteLine("  Distance range encountered: {0}", distanceRange);
-
-      double maxMinDist = 0;
-      foreach (var mapKey in this.Keys)
-      {
-        if (mapKey.Visited)
-          maxMinDist = Math.Max(maxMinDist, mapKey.MinDistFound);
-      }
-      Console.WriteLine("Max minimum distance found: {0}", maxMinDist);
-
+      Task.WaitAll(comparisonBatches.ToArray());
       timings.EndTask();
 
+      //for (int ikey = 0; ikey < this.Keys.Length; ++ikey)
+      //{
+      //  pr.Visit((ulong)ikey);
+      //  var chars = pm.GetItemsInSamePartition(this.Keys[ikey], true);
+      //  foreach (var ci in chars)
+      //  {
+      //    Mapping n;
+      //    n.icharInfo = ci.srcIndex;
+      //    n.imapKey = ikey;
+      //    double fdist = pixelFormatProvider.CalcKeyToColorDist(this.Keys[ikey], ci.actualValues);
+      //    n.dist = fdist;
+      //    allMappings.Add(n);
+
+      //    distanceRange.Visit(fdist);
+      //    this.Keys[ikey].MinDistFound = Math.Min(this.Keys[ikey].MinDistFound, fdist);
+      //    this.Keys[ikey].Visited = true;
+      //    //long imap = allMappings.Add();
+      //    comparisonsMade++;
+      //  }
+      //}
+
+      //Console.WriteLine("  Mappings generated: {0}", allMappings.Length.ToString("N0"));
+      //Console.WriteLine("  Comparisons made: {0}", comparisonsMade.ToString("N0"));
+      //Console.WriteLine("  Distance range encountered: {0}", distanceRange);
+
+      //double maxMinDist = 0;
+      //foreach (var mapKey in this.Keys)
+      //{
+      //  if (mapKey.Visited)
+      //    maxMinDist = Math.Max(maxMinDist, mapKey.MinDistFound);
+      //}
+      //Console.WriteLine("Max minimum distance found: {0}", maxMinDist);
+
+      //timings.EndTask();
 
 
-      timings.EnterTask("Prune & Sort mappings");
-      ulong itemsRemoved = allMappings.SortAndPrune(maxMinDist);
 
-      Console.WriteLine("   {0} items removed", itemsRemoved);
-      Console.WriteLine("   {0} mappings left to choose from", allMappings.Length.ToString("N0"));
+      //timings.EnterTask("Prune & Sort mappings");
+      //ulong itemsRemoved = allMappings.SortAndPrune(maxMinDist);
 
-      timings.EndTask();
+      //Console.WriteLine("   {0} items removed", itemsRemoved);
+      //Console.WriteLine("   {0} mappings left to choose from", allMappings.Length.ToString("N0"));
+
+      //timings.EndTask();
 
 
       //timings.EnterTask("Pruning out mappings");
@@ -201,34 +301,34 @@ namespace PetsciiMapgen
       //allMappings.SortByDist();
 
       //timings.EndTask();
-      timings.EnterTask("Select mappings for map");
+      //timings.EnterTask("Select mappings for map");
 
       // now walk through and fill in mappings from top to bottom.
       // maps key index to charinfo
-      this.Map = new Dictionary<long, CharInfo>((int)pixelFormatProvider.MapEntryCount);
+      //this.Map = new Dictionary<long, CharInfo>((int)pixelFormatProvider.MapEntryCount);
 
       //for (ulong imap = 0; imap < allMappings.Length; ++imap)
-      pr = new ProgressReporter(allMappings.Length);
-      ulong i = 0;
-      foreach (var m in allMappings.GetEnumerator())
-      {
-        pr.Visit(i++);
-        if (this.Keys[m.imapKey].Mapped)
-        //if (this.Keys[allMappings.Values[imap].imapKey].Mapped)
-        {
-          continue;
-        }
+      //pr = new ProgressReporter(allMappings.Length);
+      //ulong i = 0;
+      //foreach (var m in allMappings.GetEnumerator())
+      //{
+      //  pr.Visit(i++);
+      //  if (this.Keys[m.imapKey].Mapped)
+      //  //if (this.Keys[allMappings.Values[imap].imapKey].Mapped)
+      //  {
+      //    continue;
+      //  }
 
-        //var m = allMappings.Values[imap];
-        CharInfo thisCh = this.CharInfo[m.icharInfo];
+      //  //var m = allMappings.Values[imap];
+      //  CharInfo thisCh = this.CharInfo[m.icharInfo];
 
-        this.Map[this.Keys[m.imapKey].ID] = thisCh;
-        this.Keys[m.imapKey].Mapped = true;
-        this.CharInfo[m.icharInfo].usages++;
-        if (this.Map.Count == pixelFormatProvider.MapEntryCount)
-          break;
-      }
-      timings.EndTask();
+      //  this.Map[this.Keys[m.imapKey].ID] = thisCh;
+      //  this.Keys[m.imapKey].Mapped = true;
+      //  this.CharInfo[m.icharInfo].usages++;
+      //  if (this.Map.Count == pixelFormatProvider.MapEntryCount)
+      //    break;
+      //}
+      //timings.EndTask();
 
       int numCharsUsed = 0;
       int numCharsUsedOnce = 0;
@@ -282,11 +382,11 @@ namespace PetsciiMapgen
 
       if (outputFullMap)
       {
-        OutputFullMap(this.Keys, this.Map);
+        OutputFullMap();
       }
       if (outputRefMapAndFont)
       {
-        this.DistinctMappedChars = this.Map.DistinctBy(o => o.Value.srcIndex).Select(o => o.Value).ToArray();
+        this.DistinctMappedChars = this.Map.DistinctBy(o => o.icharInfo).Select(o => this.CharInfo[o.icharInfo]).ToArray();
         for (int ichar = 0; ichar < DistinctMappedChars.Length; ++ichar)
         {
           CharInfo ci = DistinctMappedChars[ichar];
@@ -294,7 +394,7 @@ namespace PetsciiMapgen
           ci.refFontIndex = ichar;
         }
 
-        OutputRefMapAndFont(this.Keys, this.Map);
+        OutputRefMapAndFont();
       }
 
       Console.WriteLine("Post-map stats:");
@@ -327,7 +427,7 @@ namespace PetsciiMapgen
       //      Console.WriteLine("   -> mapped to char: " + this.Map[mapid]);
 
       // now display top 10 characters for that mapid.
-      MappingArrayX marr = new MappingArrayX(1000000);
+      MappingArray marr = new MappingArray(1000000);
       Utils.ValueRangeInspector r = new Utils.ValueRangeInspector();
       foreach (CharInfo ci in this.CharInfo)
       {
@@ -382,9 +482,9 @@ namespace PetsciiMapgen
       bmp.Save(path);
     }
 
-    internal void OutputFullMap(ValueSet[] keys, Dictionary<long, CharInfo> map)
+    internal void OutputFullMap()
     {
-      int numCellsX = (int)Math.Ceiling(Math.Sqrt(keys.Count()));
+      int numCellsX = (int)Math.Ceiling(Math.Sqrt(this.Keys.Count()));
       Size mapImageSize = Utils.Mul(FontProvider.CharSizeNoPadding, numCellsX);// new Size(numCellsX * charSize.Width, numCellsX * charSize.Height);
 
       Console.WriteLine("MAP image generation...");
@@ -404,15 +504,10 @@ namespace PetsciiMapgen
       this.FullMapBitmap = new Bitmap(mapImageSize.Width, mapImageSize.Height, PixelFormat.Format24bppRgb);
       BitmapData destData = FullMapBitmap.LockBits(new Rectangle(0, 0, mapImageSize.Width, mapImageSize.Height), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
 
-      foreach (ValueSet k in keys)
+      foreach (ValueSet k in Keys)
       {
-        CharInfo ci = null;
-        map.TryGetValue(k.ID, out ci);
-        if (ci == null)
-        {
-          Debug.Assert(false);
-          continue;
-        }
+        CharInfo ci = this.CharInfo[Map[k.ID].icharInfo];
+        //Keys.TryGetValue(k.ID, out ci);
 
         long cellY = k.ID / numCellsX;
         long cellX = k.ID - (numCellsX * cellY);
@@ -427,7 +522,7 @@ namespace PetsciiMapgen
 
     // each R,G,B value of the resulting image is a mapping. the inserted value 0-1 refers to a character
     // in the font texture.
-    internal unsafe void OutputRefMapAndFont(ValueSet[] keys, Dictionary<long, CharInfo> map)
+    internal unsafe void OutputRefMapAndFont()
     {
       Console.WriteLine("FONT MAP image generation...");
       float fontMapCharCount = DistinctMappedChars.Length;
@@ -462,7 +557,7 @@ namespace PetsciiMapgen
       // we should just aim to use RGB as 8-bit values, so each pixel is an encoded
       // 24-bit char index.
 
-      double pixelCountD = Math.Ceiling((double)keys.Length);
+      double pixelCountD = Math.Ceiling((double)Keys.Length);
 
       int mapWidthPixels = (int)Math.Ceiling(Math.Sqrt(pixelCountD));
       int mapHeightPixels = (int)Math.Ceiling(pixelCountD / mapWidthPixels);
@@ -473,13 +568,13 @@ namespace PetsciiMapgen
       var refMapBmp = new Bitmap(mapWidthPixels, mapHeightPixels, PixelFormat.Format24bppRgb);
       BitmapData destData = refMapBmp.LockBits(new Rectangle(0, 0, mapWidthPixels, mapHeightPixels), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
 
-      for (int i = 0; i < keys.Length; ++ i)
+      for (int i = 0; i < Keys.Length; ++ i)
       {
-        CharInfo ci = null;
-        if (!map.TryGetValue(i, out ci))
-        {
-          Debug.Assert(false);
-        }
+        CharInfo ci = this.CharInfo[Map[i].icharInfo];
+        //if (!map.TryGetValue(i, out ci))
+        //{
+        //  Debug.Assert(false);
+        //}
         int y = i / mapWidthPixels;
         int x = i- (y * mapWidthPixels);
         //byte* p = destData.GetRGBPointer(x, y);

@@ -14,6 +14,13 @@ using System.Runtime.InteropServices;
 
 namespace PetsciiMapgen
 {
+  public class MappingComparer : IComparer<Mapping>
+  {
+    public int Compare(Mapping x, Mapping y)
+    {
+      return x.dist.CompareTo(y.dist);
+    }
+  }
   public struct Mapping
   {
     public int imapKey; // a set of tile values
@@ -24,37 +31,86 @@ namespace PetsciiMapgen
   public class MappingArray
   {
     public Mapping[] Values = new Mapping[30000000]; // RESERVED values therefore don't use Values.Length or do set operations like Values.sort()
-    public ulong Length { get; private set; } = 0;
+    public int Length { get; private set; } = 0;
 
     public MappingArray(int chunkSizeIgnored)
     {
-
     }
 
-    public void Add(Mapping m)
+    private void Add__(Mapping m, int potentialNewLength)
     {
-      if ((ulong)Values.LongLength <= Length)
+      if (Values.Length <= Length)
       {
-        Mapping[] t = new Mapping[Length * 2];
-        Console.WriteLine("!!! Dynamic allocation");
+        Console.WriteLine("!!! Dynamic allocation: {0:N0} to {1:N0}", this.Length, potentialNewLength);
+        Mapping[] t = new Mapping[potentialNewLength];
         Array.Copy(this.Values, t, (int)this.Length);
         this.Values = t;
+        //Array.Resize(ref this.Values, Length * 2);
       }
       Length++;
       this.Values[Length - 1] = m;
     }
-    internal ulong SortAndPrune(double maxMinDist)
+    public void Add(Mapping m, double percentComplete)
     {
-      var prunedMappings = Values.Take((int)this.Length).Where(o => o.dist <= maxMinDist).ToArray();
-      ulong ret = this.Length - (ulong)prunedMappings.Length;
-      this.Length = (ulong)prunedMappings.LongLength;
-      this.Values = prunedMappings;
-
-      //Debug.Assert(this.Values.LongLength == this.Length);
-      Array.Sort<Mapping>(this.Values, (a, b) => a.dist.CompareTo(b.dist));
-
-      return ret;
+      int newLength = (int)((double)this.Length / percentComplete);
+      newLength = Math.Max(newLength, this.Length * 2);// don't bother with small jumps. always go big.
+      Add__(m, newLength);
     }
+
+    public void Add(Mapping m)
+    {
+      Add__(m, Length * 2);
+    }
+
+    //internal ulong SortAndPrune(double maxMinDist)
+    //{
+    //  var prunedMappings = Values.Take((int)this.Length).Where(o => o.dist <= maxMinDist).ToArray();
+    //  ulong ret = this.Length - (ulong)prunedMappings.Length;
+    //  this.Length = (ulong)prunedMappings.LongLength;
+    //  this.Values = prunedMappings;
+
+    //  //Debug.Assert(this.Values.LongLength == this.Length);
+    //  Array.Sort<Mapping>(this.Values, (a, b) => a.dist.CompareTo(b.dist));
+
+    //  return ret;
+    //}
+
+
+    public ulong SortAndPrune(double maxDist)
+    {
+      //int oldLen = this.Length;
+      //for (int i = 0; i < (int)Length; ++i)
+      //{
+      //  // if the element is bad, swap with last good element and chop off array len
+      //  if (this.Values[i].dist > maxDist)
+      //  {
+      //    // find last good element (till i!)
+      //    int lastGoodIdx = Length - 1;
+      //    while (true)
+      //    {
+      //      if (this.Values[lastGoodIdx].dist <= maxDist)
+      //      {
+      //        this.Values[i] = this.Values[lastGoodIdx];// use it
+      //        Length = lastGoodIdx;// and truncate
+      //        break;
+      //      }
+      //      else if (lastGoodIdx == i)
+      //      {
+      //        // never found any usable. guess we're done.
+      //        Length = i;
+      //        break;
+      //      }
+      //      lastGoodIdx--;
+      //    }
+      //  }
+      //}
+      // then array.sort.
+      Array.Sort(this.Values, 0, Length, new MappingComparer());
+      //return (ulong)(oldLen - Length);
+      return 0;
+    }
+
+
 
     public IEnumerable<Mapping> GetEnumerator()
     {
@@ -369,36 +425,80 @@ namespace PetsciiMapgen
       }
     }
 
-    public List<SubArray> data = new List<SubArray>(100);
+    //public List<SubArray> data = new List<SubArray>(100);
+    public List<SubArray> data;
+    public int dataIdxToAddTo = 0;
 
     public HugeArray(int ChunkElementCount = 125000000)
     {
       this.ChunkElementCount = ChunkElementCount;
-      data.Add(new SubArray(ChunkElementCount));
+      data = new List<SubArray>(System.Environment.ProcessorCount);
+
+      for (int i = 0; i < System.Environment.ProcessorCount; ++ i)
+      {
+        data.Add(new SubArray(ChunkElementCount));
+      }
     }
 
-    public void Add(Mapping m)
+    public int SubArrayCount { get { return this.data.Count; } }
+
+    public void Add(Mapping m, int subarray)
     {
-      SubArray c = data.Last();
-      if (c.Length == ChunkElementCount)
+      var c = data[subarray];
+      if (c.Data.Length <= c.Length)
       {
-        // FULL. add a new.
-        data.Add(new SubArray(ChunkElementCount));
-        c = data.Last();
+        Console.WriteLine("!!! Dynamic allocation");
+        Array.Resize(ref c.Data, c.Length * 2);
       }
       c.Data[c.Length] = m;
       c.Length++;
     }
 
+
+    //public void Add(Mapping m)
+    //{
+    //  var c = data[dataIdxToAddTo];
+
+
+    //  if (c.Data.Length <= c.Length)
+    //  {
+    //    //Mapping[] t = new Mapping[Length * 2];
+    //    Console.WriteLine("!!! Dynamic allocation");
+    //    Array.Resize(ref c.Data, c.Length * 2);
+    //    //Array.Copy(this.Values, t, (int)this.Length);
+    //    //this.Values = t;
+    //  }
+    //  //c.Length++;
+    //  //this.Values[Length - 1] = m;
+
+
+
+    //  //SubArray c = data.Last();
+    //  //if (c.Length == ChunkElementCount)
+    //  //{
+    //  //  // FULL. add a new.
+    //  //  //data.Add(new SubArray(ChunkElementCount));
+    //  //  //c = data.Last();
+    //  //}
+    //  c.Data[c.Length] = m;
+    //  c.Length++;
+    //  dataIdxToAddTo++;
+    //  dataIdxToAddTo %= data.Count;
+    //}
+
     public ulong SortAndPrune(double maxDist)
     {
       ulong prevLength = this.Length;
       List<Task> tasks = new List<Task>();
-      Console.WriteLine("    Executing {0} tasks", this.data.Count);
+      Console.WriteLine("    Executing {0} tasks:", this.data.Count);
       // for each sub-array, sort and skip items with dist > x
       foreach (var c in this.data)
       {
-        int n = tasks.Count;
+        //int n = tasks.Count;
+        //if (n < 1)
+        //  continue;
+        Console.WriteLine("      {0} items", c.Length);
+
         tasks.Add(Task.Run(() =>
         {
           //Console.WriteLine("    thread {0} starting", n);
@@ -510,14 +610,6 @@ namespace PetsciiMapgen
         }
       }
       //}
-    }
-
-    public class MappingComparer : IComparer<Mapping>
-    {
-      public int Compare(Mapping x, Mapping y)
-      {
-        return x.dist.CompareTo(y.dist);
-      }
     }
 
     public class MappingEnumerator : IEnumerator<Mapping>, IComparable<MappingEnumerator>

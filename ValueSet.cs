@@ -63,8 +63,6 @@ namespace PetsciiMapgen
         {
           n.ColorData[i] = normalizedValues[i];
         }
-      //  // un-normalize these.
-      //  ColorUtils.Denormalize(useChroma, n);
       }
     }
 
