@@ -40,11 +40,32 @@ namespace PetsciiMapgen
       //    c.R, c.G, c.B, hsl.L);
       //}
 
+      //HugeArray x = new HugeArray(2);
+      //Random r = new Random();
+      //for(int i = 0; i < 100; ++ i)
+      //{
+      //  Mapping m;
+      //  m.dist = r.NextDouble();
+      //  m.icharInfo = 0;
+      //  m.imapKey = 0;
+      //  Console.WriteLine("{0}", m.dist);
+      //  x.Add(m);
+      //}
+
+      //Console.WriteLine("-----");
+      //x.SortAndPrune(1);
+      //var it = x.BeginIteration();
+
+      //foreach(var m in it)
+      //{
+      //  Console.WriteLine("{0}", m.dist);
+      //}
 
       Timings t = new Timings();
       t.EnterTask("--- MAIN PROCESSING");
 
       var emoji12 = new FontProvider("..\\..\\img\\fonts\\emojidark12.png", new Size(12, 12));//, dither: new Bayer8DitherProvider(.1));
+      var emoji16 = new FontProvider("..\\..\\img\\fonts\\emojidark16.png", new Size(16, 16));//, dither: new Bayer8DitherProvider(.1));
       var emoji24 = new FontProvider("..\\..\\img\\fonts\\emojidark24.png", new Size(24, 24));//, dither: new Bayer8DitherProvider(.1));
       var emoji32 = new FontProvider("..\\..\\img\\fonts\\emojidark32.png", new Size(32, 32));//, dither: new Bayer8DitherProvider(.1));
       var c64font = new MonoPaletteFontProvider("..\\..\\img\\fonts\\c64opt160.png", new Size(8, 8), Palettes.C64Grays);
@@ -57,9 +78,9 @@ namespace PetsciiMapgen
       // if we have a large array, we could do 3^4x4+0 mapping. but not before then.
 
       var map = new HybridMap2(
-        emoji24,
+        emoji16,
         partition,
-        new NaiveYUVPixelFormat(5, new Size(3,3), false));
+        new NaiveYUVPixelFormat(7, new Size(2,2), true), false, true, 1000000);
 
       t.EndTask();
 
@@ -73,28 +94,28 @@ namespace PetsciiMapgen
 
       t.EnterTask("processing images");
 
-      //Bitmap testBmp = new Bitmap(100, 100);
-      //using (Graphics g = Graphics.FromImage(testBmp))
-      //{
-      //  g.Clear(Color.Black);
-      //}
+      ////Bitmap testBmp = new Bitmap(100, 100);
+      ////using (Graphics g = Graphics.FromImage(testBmp))
+      ////{
+      ////  g.Clear(Color.Black);
+      ////}
 
-      //map.ProcessImageUsingRef("..\\..\\img\\BLACK.png", testBmp, testBmp, "..\\..\\img\\testdest-BLACK.png");
+      ////map.ProcessImageUsingRef("..\\..\\img\\BLACK.png", testBmp, testBmp, "..\\..\\img\\testdest-BLACK.png");
 
-      map.ProcessImageUsingRef("..\\..\\img\\grad3.png", "..\\..\\img\\testdest-grad3.png");
-      map.ProcessImageUsingRef("..\\..\\img\\circle.png", "..\\..\\img\\testdest-circle.png");
-      map.ProcessImageUsingRef("..\\..\\img\\grad.png", "..\\..\\img\\testdest-grad.png");
-      map.ProcessImageUsingRef("..\\..\\img\\airplane.jpg", "..\\..\\img\\testdest-airplane.png");
-      map.ProcessImageUsingRef("..\\..\\img\\balloon600.jpg", "..\\..\\img\\testdest-balloon600.png");
-      map.ProcessImageUsingRef("..\\..\\img\\david.jpg", "..\\..\\img\\testdest-david.png");
-      map.ProcessImageUsingRef("..\\..\\img\\david192.jpg", "..\\..\\img\\testdest-david192.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\grad3.png", "..\\..\\img\\testdest-grad3.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\circle.png", "..\\..\\img\\testdest-circle.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\grad.png", "..\\..\\img\\testdest-grad.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\airplane.jpg", "..\\..\\img\\testdest-airplane.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\balloon600.jpg", "..\\..\\img\\testdest-balloon600.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\david.jpg", "..\\..\\img\\testdest-david.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\david192.jpg", "..\\..\\img\\testdest-david192.png");
       map.ProcessImageUsingRef("..\\..\\img\\lisa1024.jpg", "..\\..\\img\\testdest-lisa1024.png");
-      map.ProcessImageUsingRef("..\\..\\img\\lisa512.jpg", "..\\..\\img\\testdest-lisa512.png");
-      map.ProcessImageUsingRef("..\\..\\img\\atomium.jpg", "..\\..\\img\\testdest-atomium.png");
-      map.ProcessImageUsingRef("..\\..\\img\\grad.png", "..\\..\\img\\testdest-grad.png");
-      map.ProcessImageUsingRef("..\\..\\img\\grad2.png", "..\\..\\img\\testdest-grad2.png");
-      map.ProcessImageUsingRef("..\\..\\img\\gtorus.png", "..\\..\\img\\testdest-gtorus.png");
-      map.ProcessImageUsingRef("..\\..\\img\\balloon1200.jpg", "..\\..\\img\\testdest-balloon1200.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\lisa512.jpg", "..\\..\\img\\testdest-lisa512.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\atomium.jpg", "..\\..\\img\\testdest-atomium.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\grad.png", "..\\..\\img\\testdest-grad.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\grad2.png", "..\\..\\img\\testdest-grad2.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\gtorus.png", "..\\..\\img\\testdest-gtorus.png");
+      //map.ProcessImageUsingRef("..\\..\\img\\balloon1200.jpg", "..\\..\\img\\testdest-balloon1200.png");
 
       t.EndTask();
 

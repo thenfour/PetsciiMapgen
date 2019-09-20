@@ -122,36 +122,6 @@ namespace PetsciiMapgen
     }
   }
 
-  public class MappingArray
-  {
-    public Mapping[] Values = new Mapping[30000000]; // RESERVED values therefore don't use Values.Length or do set operations like Values.sort()
-    public long Length { get; private set; } = 0;
-    public long Add() // returns an index
-    {
-      if (Values.Length <= Length)
-      {
-        Mapping[] t = new Mapping[Length * 2];
-        Console.WriteLine("!!! Dynamic allocation");
-        Array.Copy(this.Values, t, this.Length);
-        this.Values = t;
-      }
-      Length++;
-      return Length - 1;
-    }
-    internal long PruneWhereDistGT(double maxMinDist)
-    {
-      var prunedMappings = Values.Take((int)this.Length).Where(o => o.dist <= maxMinDist).ToArray();
-      long ret = this.Length - prunedMappings.Length;
-      this.Length = prunedMappings.LongLength;
-      this.Values = prunedMappings;
-      return ret;
-    }
-    public void SortByDist()
-    {
-      Debug.Assert(this.Values.LongLength == this.Length);
-      Array.Sort<Mapping>(this.Values, (a, b) => a.dist.CompareTo(b.dist));
-    }
-  }
 
   public class CharInfo
   {
@@ -189,19 +159,12 @@ namespace PetsciiMapgen
     }
   }
 
-  public struct Mapping
-  {
-    public int imapKey; // a set of tile values
-    public int icharInfo;
-    public double dist;
-  }
-
   public class ProgressReporter
   {
-    long total;
+    ulong total;
     Stopwatch swseg;
     Stopwatch swtotal;
-    public ProgressReporter(long total)
+    public ProgressReporter(ulong total)
     {
       this.total = total;
       this.swtotal = new Stopwatch();
@@ -209,7 +172,7 @@ namespace PetsciiMapgen
       this.swseg = new Stopwatch();
       swseg.Start();
     }
-    public void Visit(long item)
+    public void Visit(ulong item)
     {
       if (swseg.ElapsedMilliseconds < 5000)
         return;
