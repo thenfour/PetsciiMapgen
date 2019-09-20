@@ -28,6 +28,18 @@ namespace PetsciiMapgen
       }
     }
 
+    public static Color[] MarioBg
+    {
+      get
+      {// 98f5e9
+        return new Color[] {
+        Color.FromArgb(  0,   0,   0),// black
+        //System.Drawing.ColorTranslator.FromHtml("#98f5e9"),
+        //Color.FromArgb(255, 255, 255),//white
+        };
+      }
+    }
+
     public static Color[] Gray5
     {
       get

@@ -504,11 +504,12 @@ namespace PetsciiMapgen
       return ret;
     }
 
-    public static void ProcessArg(this string[] args, string key, Action<string> tr)
+    public static void ProcessArg(this string[] args, string[] keyAliases, Action<string> tr)
     {
-      for (int i = 0; i < args.Length; i ++)
+      for (int i = 0; i < args.Length; i++)
       {
-        if (args[i].Equals(key, StringComparison.InvariantCultureIgnoreCase))
+        if (keyAliases.Any(o => o.Equals(args[i], StringComparison.InvariantCultureIgnoreCase)))
+        //if (args[i].Equals(key, StringComparison.InvariantCultureIgnoreCase))
         {
           if (i < args.Length - 1)
             tr(args[i + 1]);
@@ -516,6 +517,11 @@ namespace PetsciiMapgen
             tr(null);
         }
       }
+    }
+
+    public static void ProcessArg(this string[] args, string key, Action<string> tr)
+    {
+      args.ProcessArg(new string[] { key }, tr);
     }
 
 

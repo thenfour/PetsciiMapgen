@@ -25,15 +25,30 @@ namespace PetsciiMapgen
     {
       Log.WriteLine("----------------------------------------");
 
+      //args = new string[] {
+      //  //"-listpalettes",
+      //  "-outdir", "C:\\temp\\xyz",
+      //  "-fonttype", "Normal",
+      //  "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\c64opt160.png",
+      //  "-charsize", "8x8",
+      //  "-pf", "yuv",
+      //  "-pfargs", "7v2x2+2",
+      //  "-partitions", "2x3",
+      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      //};
+
       args = new string[] {
         "-listpalettes",
         "-outdir", "C:\\temp\\xyz",
-        "-fonttype", "Normal",
-        "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\c64opt160.png",
-        "-charsize", "8x8",
+        "-fonttype", "colorkey",
+        "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\mariotiles4.png",
+        "-charsize", "16x16",
+        "-topleftpadding", "1",
+        "-colorkey", "#04c1aa",
+        "-palette", "MarioBg",
         "-pf", "yuv",
-        "-pfargs", "7v2x2+2",
-        "-partitions", "2x3",
+        "-pfargs", "5v3x3+0",
+        "-partitions", "3x3",
         "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
       };
 
@@ -84,6 +99,9 @@ namespace PetsciiMapgen
             break;
           case "normal":
             fontProvider = FontProvider.ProcessArgs(args);
+            break;
+          case "colorkey":
+            fontProvider = ColorKeyFontProvider.ProcessArgs(args);
             break;
           default:
             throw new Exception("Unknown font type: " + s);
@@ -163,12 +181,12 @@ namespace PetsciiMapgen
       t.EndTask();
 
       ////var emoji12ShouldBeBlack = new Point(468, 264);
-      ////map.TestColor(ColorFUtils.FromRGB(0, 0, 0), emoji12ShouldBeBlack);//, new Point(468, 264), new Point(288, 0), new Point(0, 264));
-      ////map.TestColor(ColorFUtils.FromRGB(128, 0, 0));
-      ////map.TestColor(ColorFUtils.FromRGB(128, 128, 128));
-      ////map.TestColor(ColorFUtils.FromRGB(0, 128, 0), new Point(468, 264));
-      ////map.TestColor(ColorFUtils.FromRGB(0, 0, 128), new Point(372, 252));
-      ////map.TestColor(ColorFUtils.FromRGB(255, 255, 255));//, new Point(385, 277));
+      map.TestColor(outputDir, ColorFUtils.FromRGB(0, 0, 0));//, emoji12ShouldBeBlack);//, new Point(468, 264), new Point(288, 0), new Point(0, 264));
+      map.TestColor(outputDir, ColorFUtils.FromRGB(128, 0, 0));
+      map.TestColor(outputDir, ColorFUtils.FromRGB(128, 128, 128));
+      map.TestColor(outputDir, ColorFUtils.FromRGB(0, 128, 0), new Point(468, 264));
+      map.TestColor(outputDir, ColorFUtils.FromRGB(0, 0, 128), new Point(372, 252));
+      map.TestColor(outputDir, ColorFUtils.FromRGB(255, 255, 255));//, new Point(385, 277));
 
       if (processImagesInDir != null && System.IO.Directory.Exists(processImagesInDir))
       {
@@ -177,7 +195,7 @@ namespace PetsciiMapgen
         var files = System.IO.Directory.EnumerateFiles(processImagesInDir, "*", System.IO.SearchOption.TopDirectoryOnly);
         foreach (var file in files)
         {
-          Log.WriteLine("Processing {0}", file);
+          //Log.WriteLine("Processing {0}", file);
           string destFile = string.Format("test-{0}.png", System.IO.Path.GetFileNameWithoutExtension(file));
           string destfullp = System.IO.Path.Combine(outputDir, destFile);
           map.ProcessImageUsingRef(mapRefPath, mapFontPath, file, destfullp);
@@ -186,37 +204,6 @@ namespace PetsciiMapgen
         t.EndTask();
       }
 
-
-      //t.EnterTask("processing images");
-
-      //////Bitmap testBmp = new Bitmap(100, 100);
-      //////using (Graphics g = Graphics.FromImage(testBmp))
-      //////{
-      //////  g.Clear(Color.Black);
-      //////}
-
-      //////map.ProcessImageUsingRef("..\\..\\img\\BLACK.png", testBmp, testBmp, "..\\..\\img\\testdest-BLACK.png");
-
-      //map.ProcessImageUsingRef("..\\..\\img\\grad3.png", "..\\..\\img\\testdest-grad3.png");
-      //map.ProcessImageUsingRef("..\\..\\img\\circles.png", "..\\..\\img\\testdest-circles.png");
-      //map.ProcessImageUsingRef("..\\..\\img\\circle.png", "..\\..\\img\\testdest-circle.png");
-      //map.ProcessImageUsingRef("..\\..\\img\\grad.png", "..\\..\\img\\testdest-grad.png");
-      //map.ProcessImageUsingRef("..\\..\\img\\airplane.jpg", "..\\..\\img\\testdest-airplane.png");
-      //map.ProcessImageUsingRef("..\\..\\img\\balloon600.jpg", "..\\..\\img\\testdest-balloon600.png");
-      //map.ProcessImageUsingRef("..\\..\\img\\david.jpg", "..\\..\\img\\testdest-david.png");
-      //map.ProcessImageUsingRef("..\\..\\img\\david192.jpg", "..\\..\\img\\testdest-david192.png");
-      //map.ProcessImageUsingRef("..\\..\\img\\lisa1024.jpg", "..\\..\\img\\testdest-lisa1024.png");
-      //map.ProcessImageUsingRef("..\\..\\img\\lisa512.jpg", "..\\..\\img\\testdest-lisa512.png");
-      //map.ProcessImageUsingRef("..\\..\\img\\atomium.jpg", "..\\..\\img\\testdest-atomium.png");
-      //map.ProcessImageUsingRef("..\\..\\img\\grad.png", "..\\..\\img\\testdest-grad.png");
-      //map.ProcessImageUsingRef("..\\..\\img\\grad2.png", "..\\..\\img\\testdest-grad2.png");
-      //map.ProcessImageUsingRef("..\\..\\img\\gtorus.png", "..\\..\\img\\testdest-gtorus.png");
-      //map.ProcessImageUsingRef("..\\..\\img\\balloon1200.jpg", "..\\..\\img\\testdest-balloon1200.png");
-
-      //t.EndTask();
-
-      //Log.WriteLine("Press a key to continue...");
-      //Console.ReadKey();
     }
   }
 }

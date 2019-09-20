@@ -13,57 +13,55 @@ using System.Runtime.InteropServices;
 
 namespace PetsciiMapgen
 {
-  public class ColorKeyFontProvider : IFontProvider
+  public class MonoPaletteFontProvider : IFontProvider
   {
     public string FontFileName { get; private set; }
     public Size CharSizeNoPadding { get; private set; }
     public Bitmap Bitmap { get; private set; }
     public Image Image { get; private set; }
     public int CharCount { get; private set; }
-
     public Color[] Palette { get; private set; }
-    public Color ColorKey { get; private set; }
 
     public Size OrigSizeInChars { get; private set; }
     public int OrigCharCount { get; private set; }
 
-    public int LeftTopPadding { get; private set; }
-    public Size CharSizeWithPadding { get; private set; }
-
     public struct CharMapping
     {
       public int origIndex;
-      public int paletteIndex;
+      public int fgIdx;
+      public int bgIdx;
     }
 
     List<CharMapping> map = new List<CharMapping>();
 
-    public ColorKeyFontProvider(string fontFileName, Size charSize, Color keyColor, Color[] palette, string paletteName, int leftTopPadding)
+    public MonoPaletteFontProvider(string fontFileName, Size charSize, Color[] palette, string paletteName)
     {
-      this.ColorKey = keyColor;
       this.FontFileName = fontFileName;
       this.Image = Image.FromFile(fontFileName);
       this.Bitmap = new Bitmap(this.Image);
+      this.CharSizeNoPadding = charSize;
       this.PaletteName = paletteName;
       this.Palette = palette;
 
-      this.CharSizeNoPadding = charSize;
-      this.LeftTopPadding = leftTopPadding;
-      this.CharSizeWithPadding = new Size(charSize.Width + leftTopPadding, charSize.Height + leftTopPadding);
-
-      this.OrigSizeInChars = Utils.Div(this.Image.Size, this.CharSizeWithPadding);
+      this.OrigSizeInChars = Utils.Div(this.Image.Size, this.CharSizeNoPadding);
       this.OrigCharCount = Utils.Product(this.OrigSizeInChars);
 
       int i = 0;
-      for (int palIdx = 0; palIdx < Palette.Length; ++palIdx)
+      for (int fgidx = 0; fgidx < Palette.Length; ++ fgidx)
       {
-        for (int ch = 0; ch < OrigCharCount; ++ch) // important that this is the bottom of the stack so the 1st CharCount indices are all unique chars. makes reverse lookup simpler.
+        for (int bgidx = 0; bgidx < Palette.Length; ++bgidx)
         {
-          CharMapping m;
-          m.origIndex = ch;
-          m.paletteIndex = palIdx;
-          map.Add(m);
-          i++;
+          if (bgidx == fgidx)
+            continue;
+          for (int ch = 0; ch < OrigCharCount; ++ ch) // important that this is the bottom of the stack so the 1st CharCount indices are all unique chars. makes reverse lookup simpler.
+          {
+            CharMapping m;
+            m.origIndex = ch;
+            m.fgIdx = fgidx;
+            m.bgIdx = bgidx;
+            map.Add(m);
+            i++;
+          }
         }
       }
 
@@ -74,26 +72,19 @@ namespace PetsciiMapgen
     {
       get
       {
-        return string.Format("{0}-{1}-key{2}", System.IO.Path.GetFileNameWithoutExtension(FontFileName),
-          PaletteName,
-          System.Drawing.ColorTranslator.ToHtml(ColorKey));
+        return string.Format("{0}-{1}", System.IO.Path.GetFileNameWithoutExtension(FontFileName), PaletteName);
       }
     }
 
     public string PaletteName { get; private set; }
 
-    public static ColorKeyFontProvider ProcessArgs(string[] args)
+    public static MonoPaletteFontProvider ProcessArgs(string[] args)
     {
+      //- fontImage "emojidark12.png"
       string fontImagePath = "";
       Size charSize = new Size(8,8);
       string paletteName = "";
       Color[] palette = Palettes.RGBPrimariesHalftone16;
-      Color colorKey = Color.Black;
-      int leftTopPadding = 0;
-      args.ProcessArg(new string[] { "-leftTopPadding", "-topLeftPadding" }, s =>
-      {
-        leftTopPadding = int.Parse(s);
-      });
       args.ProcessArg("-fontimage", s =>
       {
         fontImagePath = s;
@@ -108,12 +99,8 @@ namespace PetsciiMapgen
         var ti = typeof(Palettes).GetProperty(s).GetValue(null);
         palette = (Color[])ti;
       });
-      args.ProcessArg("-colorkey", s =>
-      {
-        colorKey = System.Drawing.ColorTranslator.FromHtml(s);
-      });
 
-      return new ColorKeyFontProvider(fontImagePath, charSize, colorKey, palette, paletteName, leftTopPadding);
+      return new MonoPaletteFontProvider(fontImagePath, charSize, palette, paletteName);
     }
 
     public void Init(int DiscreteTargetValues) { }
@@ -129,25 +116,23 @@ namespace PetsciiMapgen
     public Point GetCharOriginInPixels(int ichar)
     {
       var p = GetCharPosInChars(ichar);
-      p = Utils.Mul(p, CharSizeWithPadding);
-      return Utils.Add(p, LeftTopPadding);
+      p = Utils.Mul(p, CharSizeNoPadding);
+      return p;
     }
 
     public int GetCharIndexAtPixelPos(Point charPixPosWUT)
     {
-      int chx = charPixPosWUT.X / CharSizeWithPadding.Width;
-      int chy = charPixPosWUT.Y / CharSizeWithPadding.Height;
+      int chx = charPixPosWUT.X / CharSizeNoPadding.Width;
+      int chy = charPixPosWUT.Y / CharSizeNoPadding.Height;
       return chx + (OrigSizeInChars.Width * chy);
     }
 
     public Color SelectColor(int ichar, Color c)
     {
-      if (c == this.ColorKey)
-      {
-        var ch = this.map[ichar];
-        return this.Palette[ch.paletteIndex];
-      }
-      return c;
+      var ch = this.map[ichar];
+      if (c.R < 127)
+        return this.Palette[ch.bgIdx];
+      return this.Palette[ch.fgIdx];
     }
 
     public ColorF GetRegionColor(int ichar, Point topLeft, Size size, Size cellsPerChar, int cellOffsetX, int cellOffsetY)

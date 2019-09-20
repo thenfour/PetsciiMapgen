@@ -28,36 +28,6 @@ namespace PetsciiMapgen
     public IFontProvider FontProvider { get; private set; }
     public IPixelFormatProvider PixelFormatProvider { get; private set; }
 
-    //public string MapFullPath
-    //{
-    //  get
-    //  {
-    //    return string.Format("..\\..\\img\\mapFull-{0}-{1}.png",
-    //            System.IO.Path.GetFileNameWithoutExtension(FontProvider.FontFileName),
-    //            this.PixelFormatProvider.PixelFormatString);
-    //  }
-    //}
-
-    //public string MapRefPath
-    //{
-    //  get
-    //  {
-    //    return string.Format("..\\..\\img\\mapRef-{0}-{1}.png",
-    //            System.IO.Path.GetFileNameWithoutExtension(FontProvider.FontFileName),
-    //            this.PixelFormatProvider.PixelFormatString);
-    //  }
-    //}
-
-    //public string MapRefFontPath
-    //{
-    //  get
-    //  {
-    //    return string.Format("..\\..\\img\\mapRefFont-{0}-{1}.png",
-    //            System.IO.Path.GetFileNameWithoutExtension(FontProvider.FontFileName),
-    //            this.PixelFormatProvider.PixelFormatString);
-    //  }
-    //}
-
     private HybridMap2()
     {
     }
@@ -271,10 +241,10 @@ namespace PetsciiMapgen
 
     // when a color looks wrong, let's try and trace it back. outputs mapping information for this color,
     // top char matches, and outputs an image showing the chars found.
-    public void TestColor(ColorF rgb, params Point[] charPixPosWUT)
+    public void TestColor(string outputDir, ColorF rgb, params Point[] charPixPosWUT)
     {
       const int charsToOutputToImage = 100;
-      const int charsToOutputInConsole = 20;
+      const int charsToOutputInConsole = 10;
       const int detailedCharOutput = 3;
 
       List<int> WUTcharIndex = new List<int>();
@@ -337,7 +307,7 @@ namespace PetsciiMapgen
       }
       bmp.UnlockBits(bmpData);
 
-      string path = string.Format("..\\..\\img\\TESTVIS {0}.png", rgb);
+      string path = System.IO.Path.Combine(outputDir,  string.Format("TESTVIS {0}.png", rgb));
       Log.WriteLine("    Output chars to :" + path);
       bmp.Save(path);
     }

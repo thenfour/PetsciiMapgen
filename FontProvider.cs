@@ -67,6 +67,11 @@ namespace PetsciiMapgen
       string fontImagePath = "";
       Size charSize = new Size(8, 8);
       IDitherProvider dither = null;
+      int leftTopPadding = 0;
+      args.ProcessArg("-leftTopPadding", s =>
+      {
+        leftTopPadding = int.Parse(s);
+      });
       args.ProcessArg("-fontimage", s =>
       {
         fontImagePath = s;
@@ -88,7 +93,7 @@ namespace PetsciiMapgen
         }
       });
 
-      return new FontProvider(fontImagePath, charSize, 0, dither);
+      return new FontProvider(fontImagePath, charSize, leftTopPadding, dither);
     }
 
     public void Init(int DiscreteTargetValues)
