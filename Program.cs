@@ -43,7 +43,7 @@ namespace PetsciiMapgen
         "-fgcolor", "#000000",
 
         "-pf", "yuv",
-        "-pfargs", "2047v1x1+0",
+        "-pfargs", "255v1x1+0",
         "-partitions", "1x1",
         "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
       };

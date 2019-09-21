@@ -109,7 +109,7 @@ namespace PetsciiMapgen
 
     public void Init(int DiscreteTargetValues)
     {
-      var cps = EmojiTest.Utils.AllEmojiCodepoints(UnicodeGlyphTextFile);
+      var cps = EmojiTest.Utils.AllEmojisWithModifiers(UnicodeGlyphTextFile);
       this.charMap = EmojiTest.Utils.GenerateEmojiBitmap(FontFamily,
         this.CharSizeNoPadding.Width, this.CharSizeNoPadding.Height,
         Scale, Shift.Width, Shift.Height, cps, BackgroundColor, ForegroundColor, AspectTolerance);
@@ -196,7 +196,7 @@ namespace PetsciiMapgen
             sb.Append(' ');
             continue;
           }
-          sb.Append(this.charMap.AllCells[ichar].str);
+          sb.Append(this.charMap.AllCells[ichar].info.str);
         }
         sb.Append("\r\n");
       }

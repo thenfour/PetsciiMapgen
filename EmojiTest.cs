@@ -21,13 +21,26 @@ namespace EmojiTest
 {
   public static class Utils
   {
-    public static IEnumerable<int> AllEmojiCodepoints(string unicodeDataTextfilePath)
+    public struct EmojiInfo
+    {
+      public int cp;
+      public int modifier;
+      public string str;
+      public string attribute;
+    }
+    // returns codepoints and attributes. not permutated with modifiers.
+    public static IEnumerable<EmojiInfo> AllEmojiCodepoints(string unicodeDataTextfilePath)
     {
       var ret = new List<string>(10000);
       var el = System.IO.File.ReadAllLines(unicodeDataTextfilePath);
       foreach (var l in el)
       {
+        // https://blog.mzikmund.com/2017/01/working-with-emoji-skin-tones-in-apps/
+        // 
         var beforeComment = l.Split('#')[0];
+        if (!beforeComment.Contains(';'))
+          continue;
+        var attribute = beforeComment.Split(';')[1].Trim();
         beforeComment = beforeComment.Split(';')[0];
         beforeComment = beforeComment.Trim();
         if (!beforeComment.Any())
@@ -43,15 +56,48 @@ namespace EmojiTest
           int cp2 = Convert.ToInt32(r.Last(), 16);
           for (int i = cp; i <= cp2; ++i)
           {
-            yield return i;
+            EmojiInfo rv;
+            rv.attribute = attribute;
+            rv.cp = i;
+            rv.str = char.ConvertFromUtf32(i);
+            rv.modifier = -1;
+            yield return rv;
           }
         }
       }
     }
+
+    public static IEnumerable<EmojiInfo> AllEmojisWithModifiers(string unicodeDataTextfilePath)
+    {
+      var emoji = AllEmojiCodepoints(unicodeDataTextfilePath);
+      var modifiers = emoji.Where(e => e.attribute == "Emoji_Modifier").ToArray();
+      var rv = new List<EmojiInfo>(emoji.Count());
+      foreach(var e in emoji)
+      {
+        if (e.attribute == "Emoji_Modifier_Base")
+        {
+          rv.AddRange(modifiers.Select(m =>
+          {
+            EmojiInfo modified;
+            modified.attribute = "(modified)";
+            modified.cp = e.cp;
+            modified.modifier = m.cp;
+            modified.str = e.str + m.str;
+            return modified;
+          }));
+        } else
+        {
+          rv.Add(e);
+        }
+      }
+      return rv;
+    }
+
     public struct GlyphData
     {
-      public int cp;
-      public string str;
+      //public int cp;
+      //public string str;
+      public EmojiInfo info;
       public float width;
       public float height;
       public float scaleNeeded;
@@ -63,7 +109,8 @@ namespace EmojiTest
       public int rows;
       public GlyphData[] AllCells;
     }
-    public static GenerateEmojiBitmapResults GenerateEmojiBitmap(string fontName, int cellWidth, int cellHeight, float additionalScale, int shiftX, int shiftY, IEnumerable<int> codepointsToInclude, System.Drawing.Color backgroundColor, System.Drawing.Color textColor, float aspectToleranceFromTarget)
+    public static GenerateEmojiBitmapResults GenerateEmojiBitmap(string fontName, int cellWidth, int cellHeight,
+      float additionalScale, int shiftX, int shiftY, IEnumerable<EmojiInfo> codepointsToInclude, System.Drawing.Color backgroundColor, System.Drawing.Color textColor, float aspectToleranceFromTarget)
     {
       EmojiTest.Direct2DText dt = new EmojiTest.Direct2DText();
       RawColor4 bg = new RawColor4(backgroundColor.R / 255.0f, backgroundColor.G / 255.0f, backgroundColor.B / 255.0f, 1);
@@ -85,13 +132,13 @@ namespace EmojiTest
       PetsciiMapgen.Utils.ValueRangeInspector rangeY = new PetsciiMapgen.Utils.ValueRangeInspector();
       PetsciiMapgen.Utils.ValueRangeInspector allAspects = new PetsciiMapgen.Utils.ValueRangeInspector();
       PetsciiMapgen.Utils.ValueRangeInspector selectedAspects = new PetsciiMapgen.Utils.ValueRangeInspector();
-      var emoji = codepointsToInclude.Select(cp =>
+      var emoji = codepointsToInclude.Select(e =>
       {
         pr.Visit();
         GlyphData ret;
-        ret.cp = cp;
-        ret.str = char.ConvertFromUtf32(cp);
-        var sz = dt.GetTextSize(ret.str);
+        ret.info = e;
+        //ret.str = char.ConvertFromUtf32(cp);
+        var sz = dt.GetTextSize(ret.info.str);
         ret.width = sz.Width;
         ret.height = sz.Height;
         rangeX.Visit(ret.width);
@@ -111,7 +158,7 @@ namespace EmojiTest
       })
       .Where(o =>
       {
-        if (!gtf.CharacterToGlyphMap.ContainsKey(o.cp))
+        if (!gtf.CharacterToGlyphMap.ContainsKey(o.info.cp))
           return false;
         float aspect = o.width / o.height;
         float da = Math.Abs(aspect - targetAspect);
@@ -151,7 +198,7 @@ namespace EmojiTest
           }
 
           SharpDX.Size2F sz;
-          System.Drawing.Bitmap bmpChar = dt.TextToBitmap(e.str, out sz, bg);
+          System.Drawing.Bitmap bmpChar = dt.TextToBitmap(e.info.str, out sz, bg);
 
           // offset where to blit from, so it's centered.
           int ox = (int)((sz.Width - targetWidth) / 2);
