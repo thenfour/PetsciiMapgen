@@ -104,6 +104,7 @@ namespace PetsciiMapgen
     }
 
     public void Init(int DiscreteTargetValues) { }
+    //public void OnImageProcessed(IEnumerable<KeyValuePair<Point, int>> cellsMapped, string outputDir, string bitmapFilename) { }
 
     public Point GetCharPosInChars(int ichar)
     {

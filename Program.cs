@@ -16,6 +16,10 @@ using System.Collections;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Drawing.Imaging;
+using System.Drawing.Text;
+using System.Runtime.InteropServices;
+using System.IO;
+using System.Windows.Media;
 
 namespace PetsciiMapgen
 {
@@ -24,6 +28,25 @@ namespace PetsciiMapgen
     static void Main(string[] args)
     {
       Log.WriteLine("----------------------------------------");
+
+      args = new string[] {
+        "-listpalettes",
+        "-outdir", "C:\\temp",
+
+        "-fonttype", "fontfamily",
+        "-fontfamily", "Segoe UI emoji",
+        "-charsize", "12x12",
+        "-scale", "1.09",
+        "-UnicodeGlyphTextFile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emoji-data-v12.txt",
+        "-aspecttolerance", "0.15",
+        "-bgcolor", "#000000",
+        "-fgcolor", "#000000",
+
+        "-pf", "yuv",
+        "-pfargs", "2047v1x1+0",
+        "-partitions", "1x1",
+        "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      };
 
       //args = new string[] {
       //  //"-listpalettes",
@@ -37,20 +60,20 @@ namespace PetsciiMapgen
       //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
       //};
 
-      args = new string[] {
-        "-listpalettes",
-        "-outdir", "C:\\temp\\xyz",
-        "-fonttype", "colorkey",
-        "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\mariotiles4.png",
-        "-charsize", "16x16",
-        "-topleftpadding", "1",
-        "-colorkey", "#04c1aa",
-        "-palette", "MarioBg",
-        "-pf", "yuv",
-        "-pfargs", "5v3x3+0",
-        "-partitions", "3x3",
-        "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-      };
+      //args = new string[] {
+      //  "-listpalettes",
+      //  "-outdir", "C:\\temp\\xyz",
+      //  "-fonttype", "colorkey",
+      //  "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\mariotiles4.png",
+      //  "-charsize", "16x16",
+      //  "-topleftpadding", "1",
+      //  "-colorkey", "#04c1aa",
+      //  "-palette", "MarioBg",
+      //  "-pf", "yuv",
+      //  "-pfargs", "5v3x3+0",
+      //  "-partitions", "3x3",
+      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      //};
 
       PartitionManager partitionManager = new PartitionManager(1, 1);
       IPixelFormatProvider pixelFormat = null;
@@ -90,6 +113,8 @@ namespace PetsciiMapgen
         }
       });
 
+      FontFamilyFontProvider fontFamilyProvider = null;
+
       args.ProcessArg("-fonttype", s =>
       {
         switch (s.ToLowerInvariant())
@@ -102,6 +127,9 @@ namespace PetsciiMapgen
             break;
           case "colorkey":
             fontProvider = ColorKeyFontProvider.ProcessArgs(args);
+            break;
+          case "fontfamily":
+            fontProvider = fontFamilyProvider = FontFamilyFontProvider.ProcessArgs(args);
             break;
           default:
             throw new Exception("Unknown font type: " + s);
@@ -178,15 +206,21 @@ namespace PetsciiMapgen
         mapFontPath,
         coresToUtilize);
 
+      if (fontFamilyProvider != null)
+      {
+        string fontImgPath = System.IO.Path.Combine(outputDir, "font.png");
+        fontFamilyProvider.SaveFontImage(fontImgPath);
+      }
+
       t.EndTask();
 
       ////var emoji12ShouldBeBlack = new Point(468, 264);
-      map.TestColor(outputDir, ColorFUtils.FromRGB(0, 0, 0));//, emoji12ShouldBeBlack);//, new Point(468, 264), new Point(288, 0), new Point(0, 264));
-      map.TestColor(outputDir, ColorFUtils.FromRGB(128, 0, 0));
-      map.TestColor(outputDir, ColorFUtils.FromRGB(128, 128, 128));
-      map.TestColor(outputDir, ColorFUtils.FromRGB(0, 128, 0), new Point(468, 264));
-      map.TestColor(outputDir, ColorFUtils.FromRGB(0, 0, 128), new Point(372, 252));
-      map.TestColor(outputDir, ColorFUtils.FromRGB(255, 255, 255));//, new Point(385, 277));
+      //map.TestColor(outputDir, ColorFUtils.FromRGB(0, 0, 0));//, emoji12ShouldBeBlack);//, new Point(468, 264), new Point(288, 0), new Point(0, 264));
+      //map.TestColor(outputDir, ColorFUtils.FromRGB(128, 0, 0));
+      //map.TestColor(outputDir, ColorFUtils.FromRGB(128, 128, 128));
+      //map.TestColor(outputDir, ColorFUtils.FromRGB(0, 128, 0), new Point(468, 264));
+      //map.TestColor(outputDir, ColorFUtils.FromRGB(0, 0, 128), new Point(372, 252));
+      //map.TestColor(outputDir, ColorFUtils.FromRGB(255, 255, 255));//, new Point(385, 277));
 
       if (processImagesInDir != null && System.IO.Directory.Exists(processImagesInDir))
       {
@@ -198,7 +232,13 @@ namespace PetsciiMapgen
           //Log.WriteLine("Processing {0}", file);
           string destFile = string.Format("test-{0}.png", System.IO.Path.GetFileNameWithoutExtension(file));
           string destfullp = System.IO.Path.Combine(outputDir, destFile);
-          map.ProcessImageUsingRef(mapRefPath, mapFontPath, file, destfullp);
+          var rv = map.ProcessImageUsingRef(mapRefPath, mapFontPath, file, destfullp);
+          if (fontFamilyProvider != null)
+          {
+            string str = fontFamilyProvider.ConvertToText(rv);
+            string txtpath = System.IO.Path.Combine(outputDir, string.Format("test-{0}.txt", System.IO.Path.GetFileNameWithoutExtension(file)));
+            System.IO.File.WriteAllText(txtpath, str);
+          }
         }
 
         t.EndTask();

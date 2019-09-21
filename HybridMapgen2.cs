@@ -474,14 +474,16 @@ namespace PetsciiMapgen
       destImg.Save(destImagePath);
     }
 
-    public unsafe void ProcessImageUsingRef(string MapRefPath, string MapRefFontPath, string srcImagePath, string destImagePath)
+    // returns map from cell => REFFONT char id
+    public unsafe IDictionary<Point, int> ProcessImageUsingRef(string MapRefPath, string MapRefFontPath, string srcImagePath, string destImagePath)
     {
       var testImg = Image.FromFile(srcImagePath);
       Bitmap testBmp = new Bitmap(testImg);
-      ProcessImageUsingRef(MapRefPath, MapRefFontPath, srcImagePath, testImg, testBmp, destImagePath);
+      return ProcessImageUsingRef(MapRefPath, MapRefFontPath, srcImagePath, testImg, testBmp, destImagePath);
     }
 
-    public unsafe void ProcessImageUsingRef(string MapRefPath, string MapRefFontPath, string srcImagePath, Image testImg, Bitmap testBmp, string destImagePath)
+    // returns map from cell => charid
+    public unsafe IDictionary<Point, int> ProcessImageUsingRef(string MapRefPath, string MapRefFontPath, string srcImagePath, Image testImg, Bitmap testBmp, string destImagePath)
     {
       Log.WriteLine("  tranfsorm image using REF: " + srcImagePath);
       var refMapImage = Image.FromFile(MapRefPath);
@@ -491,13 +493,17 @@ namespace PetsciiMapgen
 
       int fontCellsX = refFontImage.Width / FontProvider.CharSizeNoPadding.Width;
 
+      int rows = testImg.Height / FontProvider.CharSizeNoPadding.Height;
+      int columns = testImg.Width / FontProvider.CharSizeNoPadding.Width;
+      Dictionary<Point, int> rv = new Dictionary<Point, int>(rows * columns);
+
       using (var g = Graphics.FromImage(destImg))
       {
         ColorF srcColor = ColorFUtils.Init;
         ColorF yuv = ColorFUtils.Init;
-        for (int srcCellY = 0; srcCellY < testImg.Height / FontProvider.CharSizeNoPadding.Height; ++srcCellY)
+        for (int srcCellY = 0; srcCellY < rows; ++srcCellY)
         {
-          for (int srcCellX = 0; srcCellX < testImg.Width / FontProvider.CharSizeNoPadding.Width; ++srcCellX)
+          for (int srcCellX = 0; srcCellX < columns; ++srcCellX)
           {
             // sample in the cell to determine the "key" "ID".
             ColorF charC = ColorFUtils.Init;
@@ -520,6 +526,8 @@ namespace PetsciiMapgen
             int fontCellX = fontID % fontCellsX;
 
             // blit from map img.
+            rv[new Point(srcCellX, srcCellY)] = DistinctMappedChars[fontID].srcIndex;
+
             Rectangle srcRect = new Rectangle(
               fontCellX * FontProvider.CharSizeNoPadding.Width,
               fontCellY * FontProvider.CharSizeNoPadding.Height,
@@ -533,6 +541,8 @@ namespace PetsciiMapgen
       }
 
       destImg.Save(destImagePath);
+
+      return rv;
     }
   }
 }

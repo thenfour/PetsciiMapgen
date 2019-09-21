@@ -24,6 +24,7 @@ namespace PetsciiMapgen
     Size CharSizeNoPadding { get; }
     void BlitCharacter(int ichar, BitmapData data, long destX, long destY);
     ColorF GetRegionColor(int ichar, Point topLeft, Size size, Size cellsPerChar, int cellOffsetX, int cellOffsetY);
+    //void OnImageProcessed(IEnumerable<KeyValuePair<Point, int>> cellsMapped, string outputDir, string bitmapFilename);// called when an image has been converted. gives the emoji font provider an opportunity to output as text
   }
 
   public class FontProvider : IFontProvider
@@ -40,6 +41,8 @@ namespace PetsciiMapgen
     public int CharCount { get; private set; }
 
     public IDitherProvider DitherProvider { get; private set; }
+
+    //public void OnImageProcessed(IEnumerable<KeyValuePair<Point, int>> cellsMapped, string outputDir, string bitmapFilename) { }
 
     public string DisplayName { get
       {

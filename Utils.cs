@@ -162,6 +162,7 @@ namespace PetsciiMapgen
   public class ProgressReporter
   {
     ulong total;
+    ulong current = 0;
     Stopwatch swseg;
     Stopwatch swtotal;
     public ProgressReporter(ulong total)
@@ -172,6 +173,11 @@ namespace PetsciiMapgen
       this.swseg = new Stopwatch();
       swseg.Start();
     }
+    public void Visit()
+    {
+      Visit(current);
+      current++;
+    }
     public void Visit(ulong item)
     {
       if (swseg.ElapsedMilliseconds < 5000)
@@ -180,7 +186,6 @@ namespace PetsciiMapgen
       double p = (double)item / total;
       double elapsedSec = (double)swtotal.ElapsedMilliseconds / 1000.0;
       double totalEst = elapsedSec / p;
-      //double estRemaining = (double)swtotal.ElapsedMilliseconds / (1.0-p);
       double estRemaining = totalEst - elapsedSec;
       Log.WriteLine("  Progress: {0}% (est remaining: {1} sec)", (p*100).ToString("0.00"), estRemaining.ToString("0.00"));
     }
