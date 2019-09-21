@@ -122,7 +122,8 @@ namespace EmojiTest
       System.Windows.Media.Typeface tf = new System.Windows.Media.Typeface(fontName);
       if (!tf.TryGetGlyphTypeface(out System.Windows.Media.GlyphTypeface gtf))
       {
-        throw new Exception();
+        PetsciiMapgen.Log.WriteLine("!!!!!!!!!! FONT FAMILY HAS NO GLYPH MAP; you will end up with unsupported glyphs in the map.");
+       // throw new Exception();
       }
 
       dt.SetColor(textColor);
@@ -158,8 +159,10 @@ namespace EmojiTest
       })
       .Where(o =>
       {
-        if (!gtf.CharacterToGlyphMap.ContainsKey(o.info.cp))
-          return false;
+        if (gtf != null) {
+          if (!gtf.CharacterToGlyphMap.ContainsKey(o.info.cp))
+            return false;
+        }
         float aspect = o.width / o.height;
         float da = Math.Abs(aspect - targetAspect);
         if (da > aspectToleranceFromTarget)
@@ -207,8 +210,8 @@ namespace EmojiTest
           int y = iemoji / columns;
           int x = iemoji % columns;
           g.DrawImage(bmpChar,
-            new System.Drawing.Rectangle(x * targetWidth + shiftX, y * targetHeight + shiftY, targetWidth, targetHeight),
-            new System.Drawing.Rectangle(ox, oy, targetWidth, targetHeight), System.Drawing.GraphicsUnit.Pixel
+            new System.Drawing.Rectangle(x * targetWidth, y * targetHeight, targetWidth, targetHeight),
+            new System.Drawing.Rectangle(ox - shiftX, oy - shiftY, targetWidth, targetHeight), System.Drawing.GraphicsUnit.Pixel
             );
 
           bmpChar.Dispose();
@@ -224,9 +227,6 @@ namespace EmojiTest
       rv.columns = columns;
       rv.rows = rows;
       rv.AllCells = emoji.ToArray();
-      //Bitmap bmp = dt.TextToBitmap(txt, 3000, 3000);
-      //bmp.Save("c:\\temp\\big.png");
-      //bmp.Dispose();
       return rv;
     }
   }

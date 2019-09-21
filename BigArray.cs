@@ -54,7 +54,8 @@ namespace PetsciiMapgen
     {
       // potential optimization: resize the array as soon as we have a good idea how big it should be.
       int newLength = (int)((double)this.Length / percentComplete);
-      newLength = Math.Max(newLength, this.Length * 2);// don't bother with small jumps. always go big.
+      // add 20% for padding.
+      newLength = Math.Max(newLength + (newLength / 5), this.Length * 2);// don't bother with small jumps. always go big.
       Add__(m, newLength);
     }
 

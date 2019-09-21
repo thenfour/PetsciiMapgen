@@ -10,6 +10,7 @@ using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using System.Drawing.Text;
 
 namespace PetsciiMapgen
 {
@@ -28,26 +29,53 @@ namespace PetsciiMapgen
     public float Scale { get; private set; }
     public Size Shift { get; private set; }
     public float AspectTolerance { get; private set; }
+    public string FontName { get; private set; }
+    public string FontFile { get; private set; }
 
-    public FontFamilyFontProvider(string fontFamily, Size charSize, string unicodeGlyphTextFile,
-      Color bgColor, Color fgColor, float scale, Size shift, float aspectTolerance)
+    public FontFamilyFontProvider(string fontFamily, string fontFile, Size charSize, string unicodeGlyphTextFile,
+      Color bgColor, Color fgColor, float scale, Size shift, float aspectTolerance, string fontName)
     {
       this.CharSizeNoPadding = charSize;
       this.FontFamily = fontFamily;
+      this.FontFile = fontFile;
       this.UnicodeGlyphTextFile = unicodeGlyphTextFile;
       this.BackgroundColor = bgColor;
       this.ForegroundColor = fgColor;
       this.Scale = scale;
       this.Shift = shift;
       this.AspectTolerance = aspectTolerance;
+      this.FontName = fontName;
+
+
+      var cps = EmojiTest.Utils.AllEmojisWithModifiers(UnicodeGlyphTextFile);
+
+      if (!string.IsNullOrEmpty(FontFile))
+      {
+        _fontCollection = new PrivateFontCollection();
+        _fontCollection.AddFontFile(FontFile);
+        Log.WriteLine("Loaded font {0}", FontFile);
+        foreach (var f in _fontCollection.Families)
+        {
+          Log.WriteLine(" -> font family: {0}", f.Name);
+        }
+        if (string.IsNullOrEmpty(this.FontFamily))
+        {
+          this.FontFamily = _fontCollection.Families[0].Name;
+          Log.WriteLine("AUTO-SELECTING font family {0}", this.FontFamily);
+        }
+      }
+
+      this.charMap = EmojiTest.Utils.GenerateEmojiBitmap(FontFamily,
+        this.CharSizeNoPadding.Width, this.CharSizeNoPadding.Height,
+        Scale, Shift.Width, Shift.Height, cps, BackgroundColor, ForegroundColor, AspectTolerance);
+
     }
 
     public string DisplayName
     {
       get
       {
-        return "emoji";
-        //return string.Format("{0}-{1}", System.IO.Path.GetFileNameWithoutExtension(FontFileName), PaletteName);
+        return string.Format("{0}-{1}", FontName, this.charMap.AllCells.Length);
       }
     }
 
@@ -55,25 +83,33 @@ namespace PetsciiMapgen
     {
       // -fonttype fontfamily
       // -fontfamily "Segoe UI emoji"
+      // -fontfile "blah.wtf"
       // -charsize 8x8
       // -UnicodeGlyphTextFile emoji-data-v12.txt
       // -bgcolor #000000
       // -fgcolor #ffffff
       // -scale 1.2
       // -shift 2x2
+      // -fontname "Segoe"  <-- just to help name dirs/files
 
       string fontFamily = "";
+      string fontFile = "";
       Size charSize = new Size(8, 8);
       string unicodeGlyphTextFile = "";
       Color bgColor = Color.White;
       Color fgColor = Color.Black;
       float scale = 1.0f;
       Size shift = new Size(0, 0);
+      string fontName = "";
       float aspectTolerance = 1;
 
       args.ProcessArg("-fontfamily", s =>
       {
         fontFamily = s;
+      });
+      args.ProcessArg("-fontFile", s =>
+      {
+        fontFile = s;
       });
       args.ProcessArg("-charsize", s =>
       {
@@ -103,16 +139,18 @@ namespace PetsciiMapgen
       {
         aspectTolerance = float.Parse(s);
       });
+      args.ProcessArg("-fontname", s =>
+      {
+        fontName = s;
+      });
 
-      return new FontFamilyFontProvider(fontFamily, charSize, unicodeGlyphTextFile, bgColor, fgColor, scale, shift, aspectTolerance);
+      return new FontFamilyFontProvider(fontFamily, fontFile, charSize, unicodeGlyphTextFile, bgColor, fgColor, scale, shift, aspectTolerance, fontName);
     }
+
+    private PrivateFontCollection _fontCollection;
 
     public void Init(int DiscreteTargetValues)
     {
-      var cps = EmojiTest.Utils.AllEmojisWithModifiers(UnicodeGlyphTextFile);
-      this.charMap = EmojiTest.Utils.GenerateEmojiBitmap(FontFamily,
-        this.CharSizeNoPadding.Width, this.CharSizeNoPadding.Height,
-        Scale, Shift.Width, Shift.Height, cps, BackgroundColor, ForegroundColor, AspectTolerance);
     }
 
     public void SaveFontImage(string path)

@@ -29,24 +29,48 @@ namespace PetsciiMapgen
     {
       Log.WriteLine("----------------------------------------");
 
+      // this is pretty well tuned for Noto
       args = new string[] {
         "-listpalettes",
         "-outdir", "C:\\temp",
 
         "-fonttype", "fontfamily",
-        "-fontfamily", "Segoe UI emoji",
-        "-charsize", "12x12",
-        "-scale", "1.09",
+        "-fontfile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\NotoColorEmoji.ttf",
+        //"-fontfamily", "Segoe UI emoji",
+        "-fontname", "Noto",
+        "-charsize", "24x24",
+        "-scale", "1.2",
+        "-shift", "0x-3",
         "-UnicodeGlyphTextFile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emoji-data-v12.txt",
         "-aspecttolerance", "0.15",
-        "-bgcolor", "#000000",
-        "-fgcolor", "#000000",
+        "-bgcolor", "#ffffff",
+        "-fgcolor", "#ffffff",
 
         "-pf", "yuv",
-        "-pfargs", "255v1x1+0",
+        "-pfargs", "7v2x2+2",
         "-partitions", "1x1",
         "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
       };
+
+      //args = new string[] {
+      //  "-listpalettes",
+      //  "-outdir", "C:\\temp",
+
+      //  "-fonttype", "fontfamily",
+      //  "-fontfamily", "Segoe UI emoji",
+      //  "-fontname", "Segoe",
+      //  "-charsize", "12x12",
+      //  "-scale", "1.05",
+      //  "-UnicodeGlyphTextFile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emoji-data-v12.txt",
+      //  "-aspecttolerance", "0.15",
+      //  "-bgcolor", "#000000",
+      //  "-fgcolor", "#000000",
+
+      //  "-pf", "yuv",
+      //  "-pfargs", "31v1x1+2",
+      //  "-partitions", "1x1",
+      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      //};
 
       //args = new string[] {
       //  //"-listpalettes",
