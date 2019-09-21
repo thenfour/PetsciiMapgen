@@ -546,12 +546,24 @@ namespace PetsciiMapgen
       args.ProcessArg(new string[] { key }, tr);
     }
 
-
     //[MethodImpl(MethodImplOptions.AggressiveInlining)]
     //internal static float Mix(float v0, float v1, float t)
     //{
     //  return (1 - t) * v0 + t * v1;
     //}
+
+    public static bool ToBool(string s)
+    {
+      if (string.IsNullOrEmpty(s))
+        return false;
+      if (s == "1")
+        return true;
+      if (s.ToLowerInvariant() == "true")
+        return true;
+      if (s.ToLowerInvariant() == "yes")
+        return true;
+      return false;
+    }
   }
 }
 

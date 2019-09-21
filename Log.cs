@@ -35,7 +35,6 @@ namespace PetsciiMapgen
       int indent = indentLevel;
 
       msg = string.Format("{0} {2}{1}", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss'Z'"), msg, new string(' ', indent * 2));
-      //Log.WriteLine(msg);
       Console.WriteLine(msg);
       Debug.WriteLine(msg);
       if (lines != null)

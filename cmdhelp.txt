@@ -1,0 +1,64 @@
+﻿PETSCII map generator
+twitter/@tenfour2
+
+Command options:
+
+-help
+-listpalettes
+-partitions NxN           optional; default 1 flat partition
+-outdir path              required to do any output
+-processImagesInDir path
+-cores N                  if N<=0, we use (processor count - N)
+
+-pf ID                    Pixel format: YUV, LAB, HSL
+-pfargs NvXvY+C           defines the pixel format parameters
+                          N = number of discrete values per colorant
+                          X = number of Luma columns per cell
+                          Y = number of Luma rows per cell
+                          C = 0 or 2, to include chroma information
+
+-fonttype ID              normal, mono, colorkey, fontfamily
+
+NORMAL
+Basic grid-based font from image file.
+----------------
+  -charSize XxY
+  -fontImage
+  -leftTopPadding
+  -dither 0-1
+
+MONO
+Like normal, but treats image file as monochrome and permutates the specified
+palette over background & foreground.
+----------------
+  -charSize XxY
+  -fontImage
+  -palette
+
+COLORKEY
+Like mono, but allows you to specify a single colorkey which gets permutated
+over the specified palette
+----------------
+  -charSize XxY
+  -fontImage
+  -palette
+  -leftTopPadding
+  -colorKey #112233
+
+FONTFAMILY
+Generates a font image from a typeface specified by either fontFamily or
+FontFile. Glyphs used are specified in unicodeglyphTextFile.
+----------------
+  -charSize XxY
+  -trytofit 0 or 1         attempts to scale to fit the glyphs within the char rect.
+  -fontfamily
+  -fontfile
+  -unicodeglyphTextFile    file which defines the glyphs to select. not fully
+                           thought through; currently only supports the format
+                           at https://unicode.org/Public/emoji/12.0/emoji-test.txt
+  -bgcolor
+  -fgcolor
+  -scale
+  -shift XxY
+  -aspectTolerance         Discards glyphs whose natural aspect ratio are too distant.
+  -fontname                Optional, for file naming because the calculated font family name can be long.

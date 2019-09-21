@@ -33,207 +33,255 @@ namespace PetsciiMapgen
 #endif
         Log.WriteLine("----------------------------------------");
 
-        //// DOS color!
-        //args = new string[] {
-        //  "-listpalettes",
-        //  "-outdir", "C:\\temp",
+        args = new string[] { "-?" };
 
-        //  "-fonttype", "mono",
-        //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\VGA240.png",
-        //  "-charsize", "8x16",
-        //  "-palette", "RGBPrimariesHalftone16",
+      //// DOS color!
+      //args = new string[] {
+      //  "-listpalettes",
+      //  "-outdir", "C:\\temp",
 
-        //  "-pf", "yuv",
-        //  "-pfargs", "4v2x2+2",
-        //  "-partitions", "2x5",
-        //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-        //};
+      //  "-fonttype", "mono",
+      //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\VGA240.png",
+      //  "-charsize", "8x16",
+      //  "-palette", "RGBPrimariesHalftone16",
 
-
-        //// DOS colored grayscale
-        //args = new string[] {
-        //  "-listpalettes",
-        //  "-outdir", "C:\\temp",
-
-        //  "-fonttype", "mono",
-        //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\VGA240.png",
-        //  "-charsize", "8x16",
-        //  "-palette", "RGBPrimariesHalftone16",
-
-        //  "-pf", "yuv",
-        //  "-pfargs", "9v2x2+0",
-        //  //"-pfargs", "11v2x2+0",
-        //  "-partitions", "3x11",
-        //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-        //};
+      //  "-pf", "yuv",
+      //  "-pfargs", "4v2x2+2",
+      //  "-partitions", "2x5",
+      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      //};
 
 
+      //// DOS colored grayscale
+      //args = new string[] {
+      //  "-listpalettes",
+      //  "-outdir", "C:\\temp",
 
-        //// DOS gray
-        //args = new string[] {
-        //  "-listpalettes",
-        //  "-outdir", "C:\\temp",
+      //  "-fonttype", "mono",
+      //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\VGA240.png",
+      //  "-charsize", "8x16",
+      //  "-palette", "RGBPrimariesHalftone16",
 
-        //  "-fonttype", "mono",
-        //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\VGA240.png",
-        //  "-charsize", "8x16",
-        //  "-palette", "Gray3",
-        //  //"-palette", "Workbench314",
-
-        //  "-pf", "yuv",
-        //  "-pfargs", "9v3x2+0",
-        //  //"-pfargs", "11v2x2+0",
-        //  "-partitions", "3x11",
-        //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-        //};
+      //  "-pf", "yuv",
+      //  "-pfargs", "9v2x2+0",
+      //  //"-pfargs", "11v2x2+0",
+      //  "-partitions", "3x11",
+      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      //};
 
 
-        //// topaz 3.1
-        //args = new string[] {
-        //  "-listpalettes",
-        //  "-outdir", "C:\\temp",
 
-        //  "-fonttype", "mono",
-        //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\topaz96.gif",
-        //  "-charsize", "12x12",
-        //  "-palette", "Workbench134",
-        //  //"-palette", "Workbench314",
+      //// DOS gray
+      //args = new string[] {
+      //  "-listpalettes",
+      //  "-outdir", "C:\\temp",
 
-        //  "-pf", "yuv",
-        //  "-pfargs", "9v3x2+0",
-        //  //"-pfargs", "11v2x2+0",
-        //  "-partitions", "3x11",
-        //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-        //};
+      //  "-fonttype", "mono",
+      //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\VGA240.png",
+      //  "-charsize", "8x16",
+      //  "-palette", "Gray3",
+      //  //"-palette", "Workbench314",
 
-        // emoji grayscale
-        args = new string[] {
-          "-listpalettes",
-          "-outdir", "C:\\temp",
+      //  "-pf", "yuv",
+      //  "-pfargs", "9v3x2+0",
+      //  //"-pfargs", "11v2x2+0",
+      //  "-partitions", "3x11",
+      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      //};
 
-          "-fonttype", "normal",
-          "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark12.png",
-          "-charsize", "12x12",
 
-          "-pf", "yuv",
-          "-pfargs", "9v3x2+0",
-          //"-pfargs", "11v2x2+0",
-          "-partitions", "3x11",
-          "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-        };
+      //// topaz 3.1
+      //args = new string[] {
+      //  "-listpalettes",
+      //  "-outdir", "C:\\temp",
 
-        //  // mz700 grayscale
-        //  args = new string[] {
-        //  "-listpalettes",
-        //  "-outdir", "C:\\temp",
+      //  "-fonttype", "mono",
+      //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\topaz96.gif",
+      //  "-charsize", "12x12",
+      //  "-palette", "Workbench134",
+      //  //"-palette", "Workbench314",
 
-        //  "-fonttype", "mono",
-        //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\mz700.png",
-        //  "-charsize", "8x8",
-        //  "-palette", "BlackAndWhite",
+      //  "-pf", "yuv",
+      //  "-pfargs", "9v3x2+0",
+      //  //"-pfargs", "11v2x2+0",
+      //  "-partitions", "3x11",
+      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      //};
 
-        //  "-pf", "yuv",
-        //  //"-pfargs", "5v3x3+0",
-        //  "-pfargs", "11v3x2+0",
-        //  "-partitions", "3x11",
-        //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-        //};
+      // emoji grayscale
+      //args = new string[] {
+      //  "-listpalettes",
+      //  "-outdir", "C:\\temp",
 
-        //  // C64 grayscale
-        //  args = new string[] {
-        //  "-listpalettes",
-        //  "-outdir", "C:\\temp",
+      //  "-fonttype", "normal",
+      //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark12.png",
+      //  "-charsize", "12x12",
 
-        //  "-fonttype", "mono",
-        //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\c64opt160.png",
-        //  "-charsize", "8x8",
-        //  "-palette", "C64Gray8",
+      //  "-pf", "yuv",
+      //  "-pfargs", "9v3x2+0",
+      //  //"-pfargs", "11v2x2+0",
+      //  "-partitions", "3x11",
+      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      //};
 
-        //  "-pf", "yuv",
-        //  //"-pfargs", "5v3x3+0",
-        //  "-pfargs", "11v3x2+0",
-        //  "-partitions", "3x11",
-        //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-        //};
+      //  // mz700 grayscale
+      //  args = new string[] {
+      //  "-listpalettes",
+      //  "-outdir", "C:\\temp",
 
-        //// this is pretty well tuned for Noto
-        //args = new string[] {
-        //  "-listpalettes",
-        //  "-outdir", "C:\\temp",
+      //  "-fonttype", "mono",
+      //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\mz700.png",
+      //  "-charsize", "8x8",
+      //  "-palette", "BlackAndWhite",
 
-        //  "-fonttype", "fontfamily",
-        //  "-fontfile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\NotoColorEmoji.ttf",
-        //  //"-fontfamily", "Segoe UI emoji",
-        //  "-fontname", "Noto",
-        //  // for 24x24, 1.2x, shift 0x-3
-        //  // for 12x12, 1.2x, shift 0x-2
-        //  "-charsize", "12x12",
-        //  "-scale", "1.2",
-        //  "-shift", "0x-2",
-        //  "-UnicodeGlyphTextFile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emoji-data-v12.txt",
-        //  "-aspecttolerance", "0.15",
-        //  "-bgcolor", "#ffffff",
-        //  "-fgcolor", "#ffffff",
+      //  "-pf", "yuv",
+      //  //"-pfargs", "5v3x3+0",
+      //  "-pfargs", "11v3x2+0",
+      //  "-partitions", "3x11",
+      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      //};
 
-        //  "-pf", "yuv",
-        //  "-pfargs", "5v2x2+2",
-        //  "-partitions", "3x6",
-        //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-        //};
+      //  // C64 grayscale
+      //  args = new string[] {
+      //  "-listpalettes",
+      //  "-outdir", "C:\\temp",
 
-        //args = new string[] {
-        //  "-listpalettes",
-        //  "-outdir", "C:\\temp",
+      //  "-fonttype", "mono",
+      //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\c64opt160.png",
+      //  "-charsize", "8x8",
+      //  "-palette", "C64Gray8",
 
-        //  "-fonttype", "fontfamily",
-        //  "-fontfamily", "Segoe UI emoji",
-        //  "-fontname", "Segoe",
-        //  "-charsize", "12x12",
-        //  "-scale", "1.05",
-        //  "-UnicodeGlyphTextFile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emoji-data-v12.txt",
-        //  "-aspecttolerance", "0.15",
-        //  "-bgcolor", "#000000",
-        //  "-fgcolor", "#000000",
+      //  "-pf", "yuv",
+      //  //"-pfargs", "5v3x3+0",
+      //  "-pfargs", "11v3x2+0",
+      //  "-partitions", "3x11",
+      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      //};
 
-        //  "-pf", "yuv",
-        //  "-pfargs", "31v1x1+2",
-        //  "-partitions", "1x1",
-        //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-        //};
+      // this is pretty well tuned for Noto
+      args = new string[] {
+        "-listpalettes",
+        "-outdir", "C:\\temp",
 
-        //args = new string[] {
-        //  //"-listpalettes",
-        //  "-outdir", "C:\\temp\\xyz",
-        //  "-fonttype", "Normal",
-        //  "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\c64opt160.png",
-        //  "-charsize", "8x8",
-        //  "-pf", "yuv",
-        //  "-pfargs", "7v2x2+2",
-        //  "-partitions", "2x3",
-        //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-        //};
+        "-fonttype", "fontfamily",
+        "-fontfile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\EmojiOneColor.otf",
+        //"-fontfamily", "Segoe UI emoji",
+        "-fontname", "EmojiOne",
+        // for 24x24, 1.2x, shift 0x-3
+        // for 12x12, 1.2x, shift 0x-2
+        "-trytofit", "true",
+        "-charsize", "16x16",
+        "-scale", "1.2",
+        "-shift", "0x-1",
+        "-UnicodeGlyphTextFile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emoji-test.txt",
+        "-aspecttolerance", "1.0",
+        "-bgcolor", "#000000",
+        "-fgcolor", "#ffffff",
 
-        //args = new string[] {
-        //  "-listpalettes",
-        //  "-outdir", "C:\\temp\\xyz",
-        //  "-fonttype", "colorkey",
-        //  "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\mariotiles4.png",
-        //  "-charsize", "16x16",
-        //  "-topleftpadding", "1",
-        //  "-colorkey", "#04c1aa",
-        //  "-palette", "MarioBg",
-        //  "-pf", "yuv",
-        //  "-pfargs", "5v3x3+0",
-        //  "-partitions", "3x3",
-        //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-        //};
+        "-pf", "yuv",
+        "-pfargs", "5v2x2+2",
+        "-partitions", "3x6",
+        "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      };
 
-        PartitionManager partitionManager = new PartitionManager(1, 1);
+      //// this is pretty well tuned for Noto
+      //args = new string[] {
+      //  "-listpalettes",
+      //  "-outdir", "C:\\temp",
+
+      //  "-fonttype", "fontfamily",
+      //  "-fontfile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\NotoColorEmoji.ttf",
+      //  //"-fontfamily", "Segoe UI emoji",
+      //  "-fontname", "Noto",
+      //  // for 24x24, 1.2x, shift 0x-3
+      //  // for 12x12, 1.2x, shift 0x-2
+      //  "-trytofit", "true",
+      //  "-charsize", "16x16",
+      //  "-scale", "1.2",
+      //  "-shift", "0x-1",
+      //  "-UnicodeGlyphTextFile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emoji-test.txt",
+      //  "-aspecttolerance", "1.0",
+      //  "-bgcolor", "#000000",
+      //  "-fgcolor", "#ffffff",
+
+      //  "-pf", "yuv",
+      //  "-pfargs", "5v2x2+2",
+      //  "-partitions", "3x6",
+      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      //};
+
+      //// Segoe tuned!
+      //args = new string[] {
+      //    "-outdir", "C:\\temp",
+
+      //    "-fonttype", "fontfamily",
+      //    "-fontfamily", "Segoe UI emoji",
+      //    "-fontname", "Segoe",
+      //    "-charsize", "16x16",
+      //    "-scale", "1.3",
+      //    "-shift", "-1x-1",
+      //    "-trytofit", "true",
+      //    "-UnicodeGlyphTextFile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emoji-test.txt",
+      //    "-aspecttolerance", "0.08",
+      //    "-bgcolor", "#000000",// this should be 0, because otherwise the "blackest" character is like a dark-skin facepalm glyph with a white background.
+      //    "-fgcolor", "#ffffff",
+
+      //    "-pf", "yuv",
+      //    "-pfargs", "6v2x2+2",
+      //    "-partitions", "3x6",
+      //    "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      //  };
+
+      //args = new string[] {
+      //  //"-listpalettes",
+      //  "-outdir", "C:\\temp\\xyz",
+      //  "-fonttype", "Normal",
+      //  "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\c64opt160.png",
+      //  "-charsize", "8x8",
+      //  "-pf", "yuv",
+      //  "-pfargs", "7v2x2+2",
+      //  "-partitions", "2x3",
+      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      //};
+
+      //args = new string[] {
+      //  "-listpalettes",
+      //  "-outdir", "C:\\temp\\xyz",
+      //  "-fonttype", "colorkey",
+      //  "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\mariotiles4.png",
+      //  "-charsize", "16x16",
+      //  "-topleftpadding", "1",
+      //  "-colorkey", "#04c1aa",
+      //  "-palette", "MarioBg",
+      //  "-pf", "yuv",
+      //  "-pfargs", "5v3x3+0",
+      //  "-partitions", "3x3",
+      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      //};
+
+      PartitionManager partitionManager = new PartitionManager(1, 1);
         IPixelFormatProvider pixelFormat = null;
         IFontProvider fontProvider = null;
         string outputDir = null;
         string processImagesInDir = null;
         int coresToUtilize = System.Environment.ProcessorCount;
+
+        args.ProcessArg(new string[] { "-help", "-?", "-h" }, s => {
+
+          var assem = System.Reflection.Assembly.GetExecutingAssembly();// typeof(PartitionManager).Assembly;
+          var ns = assem.EntryPoint.DeclaringType.Namespace;
+          using (Stream stream = assem.GetManifestResourceStream(ns + ".cmdhelp.txt"))
+          {
+            using (var reader = new StreamReader(stream))
+            {
+              while (!reader.EndOfStream)
+              {
+                string ln = reader.ReadLine();
+                Log.WriteLine(ln);
+              }
+            }
+          }
+        });
 
         args.ProcessArg("-listpalettes", s =>
         {
@@ -248,6 +296,25 @@ namespace PetsciiMapgen
         {
           partitionManager = new PartitionManager(int.Parse(s.Split('x')[0]), int.Parse(s.Split('x')[1]));
         });
+
+        args.ProcessArg("-outdir", o =>
+        {
+          outputDir = o;
+        });
+
+        args.ProcessArg("-processImagesInDir", o =>
+        {
+          processImagesInDir = o;
+        });
+
+        args.ProcessArg("-cores", o =>
+        {
+          int a = int.Parse(o);
+          if (a < 1)
+            a = System.Environment.ProcessorCount - a;
+          coresToUtilize = a;
+        });
+
         args.ProcessArg("-pf", s =>
         {
           switch (s.ToLowerInvariant())
@@ -287,24 +354,6 @@ namespace PetsciiMapgen
             default:
               throw new Exception("Unknown font type: " + s);
           }
-        });
-
-        args.ProcessArg("-outdir", o =>
-        {
-          outputDir = o;
-        });
-
-        args.ProcessArg("-processImagesInDir", o =>
-        {
-          processImagesInDir = o;
-        });
-
-        args.ProcessArg("-cores", o =>
-        {
-          int a = int.Parse(o);
-          if (a < 1)
-            a = System.Environment.ProcessorCount - a;
-          coresToUtilize = a;
         });
 
         if (outputDir == null)
@@ -367,13 +416,12 @@ namespace PetsciiMapgen
 
         t.EndTask();
 
-        ////var emoji12ShouldBeBlack = new Point(468, 264);
-        map.TestColor(outputDir, ColorFUtils.FromRGB(0, 0, 0));//, emoji12ShouldBeBlack);//, new Point(468, 264), new Point(288, 0), new Point(0, 264));
+        map.TestColor(outputDir, ColorFUtils.FromRGB(0, 0, 0));
         map.TestColor(outputDir, ColorFUtils.FromRGB(128, 0, 0));
         map.TestColor(outputDir, ColorFUtils.FromRGB(128, 128, 128));
-        map.TestColor(outputDir, ColorFUtils.FromRGB(0, 128, 0), new Point(468, 264));
-        map.TestColor(outputDir, ColorFUtils.FromRGB(0, 0, 128), new Point(372, 252));
-        map.TestColor(outputDir, ColorFUtils.FromRGB(255, 255, 255));//, new Point(385, 277));
+        map.TestColor(outputDir, ColorFUtils.FromRGB(0, 128, 0));
+        map.TestColor(outputDir, ColorFUtils.FromRGB(0, 0, 128));
+        map.TestColor(outputDir, ColorFUtils.FromRGB(255, 255, 255));
 
         if (processImagesInDir != null && System.IO.Directory.Exists(processImagesInDir))
         {

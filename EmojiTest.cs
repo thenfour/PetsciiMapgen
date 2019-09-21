@@ -23,15 +23,23 @@ namespace EmojiTest
   {
     public struct EmojiInfo
     {
-      public int cp;
-      public int modifier;
+      public int[] cps;
+      //public int modifier;
+      public bool forceInclude;
       public string str;
       public string attribute;
     }
     // returns codepoints and attributes. not permutated with modifiers.
     public static IEnumerable<EmojiInfo> AllEmojiCodepoints(string unicodeDataTextfilePath)
     {
-      var ret = new List<string>(10000);
+      EmojiInfo emspace;
+      emspace.attribute = "(extra)";
+      emspace.cps = new int[] { 8195 };
+      emspace.str = char.ConvertFromUtf32(emspace.cps[0]);
+      emspace.forceInclude = true;
+      yield return emspace;
+
+      //var ret = new List<string>(10000);
       var el = System.IO.File.ReadAllLines(unicodeDataTextfilePath);
       foreach (var l in el)
       {
@@ -41,63 +49,75 @@ namespace EmojiTest
         if (!beforeComment.Contains(';'))
           continue;
         var attribute = beforeComment.Split(';')[1].Trim();
+        if (attribute != "fully-qualified" && attribute != "minimally-qualified")
+        {
+          continue;
+        }
         beforeComment = beforeComment.Split(';')[0];
         beforeComment = beforeComment.Trim();
         if (!beforeComment.Any())
           continue;
         var r = beforeComment.Split(new string[] { ".." }, StringSplitOptions.RemoveEmptyEntries);
-        int cp = Convert.ToInt32(r.First(), 16);
+        //int cp = Convert.ToInt32(r.First(), 16);
         if (r.Count() == 1)
         {
-          ret.Add(char.ConvertFromUtf32(cp));
+          EmojiInfo rv;
+          rv.cps = r.First()
+            .Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(cp => Convert.ToInt32(cp.Trim(), 16)).ToArray();
+          rv.str = string.Join("", rv.cps.Select(cp => char.ConvertFromUtf32(cp)));
+          rv.attribute = attribute;
+          rv.forceInclude = false;
+          yield return rv;
         }
         else
         {
-          int cp2 = Convert.ToInt32(r.Last(), 16);
-          for (int i = cp; i <= cp2; ++i)
-          {
-            EmojiInfo rv;
-            rv.attribute = attribute;
-            rv.cp = i;
-            rv.str = char.ConvertFromUtf32(i);
-            rv.modifier = -1;
-            yield return rv;
-          }
+          throw new Exception("don't support N..N ranges anymore.");
+          //int cp2 = Convert.ToInt32(r.Last(), 16);
+          //for (int i = cp; i <= cp2; ++i)
+          //{
+          //  EmojiInfo rv;
+          //  rv.attribute = attribute;
+          //  rv.cp = i;
+          //  rv.str = char.ConvertFromUtf32(i);
+          //  rv.modifier = -1;
+          //  yield return rv;
+          //}
         }
       }
     }
 
-    public static IEnumerable<EmojiInfo> AllEmojisWithModifiers(string unicodeDataTextfilePath)
-    {
-      EmojiInfo emspace;
-      emspace.attribute = "(extra)";
-      emspace.cp = 8195;
-      emspace.modifier = -1;
-      emspace.str = char.ConvertFromUtf32(emspace.cp);
-      var emoji = AllEmojiCodepoints(unicodeDataTextfilePath).Append(emspace);
+    //public static IEnumerable<EmojiInfo> AllEmojisWithModifiers(string unicodeDataTextfilePath)
+    //{
+    //  EmojiInfo emspace;
+    //  emspace.attribute = "(extra)";
+    //  emspace.cps = new int[] { 8195 };
+    //  //emspace.modifier = -1;
+    //  emspace.str = char.ConvertFromUtf32(emspace.cps[0]);
+    //  var emoji = AllEmojiCodepoints(unicodeDataTextfilePath).Append(emspace);
 
-      var modifiers = emoji.Where(e => e.attribute == "Emoji_Modifier").ToArray();
-      var rv = new List<EmojiInfo>(emoji.Count());
-      foreach(var e in emoji)
-      {
-        if (e.attribute == "Emoji_Modifier_Base")
-        {
-          rv.AddRange(modifiers.Select(m =>
-          {
-            EmojiInfo modified;
-            modified.attribute = "(modified)";
-            modified.cp = e.cp;
-            modified.modifier = m.cp;
-            modified.str = e.str + m.str;
-            return modified;
-          }));
-        } else
-        {
-          rv.Add(e);
-        }
-      }
-      return rv;
-    }
+    //  var modifiers = emoji.Where(e => e.attribute == "Emoji_Modifier").ToArray();
+    //  var rv = new List<EmojiInfo>(emoji.Count());
+    //  foreach(var e in emoji)
+    //  {
+    //    if (e.attribute == "Emoji_Modifier_Base")
+    //    {
+    //      rv.AddRange(modifiers.Select(m =>
+    //      {
+    //        EmojiInfo modified;
+    //        modified.attribute = "(modified)";
+    //        modified.cps = e.cps;
+    //        modified.modifier = m.cp;
+    //        modified.str = e.str + m.str;
+    //        return modified;
+    //      }));
+    //    } else
+    //    {
+    //      rv.Add(e);
+    //    }
+    //  }
+    //  return rv;
+    //}
 
     public struct GlyphData
     {
@@ -116,7 +136,8 @@ namespace EmojiTest
       public GlyphData[] AllCells;
     }
     public static GenerateEmojiBitmapResults GenerateEmojiBitmap(string fontName, int cellWidth, int cellHeight,
-      float additionalScale, int shiftX, int shiftY, IEnumerable<EmojiInfo> codepointsToInclude, System.Drawing.Color backgroundColor, System.Drawing.Color textColor, float aspectToleranceFromTarget)
+      float additionalScale, int shiftX, int shiftY, IEnumerable<EmojiInfo> codepointsToInclude,
+      System.Drawing.Color backgroundColor, System.Drawing.Color textColor, float aspectToleranceFromTarget, bool tryToFit)
     {
       EmojiTest.Direct2DText dt = new EmojiTest.Direct2DText();
       RawColor4 bg = new RawColor4(backgroundColor.R / 255.0f, backgroundColor.G / 255.0f, backgroundColor.B / 255.0f, 1);
@@ -151,22 +172,28 @@ namespace EmojiTest
         rangeX.Visit(ret.width);
         rangeY.Visit(ret.height);
         allAspects.Visit(ret.width / ret.height);
-        if (ret.height > 0 && ret.width > 0)
+        ret.scaleNeeded = 1;
+        if (tryToFit)
         {
-          float scaleNeededY = (float)targetHeight / ret.height;// factor to match target
-          float scaleNeededX = (float)targetWidth / ret.width;
-          ret.scaleNeeded = Math.Min(scaleNeededX, scaleNeededY);
-        }
-        else
-        {
-          ret.scaleNeeded = -1;
+          if (ret.height > 0 && ret.width > 0)
+          {
+            float scaleNeededY = (float)targetHeight / ret.height;// factor to match target
+            float scaleNeededX = (float)targetWidth / ret.width;
+            ret.scaleNeeded = Math.Min(scaleNeededX, scaleNeededY);
+          }
+          else
+          {
+            ret.scaleNeeded = -1;
+          }
         }
         return ret;
       })
       .Where(o =>
       {
+        if (o.info.forceInclude)
+          return true;
         if (gtf != null) {
-          if (!gtf.CharacterToGlyphMap.ContainsKey(o.info.cp))
+          if (!gtf.CharacterToGlyphMap.ContainsKey(o.info.cps[0])) // is this good enough of a check?
             return false;
         }
         float aspect = o.width / o.height;
@@ -294,21 +321,21 @@ namespace EmojiTest
     }
     public Size2F GetTextSize(string text, int width = 1000, int height = 1000)
     {
-      TextLayout tl = new TextLayout(dwFactory, text, textFormat, width, height);
+      //TextLayout tl = new TextLayout(dwFactory, text, textFormat, width, height);
       //var cm = tl.GetClusterMetrics();
       //float mw = tl.DetermineMinWidth();
-      Size2F ret = new Size2F(tl.Metrics.Width, tl.Metrics.Height);
-      tl.Dispose();
-      return ret;
+      //Size2F ret = new Size2F(tl.Metrics.Width, tl.Metrics.Height);
+      //tl.Dispose();
+      //return ret;
       // measure text width including white spaces
-      //TextLayout tl0 = new TextLayout(dwFactory, "A", textFormat, width, height);
-      //TextLayout tl1 = new TextLayout(dwFactory, text + "A\r\nB", textFormat, width, height);
-      //int result = (int)(tl1.Metrics.Width - tl0.Metrics.Width);
-      //int h = (int)(tl1.Metrics.Height - tl0.Metrics.Height);
-      //tl0.Dispose();
-      //tl1.Dispose();
+      TextLayout tl0 = new TextLayout(dwFactory, "A", textFormat, width, height);
+      TextLayout tl1 = new TextLayout(dwFactory, text + "A", textFormat, width, height);
+      int w = (int)(tl1.Metrics.Width - tl0.Metrics.Width);
+      int h = (int)(tl1.Metrics.Height);
+      tl0.Dispose();
+      tl1.Dispose();
       //return result > width ? width : result;
-      //return new System.Drawing.Size(result, h);
+      return new Size2F(w, h);
     }
 
 

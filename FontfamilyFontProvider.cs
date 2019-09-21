@@ -31,9 +31,10 @@ namespace PetsciiMapgen
     public float AspectTolerance { get; private set; }
     public string FontName { get; private set; }
     public string FontFile { get; private set; }
+    public bool TryToFit { get; private set; }
 
     public FontFamilyFontProvider(string fontFamily, string fontFile, Size charSize, string unicodeGlyphTextFile,
-      Color bgColor, Color fgColor, float scale, Size shift, float aspectTolerance, string fontName)
+      Color bgColor, Color fgColor, float scale, Size shift, float aspectTolerance, string fontName, bool tryToFit)
     {
       this.CharSizeNoPadding = charSize;
       this.FontFamily = fontFamily;
@@ -45,9 +46,11 @@ namespace PetsciiMapgen
       this.Shift = shift;
       this.AspectTolerance = aspectTolerance;
       this.FontName = fontName;
+      this.TryToFit = tryToFit;
 
-
-      var cps = EmojiTest.Utils.AllEmojisWithModifiers(UnicodeGlyphTextFile);
+      //var cps = EmojiTest.Utils.AllEmojisWithModifiers(UnicodeGlyphTextFile);
+      var cps = EmojiTest.Utils.AllEmojiCodepoints(UnicodeGlyphTextFile);
+      PetsciiMapgen.Log.WriteLine("Total fontfamily codepoint sequences to process: {0:N0}", cps.Count());
 
       if (!string.IsNullOrEmpty(FontFile))
       {
@@ -67,7 +70,7 @@ namespace PetsciiMapgen
 
       this.charMap = EmojiTest.Utils.GenerateEmojiBitmap(FontFamily,
         this.CharSizeNoPadding.Width, this.CharSizeNoPadding.Height,
-        Scale, Shift.Width, Shift.Height, cps, BackgroundColor, ForegroundColor, AspectTolerance);
+        Scale, Shift.Width, Shift.Height, cps, BackgroundColor, ForegroundColor, AspectTolerance, tryToFit);
 
     }
 
@@ -102,10 +105,15 @@ namespace PetsciiMapgen
       Size shift = new Size(0, 0);
       string fontName = "";
       float aspectTolerance = 1;
+      bool tryToFit = false;
 
       args.ProcessArg("-fontfamily", s =>
       {
         fontFamily = s;
+      });
+      args.ProcessArg("-tryToFit", s =>
+      {
+        tryToFit = Utils.ToBool(s);
       });
       args.ProcessArg("-fontFile", s =>
       {
@@ -144,7 +152,7 @@ namespace PetsciiMapgen
         fontName = s;
       });
 
-      return new FontFamilyFontProvider(fontFamily, fontFile, charSize, unicodeGlyphTextFile, bgColor, fgColor, scale, shift, aspectTolerance, fontName);
+      return new FontFamilyFontProvider(fontFamily, fontFile, charSize, unicodeGlyphTextFile, bgColor, fgColor, scale, shift, aspectTolerance, fontName, tryToFit);
     }
 
     private PrivateFontCollection _fontCollection;
