@@ -69,7 +69,13 @@ namespace EmojiTest
 
     public static IEnumerable<EmojiInfo> AllEmojisWithModifiers(string unicodeDataTextfilePath)
     {
-      var emoji = AllEmojiCodepoints(unicodeDataTextfilePath);
+      EmojiInfo emspace;
+      emspace.attribute = "(extra)";
+      emspace.cp = 8195;
+      emspace.modifier = -1;
+      emspace.str = char.ConvertFromUtf32(emspace.cp);
+      var emoji = AllEmojiCodepoints(unicodeDataTextfilePath).Append(emspace);
+
       var modifiers = emoji.Where(e => e.attribute == "Emoji_Modifier").ToArray();
       var rv = new List<EmojiInfo>(emoji.Count());
       foreach(var e in emoji)

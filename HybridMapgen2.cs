@@ -50,16 +50,19 @@ namespace PetsciiMapgen
       Log.WriteLine("Number of source chars (1d): " + this.FontProvider.CharCount.ToString("N0"));
       Log.WriteLine("Chosen values per tile: " + pixelFormatProvider.DiscreteNormalizedValues.Length);
       Log.WriteLine("Dimensions: " + PixelFormatProvider.DimensionCount);
+      Log.WriteLine("Partition count: " + pm.PartitionCount.ToString("N0"));
       Log.WriteLine("Resulting map will have this many entries: " + pixelFormatProvider.MapEntryCount.ToString("N0"));
       long mapdimpix = (long)Math.Sqrt(pixelFormatProvider.MapEntryCount);
       Log.WriteLine("Resulting map will be about: [" + mapdimpix.ToString("N0") + ", " + mapdimpix.ToString("N0") + "]");
 
       // fill in char source info (actual tile values)
       timings.EnterTask("Analyze incoming font");
+      //ProgressReporter prcharinfo = new ProgressReporter(FontProvider.CharCount);
       this.CharInfo = new List<CharInfo>();
 
       for (int ichar = 0; ichar < FontProvider.CharCount; ++ichar)
       {
+        //prcharinfo.Visit();
         var ci = new CharInfo(PixelFormatProvider.DimensionCount)
         {
           srcIndex = ichar,
@@ -75,9 +78,11 @@ namespace PetsciiMapgen
       Log.WriteLine("Number of source chars: " + this.CharInfo.Count);
 
       // create list of all mapkeys
+      timings.EnterTask("Generating {0:N0} map key indices", pixelFormatProvider.MapEntryCount);
       this.Keys = Utils.Permutate(PixelFormatProvider.DimensionCount, pixelFormatProvider.DiscreteNormalizedValues); // returns sorted.
+      timings.EndTask();
 
-      Log.WriteLine("  Key count: " + this.Keys.Length);
+      Log.WriteLine("Key count: " + this.Keys.Length);
 
       foreach (var ci in this.CharInfo)
       {
@@ -89,7 +94,6 @@ namespace PetsciiMapgen
 
       // - generate a list of mappings and their distances
       ulong theoreticalMappings = (ulong)this.CharInfo.Count * (ulong)pixelFormatProvider.MapEntryCount;
-      Log.WriteLine("  Partition count: " + pm.PartitionCount.ToString("N0"));
       Log.WriteLine("  Theoretical mapping count: " + theoreticalMappings.ToString("N0"));
 
       List<Task> comparisonBatches = new List<Task>();
@@ -185,7 +189,7 @@ namespace PetsciiMapgen
           numRepetitions += ci.usages - 1;
       }
 
-      timings.EndTask();
+      //timings.EndTask();
 
       // massive dump.
 #if DUMP_CHARINFO
@@ -244,8 +248,8 @@ namespace PetsciiMapgen
     public void TestColor(string outputDir, ColorF rgb, params Point[] charPixPosWUT)
     {
       const int charsToOutputToImage = 100;
-      const int charsToOutputInConsole = 10;
-      const int detailedCharOutput = 3;
+      const int charsToOutputInConsole = 0;
+      const int detailedCharOutput = 0;
 
       List<int> WUTcharIndex = new List<int>();
       foreach(Point p in charPixPosWUT)

@@ -16,12 +16,25 @@ namespace PetsciiMapgen
 {
   public class Log
   {
+    static int indentLevel = 0;
     static readonly object fileLock = new object();
     static string logFilePath = null;
     static List<string> lines = new List<string>();
+
+    public static void IncreaseIndent()
+    {
+      Interlocked.Increment(ref indentLevel);
+    }
+    public static void DecreaseIndent()
+    {
+      Interlocked.Decrement(ref indentLevel);
+    }
+
     public static void WriteLine(string msg)
     {
-      msg = string.Format("{0} {1}", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss'Z'"), msg);
+      int indent = indentLevel;
+
+      msg = string.Format("{0} {2}{1}", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss'Z'"), msg, new string(' ', indent * 2));
       //Log.WriteLine(msg);
       Console.WriteLine(msg);
       Debug.WriteLine(msg);

@@ -47,11 +47,27 @@ namespace PetsciiMapgen
     }
     protected override string FormatID { get { return "YUV"; } }
     protected override double NormalizeL(double x) { return Utils.Clamp(x, 0, 1); }
-    protected override double NormalizeC1(double x) { return Utils.Clamp((x / 2)+ .5, 0, 1); }
+    protected override double NormalizeC1(double x)
+    {
+      // normalized UV values should map .5 => 0, so our mapping granularity plays better. we'll always have an exactly 0
+      // point, but we won't always have .5 in our discrete values.
+      x /= 2;// -.5 to .5
+      if (x < 0)
+        x += 1;
+      // 0 to .5, or .5 to 1
+      return Utils.Clamp(x, 0, 1);
+      //return Utils.Clamp((x / 2)+ .5, 0, 1);
+    }
     protected override double NormalizeC2(double x) { return NormalizeC1(x); }
 
     protected override double DenormalizeL(double x) { return x; }
-    protected override double DenormalizeC1(double x) { return (x - .5) * 2; }
+    protected override double DenormalizeC1(double x)
+    {
+      //return (x - .5) * 2;
+      if (x > .5)
+        x -= 1;
+      return x * 2;
+    }
     protected override double DenormalizeC2(double x) { return DenormalizeC1(x); }
 
     double lumaMult;

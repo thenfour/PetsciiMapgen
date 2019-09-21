@@ -126,21 +126,21 @@ namespace PetsciiMapgen
       this.DiscreteNormalizedValues = Utils.GetDiscreteNormalizedValues(valuesPerComponent);
 
       Log.WriteLine("  DiscreteNormalizedValues:");
-      bool foundSuitableMidpoint = false;
+      //bool foundSuitableMidpoint = false;
       for (int i = 0; i < this.DiscreteNormalizedValues.Length; ++ i)
       {
         Log.WriteLine("    {0}: {1,10:0.00}", i, this.DiscreteNormalizedValues[i]);
-        if (Math.Abs(this.DiscreteNormalizedValues[i] - 0.5) < 0.0001)
-          foundSuitableMidpoint = true;
+        //if (Math.Abs(this.DiscreteNormalizedValues[i] - 0.5) < 0.0001)
+        //  foundSuitableMidpoint = true;
       }
 
-      if (!foundSuitableMidpoint)
-      {
-        Log.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!");
-        Log.WriteLine("!!!  no 0.5 point was found in discrete values.");
-        Log.WriteLine("!!!  it means you're likely to have very bad quality matches for black & white points.");
-        Log.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!");
-      }
+      //if (!foundSuitableMidpoint)
+      //{
+      //  Log.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!");
+      //  Log.WriteLine("!!!  no 0.5 point was found in discrete values.");
+      //  Log.WriteLine("!!!  it means you're likely to have very bad quality matches for black & white points.");
+      //  Log.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!");
+      //}
 
     }
 

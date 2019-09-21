@@ -165,6 +165,7 @@ namespace PetsciiMapgen
     ulong current = 0;
     Stopwatch swseg;
     Stopwatch swtotal;
+    public ProgressReporter(int total) : this((ulong)total) { }
     public ProgressReporter(ulong total)
     {
       this.total = total;
@@ -199,9 +200,14 @@ namespace PetsciiMapgen
       public string name;
     }
     Stack<Task> tasks = new Stack<Task>();
+    public void EnterTask(string s, params object[] o)
+    {
+      EnterTask(string.Format(s, o));
+    }
     public void EnterTask(string s)
     {
       Log.WriteLine("==> Enter task {0}", s);
+      Log.IncreaseIndent();
       Task n;
       if (!tasks.Any())
       {
@@ -222,8 +228,10 @@ namespace PetsciiMapgen
     }
     public void EndTask()
     {
+      Debug.Assert(this.tasks.Count > 0);
       Task n = this.tasks.Pop();
       TimeSpan ts = n.sw.Elapsed;
+      Log.DecreaseIndent();
       Log.WriteLine("<== {1} (end {0})", n.name, ts);
     }
   }
@@ -434,6 +442,15 @@ namespace PetsciiMapgen
       long numDigits = discreteNormalizedValuesPerTile.Length;
       long theoreticalBase = numDigits;
       long totalPermutations = Pow(numDigits, (uint)numDimensions);
+      if (totalPermutations > int.MaxValue)
+      {
+        Log.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!");
+        Log.WriteLine("!!!!!  Total map keys is just too big. Must be less than 2 billion.");
+        Log.WriteLine("You requested a map with {0:N0} mappings", totalPermutations);
+        Log.WriteLine("Which would result in a map ref image {0:N0} x {0:N0}", (int)Math.Sqrt(totalPermutations));
+        Log.WriteLine("And take {0:N0} MB on disk", totalPermutations / 1024 / 1024 * 3);
+        throw new Exception("Map is too big to process");
+      }
       float[] normalizedValues = new float[numDimensions];
 
       ValueSet[] ret = new ValueSet[totalPermutations];

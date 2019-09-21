@@ -40,6 +40,18 @@ namespace PetsciiMapgen
       }
     }
 
+    public static Color[] Gray3
+    {
+      get
+      {
+        return new Color[] {
+        Color.FromArgb(  0,   0,   0),// black
+        Color.FromArgb(128, 128, 128),//gray
+        Color.FromArgb(255, 255, 255),//white
+        };
+      }
+    }
+
     public static Color[] Gray5
     {
       get
@@ -60,17 +72,17 @@ namespace PetsciiMapgen
       {
         return new Color[] {
             Color.FromArgb(0, 0, 0), // luminance: 0
-            Color.FromArgb(109, 84, 18), // luminance: 24.9019607901573
-            //Color.FromArgb(98, 98, 98), // luminance: 38.4313732385635
-            Color.FromArgb(161, 104, 60), // luminance: 43.3333337306976
-            //Color.FromArgb(80, 69, 155), // luminance: 43.921571969986
+            //Color.FromArgb(109, 84, 18), // luminance: 24.9019607901573
+            Color.FromArgb(98, 98, 98), // luminance: 38.4313732385635
+            //Color.FromArgb(161, 104, 60), // luminance: 43.3333337306976
+            Color.FromArgb(80, 69, 155), // luminance: 43.921571969986
             //Color.FromArgb(159, 78, 68), // luminance: 44.5098042488098
-            //Color.FromArgb(160, 87, 163), // luminance: 49.0196108818054
+            Color.FromArgb(160, 87, 163), // luminance: 49.0196108818054
             //Color.FromArgb(92, 171, 94), // luminance: 51.5686273574829
             //Color.FromArgb(137, 137, 137), // luminance: 53.7254929542542
             Color.FromArgb(106, 191, 198), // luminance: 59.6078455448151
             //Color.FromArgb(203, 126, 117), // luminance: 62.7451002597809
-            //Color.FromArgb(136, 126, 203), // luminance: 64.5098030567169
+            Color.FromArgb(136, 126, 203), // luminance: 64.5098030567169
             //Color.FromArgb(173, 173, 173), // luminance: 67.8431391716003
             //Color.FromArgb(201, 212, 135), // luminance: 68.0392146110535
 

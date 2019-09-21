@@ -27,247 +27,383 @@ namespace PetsciiMapgen
   {
     static void Main(string[] args)
     {
-      Log.WriteLine("----------------------------------------");
-
-      // this is pretty well tuned for Noto
-      args = new string[] {
-        "-listpalettes",
-        "-outdir", "C:\\temp",
-
-        "-fonttype", "fontfamily",
-        "-fontfile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\NotoColorEmoji.ttf",
-        //"-fontfamily", "Segoe UI emoji",
-        "-fontname", "Noto",
-        "-charsize", "24x24",
-        "-scale", "1.2",
-        "-shift", "0x-3",
-        "-UnicodeGlyphTextFile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emoji-data-v12.txt",
-        "-aspecttolerance", "0.15",
-        "-bgcolor", "#ffffff",
-        "-fgcolor", "#ffffff",
-
-        "-pf", "yuv",
-        "-pfargs", "7v2x2+2",
-        "-partitions", "1x1",
-        "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-      };
-
-      //args = new string[] {
-      //  "-listpalettes",
-      //  "-outdir", "C:\\temp",
-
-      //  "-fonttype", "fontfamily",
-      //  "-fontfamily", "Segoe UI emoji",
-      //  "-fontname", "Segoe",
-      //  "-charsize", "12x12",
-      //  "-scale", "1.05",
-      //  "-UnicodeGlyphTextFile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emoji-data-v12.txt",
-      //  "-aspecttolerance", "0.15",
-      //  "-bgcolor", "#000000",
-      //  "-fgcolor", "#000000",
-
-      //  "-pf", "yuv",
-      //  "-pfargs", "31v1x1+2",
-      //  "-partitions", "1x1",
-      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-      //};
-
-      //args = new string[] {
-      //  //"-listpalettes",
-      //  "-outdir", "C:\\temp\\xyz",
-      //  "-fonttype", "Normal",
-      //  "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\c64opt160.png",
-      //  "-charsize", "8x8",
-      //  "-pf", "yuv",
-      //  "-pfargs", "7v2x2+2",
-      //  "-partitions", "2x3",
-      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-      //};
-
-      //args = new string[] {
-      //  "-listpalettes",
-      //  "-outdir", "C:\\temp\\xyz",
-      //  "-fonttype", "colorkey",
-      //  "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\mariotiles4.png",
-      //  "-charsize", "16x16",
-      //  "-topleftpadding", "1",
-      //  "-colorkey", "#04c1aa",
-      //  "-palette", "MarioBg",
-      //  "-pf", "yuv",
-      //  "-pfargs", "5v3x3+0",
-      //  "-partitions", "3x3",
-      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-      //};
-
-      PartitionManager partitionManager = new PartitionManager(1, 1);
-      IPixelFormatProvider pixelFormat = null;
-      IFontProvider fontProvider = null;
-      string outputDir = null;
-      string processImagesInDir = null;
-      int coresToUtilize = System.Environment.ProcessorCount;
-
-      args.ProcessArg("-listpalettes", s =>
+#if !DEBUG
+      try
       {
-        Log.WriteLine("Listing palettes:");
-        foreach(var p in typeof(Palettes).GetProperties())
+#endif
+        Log.WriteLine("----------------------------------------");
+
+        //// DOS color!
+        //args = new string[] {
+        //  "-listpalettes",
+        //  "-outdir", "C:\\temp",
+
+        //  "-fonttype", "mono",
+        //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\VGA240.png",
+        //  "-charsize", "8x16",
+        //  "-palette", "RGBPrimariesHalftone16",
+
+        //  "-pf", "yuv",
+        //  "-pfargs", "4v2x2+2",
+        //  "-partitions", "2x5",
+        //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+        //};
+
+
+        //// DOS colored grayscale
+        //args = new string[] {
+        //  "-listpalettes",
+        //  "-outdir", "C:\\temp",
+
+        //  "-fonttype", "mono",
+        //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\VGA240.png",
+        //  "-charsize", "8x16",
+        //  "-palette", "RGBPrimariesHalftone16",
+
+        //  "-pf", "yuv",
+        //  "-pfargs", "9v2x2+0",
+        //  //"-pfargs", "11v2x2+0",
+        //  "-partitions", "3x11",
+        //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+        //};
+
+
+
+        //// DOS gray
+        //args = new string[] {
+        //  "-listpalettes",
+        //  "-outdir", "C:\\temp",
+
+        //  "-fonttype", "mono",
+        //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\VGA240.png",
+        //  "-charsize", "8x16",
+        //  "-palette", "Gray3",
+        //  //"-palette", "Workbench314",
+
+        //  "-pf", "yuv",
+        //  "-pfargs", "9v3x2+0",
+        //  //"-pfargs", "11v2x2+0",
+        //  "-partitions", "3x11",
+        //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+        //};
+
+
+        //// topaz 3.1
+        //args = new string[] {
+        //  "-listpalettes",
+        //  "-outdir", "C:\\temp",
+
+        //  "-fonttype", "mono",
+        //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\topaz96.gif",
+        //  "-charsize", "12x12",
+        //  "-palette", "Workbench134",
+        //  //"-palette", "Workbench314",
+
+        //  "-pf", "yuv",
+        //  "-pfargs", "9v3x2+0",
+        //  //"-pfargs", "11v2x2+0",
+        //  "-partitions", "3x11",
+        //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+        //};
+
+        // emoji grayscale
+        args = new string[] {
+          "-listpalettes",
+          "-outdir", "C:\\temp",
+
+          "-fonttype", "normal",
+          "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark12.png",
+          "-charsize", "12x12",
+
+          "-pf", "yuv",
+          "-pfargs", "9v3x2+0",
+          //"-pfargs", "11v2x2+0",
+          "-partitions", "3x11",
+          "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+        };
+
+        //  // mz700 grayscale
+        //  args = new string[] {
+        //  "-listpalettes",
+        //  "-outdir", "C:\\temp",
+
+        //  "-fonttype", "mono",
+        //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\mz700.png",
+        //  "-charsize", "8x8",
+        //  "-palette", "BlackAndWhite",
+
+        //  "-pf", "yuv",
+        //  //"-pfargs", "5v3x3+0",
+        //  "-pfargs", "11v3x2+0",
+        //  "-partitions", "3x11",
+        //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+        //};
+
+        //  // C64 grayscale
+        //  args = new string[] {
+        //  "-listpalettes",
+        //  "-outdir", "C:\\temp",
+
+        //  "-fonttype", "mono",
+        //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\c64opt160.png",
+        //  "-charsize", "8x8",
+        //  "-palette", "C64Gray8",
+
+        //  "-pf", "yuv",
+        //  //"-pfargs", "5v3x3+0",
+        //  "-pfargs", "11v3x2+0",
+        //  "-partitions", "3x11",
+        //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+        //};
+
+        //// this is pretty well tuned for Noto
+        //args = new string[] {
+        //  "-listpalettes",
+        //  "-outdir", "C:\\temp",
+
+        //  "-fonttype", "fontfamily",
+        //  "-fontfile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\NotoColorEmoji.ttf",
+        //  //"-fontfamily", "Segoe UI emoji",
+        //  "-fontname", "Noto",
+        //  // for 24x24, 1.2x, shift 0x-3
+        //  // for 12x12, 1.2x, shift 0x-2
+        //  "-charsize", "12x12",
+        //  "-scale", "1.2",
+        //  "-shift", "0x-2",
+        //  "-UnicodeGlyphTextFile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emoji-data-v12.txt",
+        //  "-aspecttolerance", "0.15",
+        //  "-bgcolor", "#ffffff",
+        //  "-fgcolor", "#ffffff",
+
+        //  "-pf", "yuv",
+        //  "-pfargs", "5v2x2+2",
+        //  "-partitions", "3x6",
+        //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+        //};
+
+        //args = new string[] {
+        //  "-listpalettes",
+        //  "-outdir", "C:\\temp",
+
+        //  "-fonttype", "fontfamily",
+        //  "-fontfamily", "Segoe UI emoji",
+        //  "-fontname", "Segoe",
+        //  "-charsize", "12x12",
+        //  "-scale", "1.05",
+        //  "-UnicodeGlyphTextFile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emoji-data-v12.txt",
+        //  "-aspecttolerance", "0.15",
+        //  "-bgcolor", "#000000",
+        //  "-fgcolor", "#000000",
+
+        //  "-pf", "yuv",
+        //  "-pfargs", "31v1x1+2",
+        //  "-partitions", "1x1",
+        //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+        //};
+
+        //args = new string[] {
+        //  //"-listpalettes",
+        //  "-outdir", "C:\\temp\\xyz",
+        //  "-fonttype", "Normal",
+        //  "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\c64opt160.png",
+        //  "-charsize", "8x8",
+        //  "-pf", "yuv",
+        //  "-pfargs", "7v2x2+2",
+        //  "-partitions", "2x3",
+        //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+        //};
+
+        //args = new string[] {
+        //  "-listpalettes",
+        //  "-outdir", "C:\\temp\\xyz",
+        //  "-fonttype", "colorkey",
+        //  "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\mariotiles4.png",
+        //  "-charsize", "16x16",
+        //  "-topleftpadding", "1",
+        //  "-colorkey", "#04c1aa",
+        //  "-palette", "MarioBg",
+        //  "-pf", "yuv",
+        //  "-pfargs", "5v3x3+0",
+        //  "-partitions", "3x3",
+        //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+        //};
+
+        PartitionManager partitionManager = new PartitionManager(1, 1);
+        IPixelFormatProvider pixelFormat = null;
+        IFontProvider fontProvider = null;
+        string outputDir = null;
+        string processImagesInDir = null;
+        int coresToUtilize = System.Environment.ProcessorCount;
+
+        args.ProcessArg("-listpalettes", s =>
         {
-          Log.WriteLine("  {0}", p.Name);
-        }
-      });
-
-      args.ProcessArg("-partitions", s =>
-      {
-        partitionManager = new PartitionManager(int.Parse(s.Split('x')[0]), int.Parse(s.Split('x')[1]));
-      });
-      args.ProcessArg("-pf", s =>
-      {
-        switch (s.ToLowerInvariant())
-        {
-          case "yuv":
-            pixelFormat = NaiveYUVPixelFormat.ProcessArgs(args);
-            break;
-          case "hsl":
-            pixelFormat = HSLPixelFormat.ProcessArgs(args);
-            break;
-          case "lab":
-            pixelFormat = LABPixelFormat.ProcessArgs(args);
-            break;
-          default:
-            throw new Exception("Unknown pixel format: " + s);
-        }
-      });
-
-      FontFamilyFontProvider fontFamilyProvider = null;
-
-      args.ProcessArg("-fonttype", s =>
-      {
-        switch (s.ToLowerInvariant())
-        {
-          case "mono":
-            fontProvider = MonoPaletteFontProvider.ProcessArgs(args);
-            break;
-          case "normal":
-            fontProvider = FontProvider.ProcessArgs(args);
-            break;
-          case "colorkey":
-            fontProvider = ColorKeyFontProvider.ProcessArgs(args);
-            break;
-          case "fontfamily":
-            fontProvider = fontFamilyProvider = FontFamilyFontProvider.ProcessArgs(args);
-            break;
-          default:
-            throw new Exception("Unknown font type: " + s);
-        }
-      });
-
-      args.ProcessArg("-outdir", o =>
-      {
-        outputDir = o;
-      });
-
-      args.ProcessArg("-processImagesInDir", o =>
-      {
-        processImagesInDir = o;
-      });
-
-      args.ProcessArg("-cores", o =>
-      {
-        int a = int.Parse(o);
-        if (a < 1)
-          a = System.Environment.ProcessorCount - a;
-        coresToUtilize = a;
-      });
-
-      if (outputDir == null)
-      {
-        Log.WriteLine("No output directory was specified.");
-        return;
-      }
-      outputDir = System.IO.Path.GetFullPath(outputDir);
-      Log.WriteLine("Output directory: {0}", outputDir);
-
-      if (!System.IO.Directory.Exists(outputDir))
-      {
-        Log.WriteLine("Output directory doesn't exist.");
-        return;
-      }
-
-      // emoji12-C64_YUV-2v5x5+2
-      if (fontProvider == null)
-      {
-        Log.WriteLine("Font information not specified.");
-        return;
-      }
-      if (pixelFormat == null)
-      {
-        Log.WriteLine("Pixel format not specified.");
-        return;
-      }
-      if (partitionManager == null)
-      {
-        Log.WriteLine("Space partitioning unspecified");
-        return;
-      }
-      string configTag = string.Format("{0}_{1}_{2}", fontProvider.DisplayName, pixelFormat.PixelFormatString, partitionManager);
-      outputDir = System.IO.Path.Combine(outputDir, configTag);
-      Log.WriteLine("Creating directory: {0}", outputDir);
-      System.IO.Directory.CreateDirectory(outputDir);
-
-      string logPath = System.IO.Path.Combine(outputDir, "log.txt");
-
-      Log.SetLogFile(logPath);
-
-      Timings t = new Timings();
-      t.EnterTask("--- MAP GENERATION");
-
-      string mapFullPath = System.IO.Path.Combine(outputDir, string.Format("mapfull_{0}.png", configTag));
-      string mapRefPath = System.IO.Path.Combine(outputDir, string.Format("mapref_{0}.png", configTag));
-      string mapFontPath = System.IO.Path.Combine(outputDir, string.Format("mapfont_{0}.png", configTag));
-
-      var map = new HybridMap2(fontProvider, partitionManager, pixelFormat,
-        mapFullPath,
-        mapRefPath,
-        mapFontPath,
-        coresToUtilize);
-
-      if (fontFamilyProvider != null)
-      {
-        string fontImgPath = System.IO.Path.Combine(outputDir, "font.png");
-        fontFamilyProvider.SaveFontImage(fontImgPath);
-      }
-
-      t.EndTask();
-
-      ////var emoji12ShouldBeBlack = new Point(468, 264);
-      //map.TestColor(outputDir, ColorFUtils.FromRGB(0, 0, 0));//, emoji12ShouldBeBlack);//, new Point(468, 264), new Point(288, 0), new Point(0, 264));
-      //map.TestColor(outputDir, ColorFUtils.FromRGB(128, 0, 0));
-      //map.TestColor(outputDir, ColorFUtils.FromRGB(128, 128, 128));
-      //map.TestColor(outputDir, ColorFUtils.FromRGB(0, 128, 0), new Point(468, 264));
-      //map.TestColor(outputDir, ColorFUtils.FromRGB(0, 0, 128), new Point(372, 252));
-      //map.TestColor(outputDir, ColorFUtils.FromRGB(255, 255, 255));//, new Point(385, 277));
-
-      if (processImagesInDir != null && System.IO.Directory.Exists(processImagesInDir))
-      {
-        t.EnterTask("processing images");
-
-        var files = System.IO.Directory.EnumerateFiles(processImagesInDir, "*", System.IO.SearchOption.TopDirectoryOnly);
-        foreach (var file in files)
-        {
-          //Log.WriteLine("Processing {0}", file);
-          string destFile = string.Format("test-{0}.png", System.IO.Path.GetFileNameWithoutExtension(file));
-          string destfullp = System.IO.Path.Combine(outputDir, destFile);
-          var rv = map.ProcessImageUsingRef(mapRefPath, mapFontPath, file, destfullp);
-          if (fontFamilyProvider != null)
+          Log.WriteLine("Listing palettes:");
+          foreach (var p in typeof(Palettes).GetProperties())
           {
-            string str = fontFamilyProvider.ConvertToText(rv);
-            string txtpath = System.IO.Path.Combine(outputDir, string.Format("test-{0}.txt", System.IO.Path.GetFileNameWithoutExtension(file)));
-            System.IO.File.WriteAllText(txtpath, str);
+            Log.WriteLine("  {0}", p.Name);
           }
+        });
+
+        args.ProcessArg("-partitions", s =>
+        {
+          partitionManager = new PartitionManager(int.Parse(s.Split('x')[0]), int.Parse(s.Split('x')[1]));
+        });
+        args.ProcessArg("-pf", s =>
+        {
+          switch (s.ToLowerInvariant())
+          {
+            case "yuv":
+              pixelFormat = NaiveYUVPixelFormat.ProcessArgs(args);
+              break;
+            case "hsl":
+              pixelFormat = HSLPixelFormat.ProcessArgs(args);
+              break;
+            case "lab":
+              pixelFormat = LABPixelFormat.ProcessArgs(args);
+              break;
+            default:
+              throw new Exception("Unknown pixel format: " + s);
+          }
+        });
+
+        FontFamilyFontProvider fontFamilyProvider = null;
+
+        args.ProcessArg("-fonttype", s =>
+        {
+          switch (s.ToLowerInvariant())
+          {
+            case "mono":
+              fontProvider = MonoPaletteFontProvider.ProcessArgs(args);
+              break;
+            case "normal":
+              fontProvider = FontProvider.ProcessArgs(args);
+              break;
+            case "colorkey":
+              fontProvider = ColorKeyFontProvider.ProcessArgs(args);
+              break;
+            case "fontfamily":
+              fontProvider = fontFamilyProvider = FontFamilyFontProvider.ProcessArgs(args);
+              break;
+            default:
+              throw new Exception("Unknown font type: " + s);
+          }
+        });
+
+        args.ProcessArg("-outdir", o =>
+        {
+          outputDir = o;
+        });
+
+        args.ProcessArg("-processImagesInDir", o =>
+        {
+          processImagesInDir = o;
+        });
+
+        args.ProcessArg("-cores", o =>
+        {
+          int a = int.Parse(o);
+          if (a < 1)
+            a = System.Environment.ProcessorCount - a;
+          coresToUtilize = a;
+        });
+
+        if (outputDir == null)
+        {
+          Log.WriteLine("No output directory was specified.");
+          return;
+        }
+        outputDir = System.IO.Path.GetFullPath(outputDir);
+        Log.WriteLine("Output directory: {0}", outputDir);
+
+        if (!System.IO.Directory.Exists(outputDir))
+        {
+          Log.WriteLine("Output directory doesn't exist.");
+          return;
+        }
+
+        // emoji12-C64_YUV-2v5x5+2
+        if (fontProvider == null)
+        {
+          Log.WriteLine("Font information not specified.");
+          return;
+        }
+        if (pixelFormat == null)
+        {
+          Log.WriteLine("Pixel format not specified.");
+          return;
+        }
+        if (partitionManager == null)
+        {
+          Log.WriteLine("Space partitioning unspecified");
+          return;
+        }
+        string configTag = string.Format("{0}_{1}_{2}", fontProvider.DisplayName, pixelFormat.PixelFormatString, partitionManager);
+        outputDir = System.IO.Path.Combine(outputDir, configTag);
+        Log.WriteLine("Creating directory: {0}", outputDir);
+        System.IO.Directory.CreateDirectory(outputDir);
+
+        string logPath = System.IO.Path.Combine(outputDir, "log.txt");
+
+        Log.SetLogFile(logPath);
+
+        Timings t = new Timings();
+        t.EnterTask("--- MAP GENERATION");
+
+        string mapFullPath = System.IO.Path.Combine(outputDir, string.Format("mapfull_{0}.png", configTag));
+        string mapRefPath = System.IO.Path.Combine(outputDir, string.Format("mapref_{0}.png", configTag));
+        string mapFontPath = System.IO.Path.Combine(outputDir, string.Format("mapfont_{0}.png", configTag));
+
+        var map = new HybridMap2(fontProvider, partitionManager, pixelFormat,
+          mapFullPath,
+          mapRefPath,
+          mapFontPath,
+          coresToUtilize);
+
+        if (fontFamilyProvider != null)
+        {
+          string fontImgPath = System.IO.Path.Combine(outputDir, "font.png");
+          fontFamilyProvider.SaveFontImage(fontImgPath);
         }
 
         t.EndTask();
-      }
 
+        ////var emoji12ShouldBeBlack = new Point(468, 264);
+        map.TestColor(outputDir, ColorFUtils.FromRGB(0, 0, 0));//, emoji12ShouldBeBlack);//, new Point(468, 264), new Point(288, 0), new Point(0, 264));
+        map.TestColor(outputDir, ColorFUtils.FromRGB(128, 0, 0));
+        map.TestColor(outputDir, ColorFUtils.FromRGB(128, 128, 128));
+        map.TestColor(outputDir, ColorFUtils.FromRGB(0, 128, 0), new Point(468, 264));
+        map.TestColor(outputDir, ColorFUtils.FromRGB(0, 0, 128), new Point(372, 252));
+        map.TestColor(outputDir, ColorFUtils.FromRGB(255, 255, 255));//, new Point(385, 277));
+
+        if (processImagesInDir != null && System.IO.Directory.Exists(processImagesInDir))
+        {
+          t.EnterTask("processing images");
+
+          var files = System.IO.Directory.EnumerateFiles(processImagesInDir, "*", System.IO.SearchOption.TopDirectoryOnly);
+          foreach (var file in files)
+          {
+            //Log.WriteLine("Processing {0}", file);
+            string destFile = string.Format("test-{0}.png", System.IO.Path.GetFileNameWithoutExtension(file));
+            string destfullp = System.IO.Path.Combine(outputDir, destFile);
+            var rv = map.ProcessImageUsingRef(mapRefPath, mapFontPath, file, destfullp);
+            if (fontFamilyProvider != null)
+            {
+              string str = fontFamilyProvider.ConvertToText(rv);
+              string txtpath = System.IO.Path.Combine(outputDir, string.Format("test-{0}.txt", System.IO.Path.GetFileNameWithoutExtension(file)));
+              System.IO.File.WriteAllText(txtpath, str);
+            }
+          }
+
+          t.EndTask();
+        }
+
+#if !DEBUG
+      }
+      catch (Exception e)
+      {
+        Log.WriteLine("Exception occurred:\r\n{0}", e);
+      }
+#endif
     }
   }
 }
