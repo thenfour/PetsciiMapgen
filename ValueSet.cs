@@ -10,9 +10,46 @@ using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using Newtonsoft.Json;
 
 namespace PetsciiMapgen
 {
+  public class ValueSetJsonConverter : Newtonsoft.Json.JsonConverter<ValueSet>
+  {
+    public override unsafe ValueSet ReadJson(JsonReader reader, Type objectType, ValueSet existingValue, bool hasExistingValue, JsonSerializer serializer)
+    {
+      ValueSet r;
+      Dictionary<string, object> d = new Dictionary<string, object>();
+      d = (Dictionary<string, object>)serializer.Deserialize(reader);
+
+      r.Mapped = false;
+      r.MinDistFound = -1;
+      r.Visited = true;
+      r.ID = (long)d["ID"];
+      r.ValuesLength = (int)d["ValuesLength"];
+      for (int i = 0; i < r.ValuesLength; ++i)
+      {
+        r.ColorData[i] = (float)d["v" + i.ToString("00")];
+      }
+      return r;
+    }
+
+    public override unsafe void WriteJson(JsonWriter writer, ValueSet value, JsonSerializer serializer)
+    {
+      Dictionary<string, object> d = new Dictionary<string, object>();
+      d["ValuesLength"] = value.ValuesLength;
+      d["ID"] = value.ID;
+      for(int i = 0; i < value.ValuesLength; ++ i)
+      {
+        d["v" + i.ToString("00")] = value.ColorData[i];
+      }
+      serializer.Serialize(writer, d);
+    }
+    public override bool CanRead { get { return true; } }
+    public override bool CanWrite { get { return true; } }
+  }
+
+  [Newtonsoft.Json.JsonConverter(typeof(ValueSetJsonConverter))]
   public unsafe struct ValueSet
   {
     public int ValuesLength;
@@ -31,10 +68,11 @@ namespace PetsciiMapgen
       return string.Format("[{0}]", string.Join(",", items));
     }
 
-//#if DEBUG
-// DONT DO THIS because it will cause issues with references vs. copies to this field.
-//    public float[] ColorData;
-//#else
+    //#if DEBUG
+    // DONT DO THIS because it will cause issues with references vs. copies to this field.
+    //    public float[] ColorData;
+    //#else
+    //[Newtonsoft.Json.JsonArray()]
     public fixed float ColorData[11];
 //#endif
     //public fixed float NormValues[11];// values 0-1

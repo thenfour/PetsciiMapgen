@@ -137,7 +137,7 @@ namespace EmojiTest
     }
     public static GenerateEmojiBitmapResults GenerateEmojiBitmap(string fontName, int cellWidth, int cellHeight,
       float additionalScale, int shiftX, int shiftY, IEnumerable<EmojiInfo> codepointsToInclude,
-      System.Drawing.Color backgroundColor, System.Drawing.Color textColor, float aspectToleranceFromTarget, bool tryToFit)
+      System.Drawing.Color backgroundColor, System.Drawing.Color textColor, float? aspectToleranceFromTarget, bool tryToFit)
     {
       EmojiTest.Direct2DText dt = new EmojiTest.Direct2DText();
       RawColor4 bg = new RawColor4(backgroundColor.R / 255.0f, backgroundColor.G / 255.0f, backgroundColor.B / 255.0f, 1);
@@ -160,6 +160,8 @@ namespace EmojiTest
       PetsciiMapgen.Utils.ValueRangeInspector rangeY = new PetsciiMapgen.Utils.ValueRangeInspector();
       PetsciiMapgen.Utils.ValueRangeInspector allAspects = new PetsciiMapgen.Utils.ValueRangeInspector();
       PetsciiMapgen.Utils.ValueRangeInspector selectedAspects = new PetsciiMapgen.Utils.ValueRangeInspector();
+      int rejectedBecauseNotInTypeface = 0;
+      int rejectedBecauseAspect = 0;
       var emoji = codepointsToInclude.Select(e =>
       {
         pr.Visit();
@@ -193,13 +195,19 @@ namespace EmojiTest
         if (o.info.forceInclude)
           return true;
         if (gtf != null) {
-          if (!gtf.CharacterToGlyphMap.ContainsKey(o.info.cps[0])) // is this good enough of a check?
+          if (!gtf.CharacterToGlyphMap.ContainsKey(o.info.cps[0]))
+          { // is this good enough of a check? 
+            rejectedBecauseNotInTypeface++;
             return false;
+          }
         }
         float aspect = o.width / o.height;
         float da = Math.Abs(aspect - targetAspect);
-        if (da > aspectToleranceFromTarget)
+        if (aspectToleranceFromTarget.HasValue && da > aspectToleranceFromTarget)
+        {
+          rejectedBecauseAspect++;
           return false;
+        }
 
         selectedAspects.Visit(aspect);
         return true;
@@ -207,7 +215,12 @@ namespace EmojiTest
       .OrderBy(o => o.scaleNeeded).ToArray();
 
       PetsciiMapgen.Log.WriteLine("EMOJI font encountered aspect ratios between {0}", allAspects);
-      PetsciiMapgen.Log.WriteLine("EMOJI font allowed aspect ratios between {0}", selectedAspects);
+      PetsciiMapgen.Log.WriteLine("Chars rejected because they don't have glyphs in this typeface: {0:N0}", rejectedBecauseNotInTypeface);
+      PetsciiMapgen.Log.WriteLine("Chars rejected because aspect ratio out of range: {0:N0}", rejectedBecauseAspect);
+      if (aspectToleranceFromTarget.HasValue)
+      {
+        PetsciiMapgen.Log.WriteLine("EMOJI font allowed aspect ratios between {0}", selectedAspects);
+      }
 
       int count = emoji.Count();
       int columns = (int)Math.Ceiling(Math.Sqrt(count));

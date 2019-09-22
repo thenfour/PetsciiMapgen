@@ -53,6 +53,7 @@ FontFile. Glyphs used are specified in unicodeglyphTextFile.
   -trytofit 0 or 1         attempts to scale to fit the glyphs within the char rect.
   -fontfamily
   -fontfile
+  -CharListTextFile        a utf-8 text file with a list of all characters to use as a charset.
   -unicodeglyphTextFile    file which defines the glyphs to select. not fully
                            thought through; currently only supports the format
                            at https://unicode.org/Public/emoji/12.0/emoji-test.txt
@@ -60,5 +61,5 @@ FontFile. Glyphs used are specified in unicodeglyphTextFile.
   -fgcolor
   -scale
   -shift XxY
-  -aspectTolerance         Discards glyphs whose natural aspect ratio are too distant.
+  -aspectTolerance         Optional. Discards glyphs whose natural aspect ratio are too distant. This check isn't performed if omitted or invalid.
   -fontname                Optional, for file naming because the calculated font family name can be long.

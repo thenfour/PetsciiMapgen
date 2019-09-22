@@ -28,13 +28,14 @@ namespace PetsciiMapgen
     public Color ForegroundColor { get; private set; }
     public float Scale { get; private set; }
     public Size Shift { get; private set; }
-    public float AspectTolerance { get; private set; }
+    public float? AspectTolerance { get; private set; }
     public string FontName { get; private set; }
     public string FontFile { get; private set; }
     public bool TryToFit { get; private set; }
+    public string CharListTextFile { get; private set; }
 
     public FontFamilyFontProvider(string fontFamily, string fontFile, Size charSize, string unicodeGlyphTextFile,
-      Color bgColor, Color fgColor, float scale, Size shift, float aspectTolerance, string fontName, bool tryToFit)
+      Color bgColor, Color fgColor, float scale, Size shift, float? aspectTolerance, string fontName, bool tryToFit, string charListTextFile)
     {
       this.CharSizeNoPadding = charSize;
       this.FontFamily = fontFamily;
@@ -47,9 +48,28 @@ namespace PetsciiMapgen
       this.AspectTolerance = aspectTolerance;
       this.FontName = fontName;
       this.TryToFit = tryToFit;
+      this.CharListTextFile = charListTextFile;
 
-      //var cps = EmojiTest.Utils.AllEmojisWithModifiers(UnicodeGlyphTextFile);
-      var cps = EmojiTest.Utils.AllEmojiCodepoints(UnicodeGlyphTextFile);
+      IEnumerable<EmojiTest.Utils.EmojiInfo> cps = null;
+      if (!string.IsNullOrEmpty(UnicodeGlyphTextFile))
+      {
+        cps = EmojiTest.Utils.AllEmojiCodepoints(UnicodeGlyphTextFile);
+      }
+      if (!string.IsNullOrEmpty(CharListTextFile))
+      {
+        string s = System.IO.File.ReadAllText(charListTextFile);
+        List<EmojiTest.Utils.EmojiInfo> cps2 = new List<EmojiTest.Utils.EmojiInfo>();
+        foreach (char c in s.Distinct())
+        {
+          EmojiTest.Utils.EmojiInfo o;
+          o.attribute = null;
+          o.cps = new int[] { c };
+          o.forceInclude = false;
+          o.str = c.ToString();
+          cps2.Add(o);
+        }
+        cps = cps2;
+      }
       PetsciiMapgen.Log.WriteLine("Total fontfamily codepoint sequences to process: {0:N0}", cps.Count());
 
       if (!string.IsNullOrEmpty(FontFile))
@@ -104,12 +124,17 @@ namespace PetsciiMapgen
       float scale = 1.0f;
       Size shift = new Size(0, 0);
       string fontName = "";
-      float aspectTolerance = 1;
+      float? aspectTolerance = null;
       bool tryToFit = false;
+      string charListTextFile = "";
 
       args.ProcessArg("-fontfamily", s =>
       {
         fontFamily = s;
+      });
+      args.ProcessArg("-charListTextFile", s =>
+      {
+        charListTextFile = s;
       });
       args.ProcessArg("-tryToFit", s =>
       {
@@ -145,14 +170,19 @@ namespace PetsciiMapgen
       });
       args.ProcessArg("-aspectTolerance", s =>
       {
-        aspectTolerance = float.Parse(s);
+        if (float.TryParse(s, out float f))
+        {
+          aspectTolerance = f;
+        }
       });
       args.ProcessArg("-fontname", s =>
       {
         fontName = s;
       });
 
-      return new FontFamilyFontProvider(fontFamily, fontFile, charSize, unicodeGlyphTextFile, bgColor, fgColor, scale, shift, aspectTolerance, fontName, tryToFit);
+      return new FontFamilyFontProvider(fontFamily, fontFile, charSize, unicodeGlyphTextFile,
+        bgColor, fgColor, scale, shift, aspectTolerance, fontName,
+        tryToFit, charListTextFile);
     }
 
     private PrivateFontCollection _fontCollection;

@@ -89,23 +89,20 @@ namespace PetsciiMapgen
       //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
       //};
 
-
       //// topaz 3.1
       //args = new string[] {
-      //  "-listpalettes",
       //  "-outdir", "C:\\temp",
+      //  "-partitions", "3x11",
+      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+
+      //  "-pf", "yuv",
+      //  "-pfargs", "10v3x2+0",
 
       //  "-fonttype", "mono",
       //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\topaz96.gif",
-      //  "-charsize", "12x12",
-      //  "-palette", "Workbench134",
-      //  //"-palette", "Workbench314",
-
-      //  "-pf", "yuv",
-      //  "-pfargs", "9v3x2+0",
-      //  //"-pfargs", "11v2x2+0",
-      //  "-partitions", "3x11",
-      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      //  "-charsize", "8x16",
+      //  //"-palette", "Workbench134",
+      //  "-palette", "Workbench314",
       //};
 
       // emoji grayscale
@@ -124,21 +121,19 @@ namespace PetsciiMapgen
       //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
       //};
 
-      //  // mz700 grayscale
-      //  args = new string[] {
-      //  "-listpalettes",
+      //// mz700 blackandwhite
+      //args = new string[] {
       //  "-outdir", "C:\\temp",
+      //  "-partitions", "3x11",
+      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+
+      //  "-pf", "yuv",
+      //  "-pfargs", "12v3x2+0",
 
       //  "-fonttype", "mono",
       //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\mz700.png",
       //  "-charsize", "8x8",
       //  "-palette", "BlackAndWhite",
-
-      //  "-pf", "yuv",
-      //  //"-pfargs", "5v3x3+0",
-      //  "-pfargs", "11v3x2+0",
-      //  "-partitions", "3x11",
-      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
       //};
 
       //  // C64 grayscale
@@ -158,31 +153,27 @@ namespace PetsciiMapgen
       //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
       //};
 
-      // this is pretty well tuned for Noto
-      args = new string[] {
-        "-listpalettes",
-        "-outdir", "C:\\temp",
+      //// EMOJI ONE
+      //args = new string[] {
+      //  "-outdir", "C:\\temp",
+      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      //  "-partitions", "3x6",
 
-        "-fonttype", "fontfamily",
-        "-fontfile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\EmojiOneColor.otf",
-        //"-fontfamily", "Segoe UI emoji",
-        "-fontname", "EmojiOne",
-        // for 24x24, 1.2x, shift 0x-3
-        // for 12x12, 1.2x, shift 0x-2
-        "-trytofit", "true",
-        "-charsize", "16x16",
-        "-scale", "1.2",
-        "-shift", "0x-1",
-        "-UnicodeGlyphTextFile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emoji-test.txt",
-        "-aspecttolerance", "1.0",
-        "-bgcolor", "#000000",
-        "-fgcolor", "#ffffff",
+      //  "-pf", "yuv",
+      //  "-pfargs", "5v2x2+2",
 
-        "-pf", "yuv",
-        "-pfargs", "5v2x2+2",
-        "-partitions", "3x6",
-        "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-      };
+      //  "-fonttype", "fontfamily",
+      //  "-fontfile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\EmojiOneColor.otf",
+      //  "-fontname", "EmojiOne",
+      //  "-trytofit", "true",
+      //  "-charsize", "16x16",
+      //  "-scale", "1.2",
+      //  "-shift", "0x-1",
+      //  "-UnicodeGlyphTextFile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emoji-test.txt",
+      //  "-aspecttolerance", "1.0",
+      //  "-bgcolor", "#000000",
+      //  "-fgcolor", "#ffffff",
+      //};
 
       //// this is pretty well tuned for Noto
       //args = new string[] {
@@ -232,31 +223,58 @@ namespace PetsciiMapgen
       //    "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
       //  };
 
-      //args = new string[] {
-      //  //"-listpalettes",
-      //  "-outdir", "C:\\temp\\xyz",
-      //  "-fonttype", "Normal",
-      //  "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\c64opt160.png",
-      //  "-charsize", "8x8",
-      //  "-pf", "yuv",
-      //  "-pfargs", "7v2x2+2",
-      //  "-partitions", "2x3",
-      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-      //};
+
 
       //args = new string[] {
-      //  "-listpalettes",
-      //  "-outdir", "C:\\temp\\xyz",
+      //    "-outdir", "C:\\temp",
+
+      //    "-fonttype", "fontfamily",
+      //    "-fontfamily", "Arial Unicode MS",
+      //    "-fontname", "Arial",
+      //    "-charsize", "16x16",
+      //    "-scale", "1.6",
+      //    "-shift", "0x0",
+      //    "-trytofit", "true",
+      //    "-CharListTextFile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\alphanum.txt",
+      //    "-bgcolor", "#000000",
+      //    "-fgcolor", "#ffffff",
+
+      //    "-pf", "yuv",
+      //    "-pfargs", "4v2x2+0",
+      //    "-partitions", "2x6",
+      //    "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      //  };
+
+      // C64 grayscale (using full c64 palette)
+      // 7v3x3 takes like 1 hour to process but works well!
+      args = new string[] {
+        "-outdir", "C:\\temp",
+        "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+        "-partitions", "3x6",
+
+        "-pf", "yuv",
+        "-pfargs", "7v2x2+0",
+
+          "-fonttype", "mono",
+        "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\c64opt160.png",
+        "-charsize", "8x8",
+          "-palette", "C64Color",
+        };
+
+      //args = new string[] {
+      //  "-outdir", "C:\\temp",
+      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      //  "-partitions", "3x5",
+
+      //  "-pf", "yuv",
+      //  "-pfargs", "9v2x2+2",
+
       //  "-fonttype", "colorkey",
       //  "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\mariotiles4.png",
       //  "-charsize", "16x16",
       //  "-topleftpadding", "1",
       //  "-colorkey", "#04c1aa",
       //  "-palette", "MarioBg",
-      //  "-pf", "yuv",
-      //  "-pfargs", "5v3x3+0",
-      //  "-partitions", "3x3",
-      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
       //};
 
       PartitionManager partitionManager = new PartitionManager(1, 1);

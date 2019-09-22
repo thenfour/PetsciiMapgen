@@ -19,7 +19,7 @@ namespace PetsciiMapgen
 {
   public class HybridMap2
   {
-    public Bitmap FullMapBitmap;
+    //public Bitmap FullMapBitmap;
     public CharInfo[] DistinctMappedChars;
     public ValueSet[] Keys { get; private set; }
     public List<CharInfo> CharInfo { get; private set; }
@@ -335,11 +335,14 @@ namespace PetsciiMapgen
         return;
       }
 
-      this.FullMapBitmap = new Bitmap(mapImageSize.Width, mapImageSize.Height, PixelFormat.Format24bppRgb);
+      var FullMapBitmap = new Bitmap(mapImageSize.Width, mapImageSize.Height, PixelFormat.Format24bppRgb);
       BitmapData destData = FullMapBitmap.LockBits(new Rectangle(0, 0, mapImageSize.Width, mapImageSize.Height), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
+
+      ProgressReporter pr = new ProgressReporter(Keys.Length);
 
       foreach (ValueSet k in Keys)
       {
+        pr.Visit();
         CharInfo ci = this.CharInfo[Map[k.ID].icharInfo];
 
         long cellY = k.ID / numCellsX;
@@ -412,6 +415,26 @@ namespace PetsciiMapgen
       refMapBmp.UnlockBits(destData);
 
       refMapBmp.Save(MapRefPath);
+
+      // save data structures
+      string jsonDistinctMappedChars = Newtonsoft.Json.JsonConvert.SerializeObject(DistinctMappedChars, Newtonsoft.Json.Formatting.Indented);
+      System.IO.File.WriteAllText(System.IO.Path.Combine(MapRefPath, "..\\DistinctMappedChars.json"), jsonDistinctMappedChars);
+
+      string jsonKeys = Newtonsoft.Json.JsonConvert.SerializeObject(Keys, Newtonsoft.Json.Formatting.Indented);
+      System.IO.File.WriteAllText(System.IO.Path.Combine(MapRefPath, "..\\Keys.json"), jsonKeys);
+
+      string jsonCharInfo = Newtonsoft.Json.JsonConvert.SerializeObject(CharInfo, Newtonsoft.Json.Formatting.Indented);
+      System.IO.File.WriteAllText(System.IO.Path.Combine(MapRefPath, "..\\CharInfo.json"), jsonCharInfo);
+
+      string jsonMap = Newtonsoft.Json.JsonConvert.SerializeObject(Map, Newtonsoft.Json.Formatting.Indented);
+      System.IO.File.WriteAllText(System.IO.Path.Combine(MapRefPath, "..\\Map.json"), jsonMap);
+
+      //var js = new Newtonsoft.Json.JsonConverter<CharInfo>();
+
+      //public CharInfo[] DistinctMappedChars;
+      //public ValueSet[] Keys { get; private set; }
+      //public List<CharInfo> CharInfo { get; private set; }
+      //public Mapping[] Map;
     }
 
     public Color RefFontIndexToColor(int fontIndex)
@@ -434,49 +457,49 @@ namespace PetsciiMapgen
       return ((int)fontID);// / 0x10;
     }
 
-    public unsafe void ProcessImage(string srcImagePath, string destImagePath)
-    {
-      Log.WriteLine("  tranfsorm image + " + srcImagePath);
-      var testImg = Image.FromFile(srcImagePath);
-      Bitmap testBmp = new Bitmap(testImg);
-      Bitmap destImg = new Bitmap(testBmp.Width, testBmp.Height, PixelFormat.Format32bppArgb);
+    //public unsafe void ProcessImage(string srcImagePath, string destImagePath)
+    //{
+    //  Log.WriteLine("  tranfsorm image + " + srcImagePath);
+    //  var testImg = Image.FromFile(srcImagePath);
+    //  Bitmap testBmp = new Bitmap(testImg);
+    //  Bitmap destImg = new Bitmap(testBmp.Width, testBmp.Height, PixelFormat.Format32bppArgb);
 
-      int mapCellsX = FullMapBitmap.Width / FontProvider.CharSizeNoPadding.Width;
+    //  int mapCellsX = FullMapBitmap.Width / FontProvider.CharSizeNoPadding.Width;
 
-      using (var g = Graphics.FromImage(destImg))
-      {
-        ColorF srcColor = ColorFUtils.Init;
-        ColorF yuv = ColorFUtils.Init;
-        for (int srcCellY = 0; srcCellY < testImg.Height / FontProvider.CharSizeNoPadding.Height; ++srcCellY)
-        {
-          for (int srcCellX = 0; srcCellX < testImg.Width / FontProvider.CharSizeNoPadding.Width; ++srcCellX)
-          {
-            // sample in the cell to determine the "key" "ID".
-            ColorF charC = ColorFUtils.Init;
-            int ID = PixelFormatProvider.GetMapIndexOfRegion(testBmp,
-              srcCellX * FontProvider.CharSizeNoPadding.Width,
-              srcCellY * FontProvider.CharSizeNoPadding.Height,
-              FontProvider.CharSizeNoPadding
-              );
+    //  using (var g = Graphics.FromImage(destImg))
+    //  {
+    //    ColorF srcColor = ColorFUtils.Init;
+    //    ColorF yuv = ColorFUtils.Init;
+    //    for (int srcCellY = 0; srcCellY < testImg.Height / FontProvider.CharSizeNoPadding.Height; ++srcCellY)
+    //    {
+    //      for (int srcCellX = 0; srcCellX < testImg.Width / FontProvider.CharSizeNoPadding.Width; ++srcCellX)
+    //      {
+    //        // sample in the cell to determine the "key" "ID".
+    //        ColorF charC = ColorFUtils.Init;
+    //        int ID = PixelFormatProvider.GetMapIndexOfRegion(testBmp,
+    //          srcCellX * FontProvider.CharSizeNoPadding.Width,
+    //          srcCellY * FontProvider.CharSizeNoPadding.Height,
+    //          FontProvider.CharSizeNoPadding
+    //          );
 
-            long mapCellY = ID / mapCellsX;
-            long mapCellX = ID - (mapCellY * mapCellsX);
+    //        long mapCellY = ID / mapCellsX;
+    //        long mapCellX = ID - (mapCellY * mapCellsX);
 
-            // blit from map img.
-            Rectangle srcRect = new Rectangle(
-              (int)mapCellX * FontProvider.CharSizeNoPadding.Width,
-              (int)mapCellY * FontProvider.CharSizeNoPadding.Height,
-              FontProvider.CharSizeNoPadding.Width, FontProvider.CharSizeNoPadding.Height);
-            g.DrawImage(FullMapBitmap,
-              srcCellX * FontProvider.CharSizeNoPadding.Width,
-              srcCellY * FontProvider.CharSizeNoPadding.Height,
-              srcRect, GraphicsUnit.Pixel);
-          }
-        }
-      }
+    //        // blit from map img.
+    //        Rectangle srcRect = new Rectangle(
+    //          (int)mapCellX * FontProvider.CharSizeNoPadding.Width,
+    //          (int)mapCellY * FontProvider.CharSizeNoPadding.Height,
+    //          FontProvider.CharSizeNoPadding.Width, FontProvider.CharSizeNoPadding.Height);
+    //        g.DrawImage(FullMapBitmap,
+    //          srcCellX * FontProvider.CharSizeNoPadding.Width,
+    //          srcCellY * FontProvider.CharSizeNoPadding.Height,
+    //          srcRect, GraphicsUnit.Pixel);
+    //      }
+    //    }
+    //  }
 
-      destImg.Save(destImagePath);
-    }
+    //  destImg.Save(destImagePath);
+    //}
 
     // returns map from cell => REFFONT char id
     public unsafe IDictionary<Point, int> ProcessImageUsingRef(string MapRefPath, string MapRefFontPath, string srcImagePath, string destImagePath)
