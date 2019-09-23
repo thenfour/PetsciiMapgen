@@ -129,5 +129,11 @@ namespace PetsciiMapgen
     {
       return string.Format("p{0}x{1}", this.PartitionsPerDimension, this.Depth);
     }
+
+    internal void WriteConfig(StringBuilder sb)
+    {
+      sb.AppendLine(string.Format("partitionsPerDimension=" + this.PartitionsPerDimension));
+      sb.AppendLine(string.Format("partitionDepth=" + this.Depth));
+    }
   }
 }

@@ -439,9 +439,9 @@ namespace PetsciiMapgen
     {
       // we will just do this as if each value is a digit in a number. that's the analogy that drives this.
       // actually this symbolizes the # of digits in the result, PLUS the number of possible values per digit.
-      long numDigits = discreteNormalizedValuesPerTile.Length;
-      long theoreticalBase = numDigits;
-      long totalPermutations = Pow(numDigits, (uint)numDimensions);
+      ulong numDigits = (ulong)discreteNormalizedValuesPerTile.Length;
+      ulong theoreticalBase = numDigits;
+      ulong totalPermutations = (ulong)Pow((long)numDigits, (uint)numDimensions);
       if (totalPermutations > int.MaxValue)
       {
         Log.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!");
@@ -454,21 +454,34 @@ namespace PetsciiMapgen
       float[] normalizedValues = new float[numDimensions];
 
       ValueSet[] ret = new ValueSet[totalPermutations];
-      for (long i = 0; i < totalPermutations; ++i)
+      for (ulong i = 0; i < totalPermutations; ++i)
       {
         // just like digits in a number, use % and divide to shave off "digits" one by one.
-        long a = i;// the value that originates from i and we shift/mod to enumerate digits
+        ulong a = i;// the value that originates from i and we shift/mod to enumerate digits
         //ValueSet n = NewValueSet(numTiles, i);
         for (int d = 0; d < numDimensions; ++d)
         {
-          long thisIndex = a % theoreticalBase;
+          ulong thisIndex = a % theoreticalBase;
           a /= theoreticalBase;
           normalizedValues[d] = discreteNormalizedValuesPerTile[(int)thisIndex];
           //ret[i].Values[d] = discreteValuesPerTile[(int)thisIndex];
         }
-        ValueSet.Init(ref ret[i], numDimensions, i, normalizedValues);
+        ValueSet.Init(ref ret[i], numDimensions, (long)i, normalizedValues);
         //ret.Add(n);
+        //for (int xxx = 0; xxx < ret[i].ValuesLength; ++xxx)
+        //{
+        //  Debug.Assert(ret[14].ColorData[xxx] == 0 || ret[14].ColorData[xxx] == 0.5 || ret[14].ColorData[xxx] == 1.0);
+        //}
       }
+
+      //foreach (var r in ret)
+      //{
+      //  for (int i = 0; i < r.ValuesLength; ++ i)
+      //  {
+      //    Debug.Assert(r.ColorData[i] == 0 || r.ColorData[i] == 0.5 || r.ColorData[i] == 1.0);
+      //  }
+      //}
+
       return ret;
     }
 

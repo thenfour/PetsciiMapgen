@@ -51,6 +51,7 @@ namespace PetsciiMapgen
     int NormalizedValueSetToMapID(float[] vals);
     int DebugGetMapIndexOfColor(ColorF charRGB);
     int GetMapIndexOfRegion(Bitmap img, int x, int y, Size sz);
+    void WriteConfig(StringBuilder sb);
   }
 
 
@@ -74,6 +75,18 @@ namespace PetsciiMapgen
 
     protected int LumaComponentCount { get; private set; }
     protected int ChromaComponentCount { get; private set; }
+
+    protected Size LumaTiles { get; private set; }
+    protected bool UseChroma { get; private set; }
+
+    public virtual void WriteConfig(StringBuilder sb)
+    {
+      sb.AppendLine("# LCC pixel format provider config");
+      sb.AppendLine(string.Format("valuesPerComponent={0}", DiscreteNormalizedValues.Length));
+      sb.AppendLine(string.Format("lumaRows={0}", LumaTiles.Height));
+      sb.AppendLine(string.Format("lumaColumns={0}", LumaTiles.Width));
+      sb.AppendLine(string.Format("chromaComponents={0}", ChromaComponentCount));
+    }
 
     public string PixelFormatString
     {
@@ -101,10 +114,6 @@ namespace PetsciiMapgen
       lumaTiles = lumaTiles_;
       useChroma = useChroma_;
     }
-
-
-    protected Size LumaTiles { get; private set; }
-    protected bool UseChroma { get; private set; }
 
     public int MapEntryCount
     {

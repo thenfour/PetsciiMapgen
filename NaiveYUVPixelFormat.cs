@@ -73,6 +73,13 @@ namespace PetsciiMapgen
     double lumaMult;
     double chromaMult;
 
+    public override void WriteConfig(StringBuilder sb)
+    {
+      base.WriteConfig(sb);
+      sb.AppendLine(string.Format("lumaMult={0}", this.lumaMult));
+      sb.AppendLine(string.Format("chromaMult={0}", this.chromaMult));
+    }
+
     public NaiveYUVPixelFormat(int valuesPerComponent, Size lumaTiles, bool useChroma, double lumaMult = 1.5, double chromaMult = 1) :
       base(valuesPerComponent, lumaTiles, useChroma)
     {

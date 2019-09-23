@@ -19,17 +19,23 @@ namespace PetsciiMapgen
     public override unsafe ValueSet ReadJson(JsonReader reader, Type objectType, ValueSet existingValue, bool hasExistingValue, JsonSerializer serializer)
     {
       ValueSet r;
-      Dictionary<string, object> d = new Dictionary<string, object>();
-      d = (Dictionary<string, object>)serializer.Deserialize(reader);
+      //Dictionary<string, object> d = new Dictionary<string, object>();
+      Newtonsoft.Json.Linq.JObject jo = (Newtonsoft.Json.Linq.JObject)serializer.Deserialize(reader);
+      var d = jo.ToObject<Dictionary<string, object>>();
+      //d = (Dictionary<string, object>)serializer.Deserialize(reader);
 
       r.Mapped = false;
       r.MinDistFound = -1;
       r.Visited = true;
+
+      //r.ID = 0;
+      //r.ValuesLength = 0;
+
       r.ID = (long)d["ID"];
-      r.ValuesLength = (int)d["ValuesLength"];
+      r.ValuesLength = Convert.ToInt32(d["ValuesLength"]);
       for (int i = 0; i < r.ValuesLength; ++i)
       {
-        r.ColorData[i] = (float)d["v" + i.ToString("00")];
+        r.ColorData[i] = (float)Convert.ToDouble(d["v" + i.ToString("00")]);
       }
       return r;
     }
@@ -73,9 +79,10 @@ namespace PetsciiMapgen
     //    public float[] ColorData;
     //#else
     //[Newtonsoft.Json.JsonArray()]
-    public fixed float ColorData[11];
+    const int MaxDimensions = 20;
+    public fixed float ColorData[MaxDimensions];
 //#endif
-    //public fixed float NormValues[11];// values 0-1
+    //public fixed float NormValues[20];// values 0-1
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static ValueSet New(int dimensionsPerCharacter, long id)
@@ -88,8 +95,12 @@ namespace PetsciiMapgen
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void Init(ref ValueSet n, int dimensionsPerCharacter, long id, float[] normalizedValues)
     {
+      if (dimensionsPerCharacter > MaxDimensions)
+      {
+        throw new Exception("Maximum dimensions is established as " + MaxDimensions);
+      }
 #if DEBUG
-     // n.ColorData = new float[11];
+      // n.ColorData = new float[20];
 #endif
       n.ValuesLength = dimensionsPerCharacter;
       n.ID = id;

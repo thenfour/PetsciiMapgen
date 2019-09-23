@@ -5,10 +5,22 @@ Command options:
 
 -help
 -listpalettes
+
+-argsfile path            path to text file of args. each line = 1 arg, for clarity
+-loadmap path             loads an existing map from the specified output
+                          directory. use with -processImages* or -test* etc.
+
+-testcolor #ff00ff        outputs an image and log testing matching a certain color
+-testpalette              same as -testcolor but over a whole named palette
+
 -partitions NxN           optional; default 1 flat partition
 -outdir path              required to do any output
 -processImagesInDir path
+-processImage path
 -cores N                  if N<=0, we use (processor count - N)
+-loadstate path           attempts to load mapping state from disk, and only
+                          process images based off that. so you can process more
+                          images without having to regen the map.
 
 -pf ID                    Pixel format: YUV, LAB, HSL
 -pfargs NvXvY+C           defines the pixel format parameters
@@ -48,6 +60,7 @@ over the specified palette
 FONTFAMILY
 Generates a font image from a typeface specified by either fontFamily or
 FontFile. Glyphs used are specified in unicodeglyphTextFile.
+This is unique in that it produces a text file along with images.
 ----------------
   -charSize XxY
   -trytofit 0 or 1         attempts to scale to fit the glyphs within the char rect.
@@ -61,5 +74,8 @@ FontFile. Glyphs used are specified in unicodeglyphTextFile.
   -fgcolor
   -scale
   -shift XxY
-  -aspectTolerance         Optional. Discards glyphs whose natural aspect ratio are too distant. This check isn't performed if omitted or invalid.
-  -fontname                Optional, for file naming because the calculated font family name can be long.
+  -aspectTolerance         Optional. Discards glyphs whose natural aspect ratio
+                           are too distant. This check isn't performed if
+                           omitted or invalid.
+  -fontname                Optional, for file naming because the calculated
+                           font family name can be long.

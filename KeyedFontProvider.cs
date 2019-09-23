@@ -36,6 +36,19 @@ namespace PetsciiMapgen
       public int paletteIndex;
     }
 
+    public virtual void WriteConfig(StringBuilder sb)
+    {
+      sb.AppendLine("fontType=ColorKey");
+      sb.AppendLine(string.Format("charWidth={0}", this.CharSizeNoPadding.Width));
+      sb.AppendLine(string.Format("charHeight={0}", this.CharSizeNoPadding.Height));
+      sb.AppendLine(string.Format("CharCount={0}", this.CharCount));
+      sb.AppendLine(string.Format("FontFileName={0}", this.FontFileName));
+      sb.AppendLine(string.Format("ColorKey={0}", this.ColorKey));
+      sb.AppendLine(string.Format("LeftTopPadding={0}", this.LeftTopPadding));
+
+      sb.AppendLine(string.Format("Palette={0}", this.Palette));
+    }
+
     List<CharMapping> map = new List<CharMapping>();
 
     public ColorKeyFontProvider(string fontFileName, Size charSize, Color keyColor, Color[] palette, string paletteName, int leftTopPadding)

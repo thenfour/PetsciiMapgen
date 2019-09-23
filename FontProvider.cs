@@ -24,6 +24,7 @@ namespace PetsciiMapgen
     Size CharSizeNoPadding { get; }
     void BlitCharacter(int ichar, BitmapData data, long destX, long destY);
     ColorF GetRegionColor(int ichar, Point topLeft, Size size, Size cellsPerChar, int cellOffsetX, int cellOffsetY);
+    void WriteConfig(StringBuilder sb);
     //void OnImageProcessed(IEnumerable<KeyValuePair<Point, int>> cellsMapped, string outputDir, string bitmapFilename);// called when an image has been converted. gives the emoji font provider an opportunity to output as text
   }
 
@@ -48,6 +49,16 @@ namespace PetsciiMapgen
       {
         return string.Format("{0}", System.IO.Path.GetFileNameWithoutExtension(FontFileName));
       }
+    }
+
+    public virtual void WriteConfig(StringBuilder sb)
+    {
+      sb.AppendLine("fontType=Normal");
+      sb.AppendLine(string.Format("charWidth={0}", this.CharSizeNoPadding.Width));
+      sb.AppendLine(string.Format("charHeight={0}", this.CharSizeNoPadding.Height));
+      sb.AppendLine(string.Format("fontFileName={0}", this.FontFileName));
+      sb.AppendLine(string.Format("leftTopPadding={0}", this.LeftTopPadding));
+      sb.AppendLine(string.Format("ditherStrength={0}", this.DitherProvider.Strength));
     }
 
     public FontProvider(string fontFileName, Size charSize, int leftTopPadding = 0, IDitherProvider dither = null)

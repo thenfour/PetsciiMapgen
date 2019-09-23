@@ -19,17 +19,32 @@ namespace PetsciiMapgen
 {
   public class HybridMap2
   {
-    //public Bitmap FullMapBitmap;
-    public CharInfo[] DistinctMappedChars;
+    public CharInfo[] DistinctMappedChars { get; private set; }
     public ValueSet[] Keys { get; private set; }
     public List<CharInfo> CharInfo { get; private set; }
-    public Mapping[] Map;
 
     public IFontProvider FontProvider { get; private set; }
     public IPixelFormatProvider PixelFormatProvider { get; private set; }
 
     private HybridMap2()
     {
+    }
+
+    public static HybridMap2 LoadFromDisk(string dir, IFontProvider f, IPixelFormatProvider pf)
+    {
+      HybridMap2 ret = new HybridMap2();
+      Log.WriteLine("Loading charinfo...");
+      string sci = System.IO.File.ReadAllText(System.IO.Path.Combine(dir, "CharInfo.json"));
+      ret.CharInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<List<CharInfo>>(sci);
+
+      Log.WriteLine("Loading DistinctMappedChars...");
+      string sdmc = System.IO.File.ReadAllText(System.IO.Path.Combine(dir, "DistinctMappedChars.json"));
+      ret.DistinctMappedChars = Newtonsoft.Json.JsonConvert.DeserializeObject<CharInfo[]>(sdmc);
+
+      ret.FontProvider = f;
+      ret.PixelFormatProvider = pf;
+
+      return ret;
     }
 
     public unsafe HybridMap2(IFontProvider fontProvider,
@@ -80,6 +95,9 @@ namespace PetsciiMapgen
       // create list of all mapkeys
       timings.EnterTask("Generating {0:N0} map key indices", pixelFormatProvider.MapEntryCount);
       this.Keys = Utils.Permutate(PixelFormatProvider.DimensionCount, pixelFormatProvider.DiscreteNormalizedValues); // returns sorted.
+
+      // examine keys.
+
       timings.EndTask();
 
       Log.WriteLine("Key count: " + this.Keys.Length);
@@ -98,7 +116,7 @@ namespace PetsciiMapgen
 
       List<Task> comparisonBatches = new List<Task>();
       List<MappingArray> allMappingsArray = new List<MappingArray>(BatchCount);
-      this.Map = new Mapping[Keys.Length];// indices need to be synchronized with Keys.
+      var Map = new Mapping[Keys.Length];// indices need to be synchronized with Keys.
 
       for (int ibatch = 0; ibatch < BatchCount; ++ibatch)
       {
@@ -223,9 +241,9 @@ namespace PetsciiMapgen
       }
 #endif
 
-      OutputFullMap(fullMapPath);
+      OutputFullMap(fullMapPath, Map);
 
-      this.DistinctMappedChars = this.Map.DistinctBy(o => o.icharInfo).Select(o => this.CharInfo[o.icharInfo]).ToArray();
+      DistinctMappedChars = Map.DistinctBy(o => o.icharInfo).Select(o => this.CharInfo[o.icharInfo]).ToArray();
       for (int ichar = 0; ichar < DistinctMappedChars.Length; ++ichar)
       {
         CharInfo ci = DistinctMappedChars[ichar];
@@ -233,7 +251,40 @@ namespace PetsciiMapgen
         ci.refFontIndex = ichar;
       }
 
-      OutputRefMapAndFont(refMapPath, refFontPath);
+      OutputRefMapAndFont(refMapPath, refFontPath, Map);
+
+
+      // save data structures
+      string jsonDistinctMappedChars = Newtonsoft.Json.JsonConvert.SerializeObject(DistinctMappedChars, Newtonsoft.Json.Formatting.Indented);
+      System.IO.File.WriteAllText(System.IO.Path.Combine(refMapPath, "..\\DistinctMappedChars.json"), jsonDistinctMappedChars);
+
+      //string jsonKeys = Newtonsoft.Json.JsonConvert.SerializeObject(Keys, Newtonsoft.Json.Formatting.Indented);
+      //System.IO.File.WriteAllText(System.IO.Path.Combine(refMapPath, "..\\Keys.json"), jsonKeys);
+
+      string jsonCharInfo = Newtonsoft.Json.JsonConvert.SerializeObject(CharInfo, Newtonsoft.Json.Formatting.Indented);
+      System.IO.File.WriteAllText(System.IO.Path.Combine(refMapPath, "..\\CharInfo.json"), jsonCharInfo);
+
+      //string jsonMap = Newtonsoft.Json.JsonConvert.SerializeObject(Map, Newtonsoft.Json.Formatting.Indented);
+      //System.IO.File.WriteAllText(System.IO.Path.Combine(refMapPath, "..\\Map.json"), jsonMap);
+
+      // hm not sure what thisi s REALLY good for tbh.
+      //string infopath = System.IO.Path.Combine(refMapPath, "..\\config.config");
+      //StringBuilder sb = new StringBuilder();
+
+      //sb.AppendLine("\r\n# general config:");
+      //sb.AppendLine(string.Format("cores={0}", BatchCount));
+      //sb.AppendLine(string.Format("fullMapPath={0}", System.IO.Path.GetFileName(fullMapPath)));
+      //sb.AppendLine(string.Format("refMapPath={0}", System.IO.Path.GetFileName(refMapPath)));
+      //sb.AppendLine(string.Format("refFontPath={0}", System.IO.Path.GetFileName(refFontPath)));
+
+      //sb.AppendLine("\r\n# partition manager config:");
+      //pm.WriteConfig(sb);
+      //sb.AppendLine("\r\n# pixel format config:");
+      //pixelFormatProvider.WriteConfig(sb);
+      //sb.AppendLine("\r\n# font config:");
+      //fontProvider.WriteConfig(sb);
+
+      //System.IO.File.WriteAllText(infopath, sb.ToString());
 
       Log.WriteLine("Post-map stats:");
       Log.WriteLine("  Used char count: " + numCharsUsed);
@@ -247,6 +298,11 @@ namespace PetsciiMapgen
     // top char matches, and outputs an image showing the chars found.
     public void TestColor(string outputDir, ColorF rgb, params Point[] charPixPosWUT)
     {
+      if (this.Keys == null)
+      {
+        Log.WriteLine("Keys is not yet populated. Need to generate them....");
+        this.Keys = Utils.Permutate(PixelFormatProvider.DimensionCount, PixelFormatProvider.DiscreteNormalizedValues); // returns sorted.
+      }
       const int charsToOutputToImage = 100;
       const int charsToOutputInConsole = 0;
       const int detailedCharOutput = 0;
@@ -295,7 +351,10 @@ namespace PetsciiMapgen
 
       BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, bmp.Width, FontProvider.CharSizeNoPadding.Height), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
 
-      Log.WriteLine("    listing top {0} closest characters to that map key:", charsToOutputInConsole);
+      if (charsToOutputInConsole > 0)
+      {
+        Log.WriteLine("    listing top {0} closest characters to that map key:", charsToOutputInConsole);
+      }
       int i = 0;
       foreach (var mapping in marr.GetEnumerator())
       {
@@ -314,9 +373,10 @@ namespace PetsciiMapgen
       string path = System.IO.Path.Combine(outputDir,  string.Format("TESTVIS {0}.png", rgb));
       Log.WriteLine("    Output chars to :" + path);
       bmp.Save(path);
+      bmp.Dispose();
     }
 
-    internal void OutputFullMap(string MapFullPath)
+    internal void OutputFullMap(string MapFullPath, Mapping[] Map)
     {
       int numCellsX = (int)Math.Ceiling(Math.Sqrt(this.Keys.Count()));
       Size mapImageSize = Utils.Mul(FontProvider.CharSizeNoPadding, numCellsX);
@@ -354,11 +414,12 @@ namespace PetsciiMapgen
       FullMapBitmap.UnlockBits(destData);
 
       FullMapBitmap.Save(MapFullPath);
+      FullMapBitmap.Dispose();
     }
 
     // each R,G,B value of the resulting image is a mapping. the inserted value 0-1 refers to a character
     // in the font texture.
-    internal unsafe void OutputRefMapAndFont(string MapRefPath, string MapRefFontPath)
+    internal unsafe void OutputRefMapAndFont(string MapRefPath, string MapRefFontPath, Mapping[] Map)
     {
       Log.WriteLine("FONT MAP image generation...");
       float fontMapCharCount = DistinctMappedChars.Length;
@@ -386,6 +447,8 @@ namespace PetsciiMapgen
       fontBmp.UnlockBits(destFontData);
 
       fontBmp.Save(MapRefFontPath);
+      fontBmp.Dispose();
+      fontBmp = null;
 
       // NOW generate the small ref map. since we aim to support >65k fonts, we can't just use
       // a single R/G/B val for an index. there's just not enough precision. The most precise PNG format is 16-bit grayscale.
@@ -415,32 +478,13 @@ namespace PetsciiMapgen
       refMapBmp.UnlockBits(destData);
 
       refMapBmp.Save(MapRefPath);
-
-      // save data structures
-      string jsonDistinctMappedChars = Newtonsoft.Json.JsonConvert.SerializeObject(DistinctMappedChars, Newtonsoft.Json.Formatting.Indented);
-      System.IO.File.WriteAllText(System.IO.Path.Combine(MapRefPath, "..\\DistinctMappedChars.json"), jsonDistinctMappedChars);
-
-      string jsonKeys = Newtonsoft.Json.JsonConvert.SerializeObject(Keys, Newtonsoft.Json.Formatting.Indented);
-      System.IO.File.WriteAllText(System.IO.Path.Combine(MapRefPath, "..\\Keys.json"), jsonKeys);
-
-      string jsonCharInfo = Newtonsoft.Json.JsonConvert.SerializeObject(CharInfo, Newtonsoft.Json.Formatting.Indented);
-      System.IO.File.WriteAllText(System.IO.Path.Combine(MapRefPath, "..\\CharInfo.json"), jsonCharInfo);
-
-      string jsonMap = Newtonsoft.Json.JsonConvert.SerializeObject(Map, Newtonsoft.Json.Formatting.Indented);
-      System.IO.File.WriteAllText(System.IO.Path.Combine(MapRefPath, "..\\Map.json"), jsonMap);
-
-      //var js = new Newtonsoft.Json.JsonConverter<CharInfo>();
-
-      //public CharInfo[] DistinctMappedChars;
-      //public ValueSet[] Keys { get; private set; }
-      //public List<CharInfo> CharInfo { get; private set; }
-      //public Mapping[] Map;
+      refMapBmp.Dispose();
     }
 
     public Color RefFontIndexToColor(int fontIndex)
     {
       Debug.Assert(fontIndex >= 0);
-      Debug.Assert(fontIndex < DistinctMappedChars.Length);
+      //Debug.Assert(fontIndex < DistinctMappedChars.Length);
       int v = (int)fontIndex;// * 0x10;
       byte r = (byte)(v & 0xff);
       v >>= 8;
@@ -502,74 +546,84 @@ namespace PetsciiMapgen
     //}
 
     // returns map from cell => REFFONT char id
-    public unsafe IDictionary<Point, int> ProcessImageUsingRef(string MapRefPath, string MapRefFontPath, string srcImagePath, string destImagePath)
-    {
-      var testImg = Image.FromFile(srcImagePath);
-      Bitmap testBmp = new Bitmap(testImg);
-      return ProcessImageUsingRef(MapRefPath, MapRefFontPath, srcImagePath, testImg, testBmp, destImagePath);
-    }
+    //public unsafe IDictionary<Point, int> ProcessImageUsingRef(string MapRefPath, string MapRefFontPath, string srcImagePath, string destImagePath)
+    //{
+    //  using (var testImg = new Bitmap(srcImagePath))
+    //  using (var refMapImage = new Bitmap(MapRefPath))
+    //  using (var refFontImage = new Bitmap(MapRefFontPath))
+    //    return ProcessImageUsingRef(refMapImage, refFontImage, testImg, destImagePath);
+    //}
 
     // returns map from cell => charid
-    public unsafe IDictionary<Point, int> ProcessImageUsingRef(string MapRefPath, string MapRefFontPath, string srcImagePath, Image testImg, Bitmap testBmp, string destImagePath)
+    //public unsafe IDictionary<Point, int> ProcessImageUsingRef(string MapRefPath, string MapRefFontPath, string srcImagePath, Bitmap testBmp, string destImagePath)
+    //{
+    //  Log.WriteLine("  tranfsorm image using REF: " + srcImagePath);
+    //  var refMapImage = new Bitmap(MapRefPath);
+    //  //Bitmap refMapBitmap = new Bitmap(refMapImage);
+    //  var refFontImage = Bitmap.FromFile(MapRefFontPath);
+    //  var testBmp = new Bitmap(testImg);
+    //  return ProcessImageUsingRef(refMapImage, refFontImage, srcImagePath, destImagePath);
+    //}
+
+    // returns map from cell => charid
+    public unsafe IDictionary<Point, int> ProcessImageUsingRef(Bitmap refMapImage, Bitmap refFontImage, Bitmap testBmp, string destImagePath)
     {
-      Log.WriteLine("  tranfsorm image using REF: " + srcImagePath);
-      var refMapImage = Image.FromFile(MapRefPath);
-      Bitmap refMapBitmap = new Bitmap(refMapImage);
-      var refFontImage = Image.FromFile(MapRefFontPath);
-      Bitmap destImg = new Bitmap(testBmp.Width, testBmp.Height, PixelFormat.Format32bppArgb);
-
-      int fontCellsX = refFontImage.Width / FontProvider.CharSizeNoPadding.Width;
-
-      int rows = testImg.Height / FontProvider.CharSizeNoPadding.Height;
-      int columns = testImg.Width / FontProvider.CharSizeNoPadding.Width;
-      Dictionary<Point, int> rv = new Dictionary<Point, int>(rows * columns);
-
-      using (var g = Graphics.FromImage(destImg))
+      using (Bitmap destImg = new Bitmap(testBmp.Width, testBmp.Height, PixelFormat.Format32bppArgb))
       {
-        ColorF srcColor = ColorFUtils.Init;
-        ColorF yuv = ColorFUtils.Init;
-        for (int srcCellY = 0; srcCellY < rows; ++srcCellY)
+        int fontCellsX = refFontImage.Width / FontProvider.CharSizeNoPadding.Width;
+
+        int rows = testBmp.Height / FontProvider.CharSizeNoPadding.Height;
+        int columns = testBmp.Width / FontProvider.CharSizeNoPadding.Width;
+        Dictionary<Point, int> rv = new Dictionary<Point, int>(rows * columns);
+
+        using (var g = Graphics.FromImage(destImg))
         {
-          for (int srcCellX = 0; srcCellX < columns; ++srcCellX)
+          ColorF srcColor = ColorFUtils.Init;
+          ColorF yuv = ColorFUtils.Init;
+          for (int srcCellY = 0; srcCellY < rows; ++srcCellY)
           {
-            // sample in the cell to determine the "key" "ID".
-            ColorF charC = ColorFUtils.Init;
-            int ID = PixelFormatProvider.GetMapIndexOfRegion(testBmp,
-              srcCellX * FontProvider.CharSizeNoPadding.Width,
-              srcCellY * FontProvider.CharSizeNoPadding.Height,
-              FontProvider.CharSizeNoPadding
-              );
+            for (int srcCellX = 0; srcCellX < columns; ++srcCellX)
+            {
+              // sample in the cell to determine the "key" "ID".
+              ColorF charC = ColorFUtils.Init;
+              int ID = PixelFormatProvider.GetMapIndexOfRegion(testBmp,
+                srcCellX * FontProvider.CharSizeNoPadding.Width,
+                srcCellY * FontProvider.CharSizeNoPadding.Height,
+                FontProvider.CharSizeNoPadding
+                );
 
-            int mapCellY = ID / refMapBitmap.Width;
-            int mapCellX = ID % refMapBitmap.Width;
+              int mapCellY = ID / refMapImage.Width;
+              int mapCellX = ID % refMapImage.Width;
 
-            // get ref
-            Color refColor = refMapBitmap.GetPixel(mapCellX, mapCellY);
+              // get ref
+              Color refColor = refMapImage.GetPixel(mapCellX, mapCellY);
 
-            // convert that to font map id
-            int fontID = ColorToRefFontIndex(refColor);
-            // split into fontcells
-            int fontCellY = fontID / fontCellsX;
-            int fontCellX = fontID % fontCellsX;
+              // convert that to font map id
+              int fontID = ColorToRefFontIndex(refColor);
+              // split into fontcells
+              int fontCellY = fontID / fontCellsX;
+              int fontCellX = fontID % fontCellsX;
 
-            // blit from map img.
-            rv[new Point(srcCellX, srcCellY)] = DistinctMappedChars[fontID].srcIndex;
+              // in order to know the character index for converting to text
+              rv[new Point(srcCellX, srcCellY)] = DistinctMappedChars[fontID].srcIndex;
 
-            Rectangle srcRect = new Rectangle(
-              fontCellX * FontProvider.CharSizeNoPadding.Width,
-              fontCellY * FontProvider.CharSizeNoPadding.Height,
-              FontProvider.CharSizeNoPadding.Width, FontProvider.CharSizeNoPadding.Height);
-            g.DrawImage(refFontImage,
-              srcCellX * FontProvider.CharSizeNoPadding.Width,
-              srcCellY * FontProvider.CharSizeNoPadding.Height,
-              srcRect, GraphicsUnit.Pixel);
+              // blit from map img.
+              Rectangle srcRect = new Rectangle(
+                fontCellX * FontProvider.CharSizeNoPadding.Width,
+                fontCellY * FontProvider.CharSizeNoPadding.Height,
+                FontProvider.CharSizeNoPadding.Width, FontProvider.CharSizeNoPadding.Height);
+              g.DrawImage(refFontImage,
+                srcCellX * FontProvider.CharSizeNoPadding.Width,
+                srcCellY * FontProvider.CharSizeNoPadding.Height,
+                srcRect, GraphicsUnit.Pixel);
+            }
           }
         }
+
+        destImg.Save(destImagePath);
+
+        return rv;
       }
-
-      destImg.Save(destImagePath);
-
-      return rv;
     }
   }
 }

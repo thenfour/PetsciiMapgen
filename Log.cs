@@ -61,7 +61,7 @@ namespace PetsciiMapgen
     {
       List<string> l = Interlocked.Exchange<List<string>>(ref lines, null);
 
-      using (var sw = System.IO.File.CreateText(path))
+      using (var sw = System.IO.File.AppendText(path))
       {
         foreach (var line in l)
         {

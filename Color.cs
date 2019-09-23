@@ -17,12 +17,13 @@ namespace PetsciiMapgen
   {
     ColorF TransformColor(int cellX, int cellY, ColorF c);
     int DiscreteTargetValues { get; set; }
+    double Strength { get; }
   }
 
   public class Bayer8DitherProvider : IDitherProvider
   {
     public int DiscreteTargetValues { get; set; }
-    private double strength;
+    public double Strength { get; private set; }
     private double[,] matrix = new double[,]
     {{0.0,       0.5,      0.125,    0.625,    0.03125,  0.53125,  0.15625,  0.65625 },
  {0.75,     0.25,     0.875,    0.375,    0.78125,  0.28125,  0.90625,  0.40625 },
@@ -35,7 +36,7 @@ namespace PetsciiMapgen
 
     public Bayer8DitherProvider(double strength)
     {
-      this.strength = strength;
+      this.Strength = strength;
     }
 
     public ColorF TransformColor(int cellX, int cellY, ColorF c)
@@ -44,7 +45,7 @@ namespace PetsciiMapgen
         return c;// don't dither these; they're useful to be pure!
       cellX &= 7;
       cellY &= 7;
-      double p = (matrix[cellX, cellY] - .5) * strength;
+      double p = (matrix[cellX, cellY] - .5) * Strength;
       double i = (255 * (p / DiscreteTargetValues));
 
       c = c.Add(i);

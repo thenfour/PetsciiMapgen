@@ -34,6 +34,26 @@ namespace PetsciiMapgen
     public bool TryToFit { get; private set; }
     public string CharListTextFile { get; private set; }
 
+    public virtual void WriteConfig(StringBuilder sb)
+    {
+      sb.AppendLine("fontType=FontFamily");
+      sb.AppendLine(string.Format("charWidth={0}", this.CharSizeNoPadding.Width));
+      sb.AppendLine(string.Format("charHeight={0}", this.CharSizeNoPadding.Height));
+
+      sb.AppendLine(string.Format("FontFamily={0}", this.FontFamily));
+      sb.AppendLine(string.Format("UnicodeGlyphTextFile={0}", this.UnicodeGlyphTextFile));
+      sb.AppendLine(string.Format("BackgroundColor={0}", this.BackgroundColor));
+      sb.AppendLine(string.Format("ForegroundColor={0}", this.ForegroundColor));
+      sb.AppendLine(string.Format("Scale={0}", this.Scale));
+      sb.AppendLine(string.Format("Shift={0}", this.Shift));
+      sb.AppendLine(string.Format("AspectTolerance={0}", this.AspectTolerance));
+      sb.AppendLine(string.Format("FontName={0}", this.FontName));
+      sb.AppendLine(string.Format("FontFile={0}", this.FontFile));
+      sb.AppendLine(string.Format("TryToFit={0}", this.TryToFit));
+      sb.AppendLine(string.Format("CharListTextFile={0}", this.CharListTextFile));
+      sb.AppendLine(string.Format("CharCount={0}", this.CharCount));
+    }
+
     public FontFamilyFontProvider(string fontFamily, string fontFile, Size charSize, string unicodeGlyphTextFile,
       Color bgColor, Color fgColor, float scale, Size shift, float? aspectTolerance, string fontName, bool tryToFit, string charListTextFile)
     {
