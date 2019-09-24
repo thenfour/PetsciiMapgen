@@ -1,7 +1,12 @@
 @echo off
 pushd %~dp0..
 
-REM C64 grayscale ColorGray8B
+
+
+
+REM C64 colored grayscale YUV1x1
+REM versus YUV2x2 versus YUV1x1
+REM this can be increased certanly. maybe even 30v
 bin\Release\PetsciiMapgen.exe ^
   -outdir C:\temp ^
   -processImagesInDir "C:\root\git\thenfour\PetsciiMapgen\img\testImages" ^
@@ -9,12 +14,13 @@ bin\Release\PetsciiMapgen.exe ^
   -testpalette C64Color ^
 
   -partitions 4x8 ^
-  -pfargs 8v3x3+0 ^
+  -pf yuv ^
+  -pfargs 2048v1x1+0 ^
 
   -fonttype mono ^
   -fontImage img\fonts\c64opt160.png ^
   -charsize 8x8 ^
-  -palette C64ColorGray8B
+  -palette C64Color
 REM  -calcn 80000000
 
 

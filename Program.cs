@@ -43,23 +43,27 @@ namespace PetsciiMapgen
 
         //args = new string[] { "-?" };
 
-        args = new string[]
-        {
-          //"-calcn", "50000000",
-          //"-partitions", "4x11",
-          "-outdir", "C:\\temp",
-          "-pf", "yuv5",
-          "-pfargs", "3v5+0",
-          "-partitions", "2x8",
+        //args = new string[]
+        //{
+        //  //"-calcn", "50000000",
+        //  //"-partitions", "4x11",
+        //  "-outdir", "C:\\temp",
+        //  "-pf", "yuv5",
+        //  "-pfargs", "12v5+0",
+        //  "-partitions", "2x8",
 
-          "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-          "-testpalette", "RGBPrimariesHalftone16",
+        //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+        //  //"-processImage", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages\black.png",
+        //  //"-processImage", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages\white.png",
+        //  //"-processImage", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages\portrait.jpg",
+        //  //
+        //  //"-testpalette", "RGBPrimariesHalftone16",
 
-          "-fonttype", "mono",
-          "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\mz700.png",
-          "-charsize", "8x8",
-          "-palette", "BlackAndWhite",
-        };
+        //  "-fonttype", "mono",
+        //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\mz700.png",
+        //  "-charsize", "8x8",
+        //  "-palette", "BlackAndWhite",
+        //};
 
         //// create mz700 blackandwhite
         //args = new string[] {
@@ -396,7 +400,7 @@ namespace PetsciiMapgen
           }
         });
 
-        args.ProcessArg("-processImages", o =>
+        args.ProcessArg("-processImage", o =>
         {
           processImages.Add(o);
         });

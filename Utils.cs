@@ -69,6 +69,13 @@ namespace PetsciiMapgen
       ret.y = x.y + v.y;
       return ret;
     }
+    public static vec2 add(this vec2 x, float v)
+    {
+      vec2 ret;
+      ret.x = x.x + v;
+      ret.y = x.y + v;
+      return ret;
+    }
     public static vec2 yx(this vec2 x)
     {
       vec2 ret;

@@ -186,7 +186,11 @@ namespace PetsciiMapgen
 
     public int GetLumaTileIndexOfPixelPosInCell(int x, int y, Size cellSize)
     {
-      vec2 posInCell01 = vec2.Init(x,y).dividedBy(cellSize);
+      //if (x == 0 && y == 0) return 4;
+      vec2 posInCell01 = vec2.Init(x, y)
+        .add(.5f)// center in the pixel
+        .dividedBy(cellSize);
+
       vec2 skewAmt = posInCell01.minus(.5f).multipliedBy(.5f);
       skewAmt.y = -skewAmt.y;
 
@@ -196,7 +200,7 @@ namespace PetsciiMapgen
 
       posInCell01 = posInCell01.minus(.5f).abs();
       float m = posInCell01.x + posInCell01.y;
-      if (m < .333)
+      if (m < 1.0/3.0)
         tileIdx = 4;// arbitrary number that looks good perceptually.
       return tileIdx;
     }
@@ -215,19 +219,46 @@ namespace PetsciiMapgen
 
       for (int py = 0; py < font.CharSizeNoPadding.Height; ++py)
       {
+        //string l = "";
         for (int px = 0; px < font.CharSizeNoPadding.Width; ++ px)
         {
           ColorF pc = font.GetPixel(ci.srcIndex, px, py);
           charRGB.Add(pc);
           int lumaIdx = GetLumaTileIndexOfPixelPosInCell(px, py, font.CharSizeNoPadding);
-          lumaRGB[lumaIdx].Add(pc);
+          //switch(lumaIdx)
+          //{
+          //  case 0:
+          //    l += "..";
+          //    break;
+          //  case 1:
+          //    l += "||";
+          //    break;
+          //  case 2:
+          //    l += "==";
+          //    break;
+          //  case 3:
+          //    l += "33";
+          //    break;
+          //  case 4:
+          //    l += "  ";
+          //    break;
+          //}
+          //l += lumaIdx.ToString();
+          lumaRGB[lumaIdx] = lumaRGB[lumaIdx].Add(pc);
           pixelCounts[lumaIdx]++;
         }
+        //Log.WriteLine(l);
       }
 
       for (int i = 0; i < LumaComponentCount; ++i)
       {
-        ColorF lc = lumaRGB[i].Div(pixelCounts[i]);
+        var pc = pixelCounts[i];
+        var lc = lumaRGB[i];
+        if (pixelCounts[i] < 1)
+        {
+          throw new Exception("!!!!!! Your fonts are just too small; i can't sample them properly.");
+        }
+        lc = lc.Div(pc);
         LCCColor lccc = RGBToHCL(lc);
         ci.actualValues.ColorData[i] = (float)lccc.L;
       }
@@ -267,7 +298,7 @@ namespace PetsciiMapgen
           ColorF pc = ColorFUtils.From(img.GetPixel(x + px, y + py));
           charRGB.Add(pc);
           int lumaIdx = GetLumaTileIndexOfPixelPosInCell(px, py, sz);
-          lumaRGB[lumaIdx].Add(pc);
+          lumaRGB[lumaIdx] = lumaRGB[lumaIdx].Add(pc);
           pixelCounts[lumaIdx]++;
         }
       }

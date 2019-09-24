@@ -325,7 +325,7 @@ namespace PetsciiMapgen
         this.Keys = Utils.Permutate(PixelFormatProvider.DimensionCount, PixelFormatProvider.DiscreteNormalizedValues); // returns sorted.
       }
       const int charsToOutputToImage = 100;
-      const int charsToOutputInConsole = 0;
+      const int charsToOutputInConsole = 1;
       const int detailedCharOutput = 0;
 
       List<int> WUTcharIndex = new List<int>();
