@@ -13,6 +13,91 @@ using System.Runtime.InteropServices;
 
 namespace PetsciiMapgen
 {
+  public struct vec2
+  {
+    public float x;
+    public float y;
+    public static vec2 Init(float xy)
+    {
+      vec2 ret;
+      ret.x = ret.y = xy;
+      return ret;
+    }
+    public static vec2 Init(float x, float y)
+    {
+      vec2 ret;
+      ret.x = x;
+      ret.y = y;
+      return ret;
+    }
+    public static vec2 Init(int x, int y)
+    {
+      vec2 ret;
+      ret.x = x;
+      ret.y = y;
+      return ret;
+    }
+  }
+
+  public static class vec2Utils
+  {
+    public static vec2 dividedBy(this vec2 x, Size sz)
+    {
+      vec2 ret;
+      ret.x = x.x / sz.Width;
+      ret.y = x.y / sz.Height;
+      return ret;
+    }
+    public static vec2 minus(this vec2 x, float v)
+    {
+      vec2 ret;
+      ret.x = x.x - v;
+      ret.y = x.y - v;
+      return ret;
+    }
+    public static vec2 multipliedBy(this vec2 x, float v)
+    {
+      vec2 ret;
+      ret.x = x.x * v;
+      ret.y = x.y * v;
+      return ret;
+    }
+    public static vec2 add(this vec2 x, vec2 v)
+    {
+      vec2 ret;
+      ret.x = x.x + v.x;
+      ret.y = x.y + v.y;
+      return ret;
+    }
+    public static vec2 yx(this vec2 x)
+    {
+      vec2 ret;
+      ret.x = x.y;
+      ret.y = x.x;
+      return ret;
+    }
+    public static ivec2 step(this vec2 o, float v)
+    {
+      ivec2 ret;
+      ret.x = o.x > v ? 1 : 0;
+      ret.y = o.y > v ? 1 : 0;
+      return ret;
+    }
+    public static vec2 abs(this vec2 o)
+    {
+      vec2 ret;
+      ret.x = Math.Abs(o.x);
+      ret.y = Math.Abs(o.y);
+      return ret;
+    }
+  }
+
+  public struct ivec2
+  {
+    public int x;
+    public int y;
+  }
+
   public struct ColorF
   {
     public double R;
@@ -625,6 +710,29 @@ namespace PetsciiMapgen
         }
         return (ulong)memory;
       }
+    }
+
+    public static int NormalizedValueSetToMapID(float[] vals, int dimensionCount, float[] DiscreteNormalizedValues, int mapSize)
+    {
+      // copy/paste from others.
+      float halfSegCenter = 0.25f / DiscreteNormalizedValues.Length;
+
+      int ID = 0;
+      for (int i = dimensionCount - 1; i >= 0; --i)
+      {
+        float val = vals[i];
+        val -= halfSegCenter;
+        val = Utils.Clamp(val, 0, 1);
+        val *= DiscreteNormalizedValues.Length;
+        ID *= DiscreteNormalizedValues.Length;
+        ID += (int)Math.Floor(val);
+      }
+
+      if (ID >= mapSize)
+      {
+        ID = mapSize - 1;
+      }
+      return ID;
     }
   }
 }

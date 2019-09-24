@@ -23,6 +23,7 @@ namespace PetsciiMapgen
     int GetCharIndexAtPixelPos(Point charPixPosWUT);
     Size CharSizeNoPadding { get; }
     void BlitCharacter(int ichar, BitmapData data, long destX, long destY);
+    ColorF GetPixel(int ichar, int x, int y);
     ColorF GetRegionColor(int ichar, Point topLeft, Size size, Size cellsPerChar, int cellOffsetX, int cellOffsetY);
     void WriteConfig(StringBuilder sb);
     //void OnImageProcessed(IEnumerable<KeyValuePair<Point, int>> cellsMapped, string outputDir, string bitmapFilename);// called when an image has been converted. gives the emoji font provider an opportunity to output as text
@@ -135,6 +136,14 @@ namespace PetsciiMapgen
       int chx = charPixPosWUT.X / CharSizeWithPadding.Width;
       int chy = charPixPosWUT.Y / CharSizeWithPadding.Height;
       return chx + (SizeInChars.Width * chy);
+    }
+
+    public ColorF GetPixel(int ichar, int px, int py)
+    {
+      Point o = GetCharOriginInPixels(ichar);
+      var c = ColorFUtils.From(this.Bitmap.GetPixel(o.X + px, o.Y + py));
+      // TODO: dither
+      return c;
     }
 
     public ColorF GetRegionColor(int ichar, Point topLeft, Size size, Size cellsPerChar, int cellOffsetX, int cellOffsetY)

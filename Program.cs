@@ -43,16 +43,23 @@ namespace PetsciiMapgen
 
         //args = new string[] { "-?" };
 
-        //args = new string[]
-        //{
-        //  "-calcn", "50000000",
-        //  //"-partitions", "4x11",
-        //  "-pfargs", "3v2x2+0",
-        //  "-fonttype", "normal",
-        //  "-partitions", "2x8",
-        //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\mz700.png",
-        //  "-charsize", "8x8",
-        //};
+        args = new string[]
+        {
+          //"-calcn", "50000000",
+          //"-partitions", "4x11",
+          "-outdir", "C:\\temp",
+          "-pf", "yuv5",
+          "-pfargs", "3v5+0",
+          "-partitions", "2x8",
+
+          "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+          "-testpalette", "RGBPrimariesHalftone16",
+
+          "-fonttype", "mono",
+          "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\mz700.png",
+          "-charsize", "8x8",
+          "-palette", "BlackAndWhite",
+        };
 
         //// create mz700 blackandwhite
         //args = new string[] {
@@ -416,6 +423,9 @@ namespace PetsciiMapgen
             case "yuv":
               pixelFormat = NaiveYUVPixelFormat.ProcessArgs(args);
               break;
+            case "yuv5":
+              pixelFormat = NaiveYUV5PixelFormat.ProcessArgs(args);
+              break;
           }
         });
 
@@ -465,33 +475,36 @@ namespace PetsciiMapgen
         }
 
         args.ProcessArg("-calcn", s => {
-          Size luma = new Size(1, 1);
-          bool useChroma = false;
-          ulong partB = 1, partD = 1;
+          //Size luma = new Size(1, 1);
+          //bool useChroma = false;
+          //ulong partB = 1, partD = 1;
 
           ulong maxMapKeys = ulong.Parse(s);
 
-          args.ProcessArg("-pfargs", o => {
-            Utils.ParsePFArgs(o, out int valuesPerComponent, out useChroma, out luma);
-          });
+          //args.ProcessArg("-pfargs", o => {
+          //  Utils.ParsePFArgs(o, out int valuesPerComponent, out useChroma, out luma);
+          //});
 
-          args.ProcessArg("-partitions", o => {
-            partB = ulong.Parse(o.Split('x')[0]);
-            partD = ulong.Parse(o.Split('x')[1]);
-          });
+          //args.ProcessArg("-partitions", o => {
+          //  partB = ulong.Parse(o.Split('x')[0]);
+          //  partD = ulong.Parse(o.Split('x')[1]);
+          //});
 
-          ulong partitionCount = (ulong)Utils.Pow((long)partB, (uint)partD);
+          partitionManager.Init(pixelFormat);
+
+          //ulong partitionCount = (ulong)Utils.Pow((long)partB, (uint)partD);
+          ulong partitionCount = (ulong)partitionManager.PartitionCount;
           Log.WriteLine("Partition count: {0:N0}", partitionCount);
 
           // so the thing about partition count. You can't just divide by partition count,
           // because in deeper levels most partitions are simply unused / empty.
-          // a decent conservative approximation is simply the 1st 2 levels.
-          partitionCount = partB * partB;
+          // a decent conservative approximation is to take the first N levels
+          partitionCount = (ulong)Math.Pow(partitionManager.PartitionsPerDimension, 2.5);// n = 2.5
           Log.WriteLine("Adjusted partition count: {0:N0}", partitionCount);
           Log.WriteLine("Charset count: {0:N0}", fontProvider.CharCount);
           Log.WriteLine("Cores to utilize: {0:N0}", coresToUtilize);
-          int dimensions = Utils.Product(luma) + (useChroma ? 2 : 0);
-          Log.WriteLine("Luma + chroma components: {0:N0}", dimensions);
+          //int dimensions = Utils.Product(luma) + (useChroma ? 2 : 0);
+          Log.WriteLine("Luma + chroma components: {0:N0}", pixelFormat.DimensionCount);
 
           // figure out valuespercomponent in order to not overflow our huge mapping array.
           // maximum number of mapkeys is int.maxvalue
@@ -500,7 +513,7 @@ namespace PetsciiMapgen
           // mapsize = N^dimensions
           // actual mappings will divide that by partition count more-or-less
 
-          ulong NbasedOnMapSize = (ulong)Math.Floor(Math.Pow(maxMapKeys, 1.0 / dimensions));
+          ulong NbasedOnMapSize = (ulong)Math.Floor(Math.Pow(maxMapKeys, 1.0 / pixelFormat.DimensionCount));
 
           // mappings overflow when there are so many chars in the font that
           // it can't be held in memory.
@@ -509,13 +522,13 @@ namespace PetsciiMapgen
           ulong charCount = (ulong)fontProvider.CharCount;
           ulong maxTheoreticalMappingCount = (ulong)coresToUtilize * (ulong)UInt32.MaxValue * (ulong)partitionCount * 3 / 4;
           ulong maxKeyCount = maxTheoreticalMappingCount / charCount;
-          ulong NbasedOnMappings = (ulong)Math.Floor(Math.Pow(maxKeyCount, 1.0 / dimensions));
+          ulong NbasedOnMappings = (ulong)Math.Floor(Math.Pow(maxKeyCount, 1.0 / pixelFormat.DimensionCount));
 
           Log.WriteLine("Based on the map size requested, N can be as much as        {0:N0}", NbasedOnMapSize);
           Log.WriteLine("Based on the charset and mapping array, N can be as much as {0:N0}", NbasedOnMappings);
           ulong m = Math.Min(NbasedOnMapSize, NbasedOnMappings);
 
-          ulong keyCount = (ulong)Math.Pow(m, dimensions);
+          ulong keyCount = (ulong)Math.Pow(m, pixelFormat.DimensionCount);
           ulong sizeofMapping = (ulong)Marshal.SizeOf<Mapping>();
           Log.WriteLine("Which will use {0:N0} of memory for mappings", keyCount * charCount / partitionCount * sizeofMapping);
 
@@ -527,7 +540,7 @@ namespace PetsciiMapgen
 
           // reduce keycount to conform.
           maxKeyCount = maxmem / (charCount * sizeofMapping / partitionCount);
-          ulong NbasedOnMem = (ulong)Math.Floor(Math.Pow(maxKeyCount, 1.0 / dimensions));
+          ulong NbasedOnMem = (ulong)Math.Floor(Math.Pow(maxKeyCount, 1.0 / pixelFormat.DimensionCount));
           Log.WriteLine("Based on memory usage, N can be as much as                  {0:N0}", NbasedOnMem);
 
           m = Math.Min(m, NbasedOnMem);
@@ -617,7 +630,7 @@ namespace PetsciiMapgen
         {
           foreach (var file in processImages)
           {
-            //Log.WriteLine("Processing {0}", file);
+            Log.WriteLine("Processing {0}", file);
             string destFile = string.Format("test-{0}.png", System.IO.Path.GetFileNameWithoutExtension(file));
             string destfullp = System.IO.Path.Combine(outputDir, destFile);
             using (var testImg = new Bitmap(file))

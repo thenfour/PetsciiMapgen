@@ -146,6 +146,14 @@ namespace PetsciiMapgen
       return this.Palette[ch.fgIdx];
     }
 
+    public ColorF GetPixel(int ichar, int px, int py)
+    {
+      Point o = GetCharOriginInPixels(ichar);
+      var c = ColorFUtils.From(this.Bitmap.GetPixel(o.X + px, o.Y + py));
+      // TODO: dither
+      return c;
+    }
+
     public ColorF GetRegionColor(int ichar, Point topLeft, Size size, Size cellsPerChar, int cellOffsetX, int cellOffsetY)
     {
       Point oc = GetCharPosInChars(ichar);

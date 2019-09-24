@@ -15,23 +15,39 @@ REM   -palette C64ColorGray8B
 REM -calcn 75000000
 
 REM C64 grayscale ColorGray8B
-bin\Release\PetsciiMapgen.exe ^
-  -outdir C:\temp ^
-
-  -partitions 2x8 ^
-  -pfargs 16v2x2+0 ^
-
-  -fonttype mono ^
-  -fontImage img\fonts\c64opt160.png ^
-  -charsize 8x8 ^
-  -palette C64ColorGray8B
-
-:: -calcn 75000000
+::bin\Release\PetsciiMapgen.exe ^
+::  -outdir C:\temp ^
 ::  -processImagesInDir "C:\root\git\thenfour\PetsciiMapgen\img\testImages" ^
 ::  -testpalette ThreeBit ^
 ::  -testpalette C64Color ^
 
+::  -partitions 4x8 ^
+::  -pfargs 72v2x2+0 ^
+
+::  -fonttype mono ^
+::  -fontImage img\fonts\c64opt160.png ^
+::  -charsize 8x8 ^
+::  -palette C64ColorGray8B ^
+REM -calcn 75000000
+
 REM 
+
+
+
+bin\Release\PetsciiMapgen.exe ^
+  -outdir C:\temp ^
+  -processImagesInDir "C:\root\git\thenfour\PetsciiMapgen\img\testImages" ^
+  -testpalette ThreeBit ^
+  -testpalette C64Color ^
+
+  -partitions 4x8 ^
+  -pf yuv5 ^
+  -pfargs 16v5+0 ^
+
+  -fonttype mono ^
+  -fontImage img\fonts\c64opt160.png ^
+  -charsize 8x8 ^
+  -palette C64ColorGray8B ^
 
 
 
