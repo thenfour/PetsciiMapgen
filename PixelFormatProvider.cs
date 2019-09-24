@@ -103,12 +103,7 @@ namespace PetsciiMapgen
       bool useChroma_ = false;
       args.ProcessArg("-pfargs", o =>
       {
-        // 1v2x3+2
-        valuesPerComponent_ = int.Parse(o.Split('v')[0]);
-        o = o.Split('v')[1];// 2x3+2
-        useChroma_ = int.Parse(o.Split('+')[1]) == 2;
-        o = o.Split('+')[0];// 2x3
-        lumaTiles_ = new Size(int.Parse(o.Split('x')[0]), int.Parse(o.Split('x')[1]));
+        Utils.ParsePFArgs(o, out valuesPerComponent_, out useChroma_, out lumaTiles_);
       });
       valuesPerComponent = valuesPerComponent_;
       lumaTiles = lumaTiles_;
@@ -133,24 +128,6 @@ namespace PetsciiMapgen
       DimensionCount = LumaComponentCount + ChromaComponentCount;
 
       this.DiscreteNormalizedValues = Utils.GetDiscreteNormalizedValues(valuesPerComponent);
-
-      Log.WriteLine("  DiscreteNormalizedValues:");
-      //bool foundSuitableMidpoint = false;
-      for (int i = 0; i < this.DiscreteNormalizedValues.Length; ++ i)
-      {
-        Log.WriteLine("    {0}: {1,10:0.00}", i, this.DiscreteNormalizedValues[i]);
-        //if (Math.Abs(this.DiscreteNormalizedValues[i] - 0.5) < 0.0001)
-        //  foundSuitableMidpoint = true;
-      }
-
-      //if (!foundSuitableMidpoint)
-      //{
-      //  Log.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!");
-      //  Log.WriteLine("!!!  no 0.5 point was found in discrete values.");
-      //  Log.WriteLine("!!!  it means you're likely to have very bad quality matches for black & white points.");
-      //  Log.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!");
-      //}
-
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

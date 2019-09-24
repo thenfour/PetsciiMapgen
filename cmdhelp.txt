@@ -9,6 +9,11 @@ Command options:
 -argsfile path            path to text file of args. each line = 1 arg, for clarity
 -loadmap path             loads an existing map from the specified output
                           directory. use with -processImages* or -test* etc.
+-calcn maxkeys            calculates maximum values per colorant. use
+                          -pfargs and -partitions to specify other parameters.
+                          *Specify -maxmem as well.
+-maxmemgb N               Used with -calcn, specifies the amount of gb of RAM
+                          to not exceed, roughly.
 
 -testcolor #ff00ff        outputs an image and log testing matching a certain color
 -testpalette              same as -testcolor but over a whole named palette
@@ -18,9 +23,6 @@ Command options:
 -processImagesInDir path
 -processImage path
 -cores N                  if N<=0, we use (processor count - N)
--loadstate path           attempts to load mapping state from disk, and only
-                          process images based off that. so you can process more
-                          images without having to regen the map.
 
 -pf ID                    Pixel format: YUV, LAB, HSL
 -pfargs NvXvY+C           defines the pixel format parameters
@@ -28,6 +30,7 @@ Command options:
                           X = number of Luma columns per cell
                           Y = number of Luma rows per cell
                           C = 0 or 2, to include chroma information
+
 
 -fonttype ID              normal, mono, colorkey, fontfamily
 

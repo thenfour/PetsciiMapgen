@@ -62,6 +62,24 @@ namespace PetsciiMapgen
       this.FontProvider.Init(this.PixelFormatProvider.DiscreteNormalizedValues.Length);
       pm.Init(this.PixelFormatProvider);
 
+
+
+      Log.WriteLine("  DiscreteNormalizedValues:");
+      //bool foundSuitableMidpoint = false;
+      for (int i = 0; i < PixelFormatProvider.DiscreteNormalizedValues.Length; ++i)
+      {
+        if (i > 14)
+        {
+          Log.WriteLine("    ...");
+          break;
+        }
+        Log.WriteLine("    {0}: {1,10:0.00}", i, PixelFormatProvider.DiscreteNormalizedValues[i]);
+        //if (Math.Abs(this.DiscreteNormalizedValues[i] - 0.5) < 0.0001)
+        //  foundSuitableMidpoint = true;
+      }
+
+
+
       Log.WriteLine("Number of source chars (1d): " + this.FontProvider.CharCount.ToString("N0"));
       Log.WriteLine("Chosen values per tile: " + pixelFormatProvider.DiscreteNormalizedValues.Length);
       Log.WriteLine("Dimensions: " + PixelFormatProvider.DimensionCount);
@@ -185,7 +203,6 @@ namespace PetsciiMapgen
             if (mapEntriesPopulated == mapEntriesToPopulate)
               break;
           }
-
         }));
       }
       Task.WaitAll(comparisonBatches.ToArray());
@@ -240,6 +257,10 @@ namespace PetsciiMapgen
 #endif
       }
 #endif
+      Log.WriteLine("Process currently using {0:0.00} mb of memory)", Utils.BytesToMb(Utils.UsedMemoryBytes));
+      allMappingsArray = null;
+      GC.Collect();
+      Log.WriteLine("Process currently using {0:0.00} mb of memory after GC)", Utils.BytesToMb(Utils.UsedMemoryBytes));
 
       OutputFullMap(fullMapPath, Map);
 

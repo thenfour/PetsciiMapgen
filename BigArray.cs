@@ -41,7 +41,7 @@ namespace PetsciiMapgen
     {
       if (Values.Length <= Length)
       {
-        Log.WriteLine("!!! Dynamic allocation: {0:N0} to {1:N0}", this.Length, potentialNewLength);
+        Log.WriteLine("!!! Dynamic allocation: {0:N0} to {1:N0} (process currently using {2:0.00})", this.Length, potentialNewLength, Utils.BytesToMb(Utils.UsedMemoryBytes));
         Mapping[] t = new Mapping[potentialNewLength];
         Array.Copy(this.Values, t, (int)this.Length);
         this.Values = t;

@@ -281,7 +281,7 @@ namespace PetsciiMapgen
         }
       }
     }
-    
+
     public class ValueRangeInspector
     {
       public double MinValue { get; private set; } = default(double);
@@ -495,7 +495,7 @@ namespace PetsciiMapgen
       float[] ret = new float[discreteValues];
       //int i = 0;
       //for (float v = 0; v <= 1.0f; v += segSpan)
-      for (int i = 0; i < discreteValues; ++ i)
+      for (int i = 0; i < discreteValues; ++i)
       {
         ret[i] = i * 100000 / (discreteValues - 1); // using fixed precision here.
         ret[i] /= 100000;
@@ -576,6 +576,55 @@ namespace PetsciiMapgen
       if (s.ToLowerInvariant() == "yes")
         return true;
       return false;
+    }
+
+    // 1v2x3+2
+    public static void ParsePFArgs(string o, out int valuesPerComponent_, out bool useChroma_, out Size lumaTiles_)
+    {
+      valuesPerComponent_ = int.Parse(o.Split('v')[0]);
+      o = o.Split('v')[1];// 2x3+2
+      useChroma_ = int.Parse(o.Split('+')[1]) == 2;
+      o = o.Split('+')[0];// 2x3
+      lumaTiles_ = new Size(int.Parse(o.Split('x')[0]), int.Parse(o.Split('x')[1]));
+    }
+
+    public static ulong GbToBytes(ulong gb)
+    {
+      return MbToBytes(gb) * 1024;
+    }
+    public static ulong MbToBytes(ulong gb)
+    {
+      return KbToBytes(gb) * 1024;
+    }
+    public static ulong KbToBytes(ulong gb)
+    {
+      return gb * 1024;
+    }
+    public static double BytesToKb(ulong b)
+    {
+      return b / 1024;
+    }
+    public static double BytesToMb(ulong b)
+    {
+      return BytesToKb(b) / 1024;
+    }
+    public static double BytesToGb(ulong b)
+    {
+      return BytesToMb(b) / 1024;
+    }
+    public static ulong UsedMemoryBytes
+    {
+      get
+      {
+        long memory = 0;
+        using (Process proc = Process.GetCurrentProcess())
+        {
+          // The proc.PrivateMemorySize64 will returns the private memory usage in byte.
+          // Would like to Convert it to Megabyte? divide it by 1e+6
+          memory = proc.PrivateMemorySize64;
+        }
+        return (ulong)memory;
+      }
     }
   }
 }

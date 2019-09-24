@@ -43,6 +43,17 @@ namespace PetsciiMapgen
 
         //args = new string[] { "-?" };
 
+        //args = new string[]
+        //{
+        //  "-calcn", "50000000",
+        //  //"-partitions", "4x11",
+        //  "-pfargs", "3v2x2+0",
+        //  "-fonttype", "normal",
+        //  "-partitions", "2x8",
+        //  "-fontimage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\mz700.png",
+        //  "-charsize", "8x8",
+        //};
+
         //// create mz700 blackandwhite
         //args = new string[] {
         //  "-outdir", "C:\\temp",
@@ -58,12 +69,12 @@ namespace PetsciiMapgen
         //  "-palette", "BlackAndWhite",
         //};
 
-        // LOAD mz700 blackandwhite
-        args = new string[] {
-          "-loadmap", @"C:\temp\mz700-BlackAndWhite_YUV8v3x3+0_p4x11",
-          "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-          "-testpalette", "RGBPrimariesHalftone16",
-        };
+        //// LOAD mz700 blackandwhite
+        //args = new string[] {
+        //  "-loadmap", @"C:\temp\mz700-BlackAndWhite_YUV8v3x3+0_p4x11",
+        //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+        //  "-testpalette", "RGBPrimariesHalftone16",
+        //};
 
         //// DOS color!
         //args = new string[] {
@@ -151,8 +162,8 @@ namespace PetsciiMapgen
         //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
         //};
 
-        //  // C64 grayscale
-        //  args = new string[] {
+        //// C64 grayscale
+        //args = new string[] {
         //  "-listpalettes",
         //  "-outdir", "C:\\temp",
 
@@ -166,6 +177,7 @@ namespace PetsciiMapgen
         //  "-pfargs", "11v3x2+0",
         //  "-partitions", "3x11",
         //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+        //  "-testpalette", "C64Color"
         //};
 
         //// EMOJI ONE
@@ -268,7 +280,7 @@ namespace PetsciiMapgen
         //  "-partitions", "3x6",
 
         //  "-pf", "yuv",
-        //  "-pfargs", "8v2x2+2",
+        //  "-pfargs", "13v2x2+0",
 
         //    "-fonttype", "mono",
         //  "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\c64opt160.png",
@@ -394,9 +406,6 @@ namespace PetsciiMapgen
         {
           switch (s.ToLowerInvariant())
           {
-            case "yuv":
-              pixelFormat = NaiveYUVPixelFormat.ProcessArgs(args);
-              break;
             case "hsl":
               pixelFormat = HSLPixelFormat.ProcessArgs(args);
               break;
@@ -404,9 +413,16 @@ namespace PetsciiMapgen
               pixelFormat = LABPixelFormat.ProcessArgs(args);
               break;
             default:
-              throw new Exception("Unknown pixel format: " + s);
+            case "yuv":
+              pixelFormat = NaiveYUVPixelFormat.ProcessArgs(args);
+              break;
           }
         });
+
+        if (pixelFormat == null)
+        {
+          pixelFormat = NaiveYUVPixelFormat.ProcessArgs(args);
+        }
 
         FontFamilyFontProvider fontFamilyProvider = null;
 
@@ -431,20 +447,6 @@ namespace PetsciiMapgen
           }
         });
 
-        if (outputDir == null)
-        {
-          Log.WriteLine("No output directory was specified.");
-          return;
-        }
-        outputDir = System.IO.Path.GetFullPath(outputDir);
-        Log.WriteLine("Output directory: {0}", outputDir);
-
-        if (!System.IO.Directory.Exists(outputDir))
-        {
-          Log.WriteLine("Output directory doesn't exist.");
-          return;
-        }
-
         // emoji12-C64_YUV-2v5x5+2
         if (fontProvider == null)
         {
@@ -461,6 +463,95 @@ namespace PetsciiMapgen
           Log.WriteLine("Space partitioning unspecified");
           return;
         }
+
+        args.ProcessArg("-calcn", s => {
+          Size luma = new Size(1, 1);
+          bool useChroma = false;
+          ulong partB = 1, partD = 1;
+
+          ulong maxMapKeys = ulong.Parse(s);
+
+          args.ProcessArg("-pfargs", o => {
+            Utils.ParsePFArgs(o, out int valuesPerComponent, out useChroma, out luma);
+          });
+
+          args.ProcessArg("-partitions", o => {
+            partB = ulong.Parse(o.Split('x')[0]);
+            partD = ulong.Parse(o.Split('x')[1]);
+          });
+
+          ulong partitionCount = (ulong)Utils.Pow((long)partB, (uint)partD);
+          Log.WriteLine("Partition count: {0:N0}", partitionCount);
+
+          // so the thing about partition count. You can't just divide by partition count,
+          // because in deeper levels most partitions are simply unused / empty.
+          // a decent conservative approximation is simply the 1st 2 levels.
+          partitionCount = partB * partB;
+          Log.WriteLine("Adjusted partition count: {0:N0}", partitionCount);
+          Log.WriteLine("Charset count: {0:N0}", fontProvider.CharCount);
+          Log.WriteLine("Cores to utilize: {0:N0}", coresToUtilize);
+          int dimensions = Utils.Product(luma) + (useChroma ? 2 : 0);
+          Log.WriteLine("Luma + chroma components: {0:N0}", dimensions);
+
+          // figure out valuespercomponent in order to not overflow our huge mapping array.
+          // maximum number of mapkeys is int.maxvalue
+          // maximum number of mappings is (int.MaxValue * cores)
+          // theoretical mappings is charcount * mapsize
+          // mapsize = N^dimensions
+          // actual mappings will divide that by partition count more-or-less
+
+          ulong NbasedOnMapSize = (ulong)Math.Floor(Math.Pow(maxMapKeys, 1.0 / dimensions));
+
+          // mappings overflow when there are so many chars in the font that
+          // it can't be held in memory.
+
+          // take 80% for safety.
+          ulong charCount = (ulong)fontProvider.CharCount;
+          ulong maxTheoreticalMappingCount = (ulong)coresToUtilize * (ulong)UInt32.MaxValue * (ulong)partitionCount * 3 / 4;
+          ulong maxKeyCount = maxTheoreticalMappingCount / charCount;
+          ulong NbasedOnMappings = (ulong)Math.Floor(Math.Pow(maxKeyCount, 1.0 / dimensions));
+
+          Log.WriteLine("Based on the map size requested, N can be as much as        {0:N0}", NbasedOnMapSize);
+          Log.WriteLine("Based on the charset and mapping array, N can be as much as {0:N0}", NbasedOnMappings);
+          ulong m = Math.Min(NbasedOnMapSize, NbasedOnMappings);
+
+          ulong keyCount = (ulong)Math.Pow(m, dimensions);
+          ulong sizeofMapping = (ulong)Marshal.SizeOf<Mapping>();
+          Log.WriteLine("Which will use {0:N0} of memory for mappings", keyCount * charCount / partitionCount * sizeofMapping);
+
+          ulong maxmem = Utils.GbToBytes(150);
+          args.ProcessArg("-maxmemgb", gb => {
+            maxmem = Utils.GbToBytes(ulong.Parse(gb));
+          });
+          Log.WriteLine("Max memory to use: {0:N0}", maxmem);
+
+          // reduce keycount to conform.
+          maxKeyCount = maxmem / (charCount * sizeofMapping / partitionCount);
+          ulong NbasedOnMem = (ulong)Math.Floor(Math.Pow(maxKeyCount, 1.0 / dimensions));
+          Log.WriteLine("Based on memory usage, N can be as much as                  {0:N0}", NbasedOnMem);
+
+          m = Math.Min(m, NbasedOnMem);
+          Log.WriteLine("======================");
+          Log.WriteLine("== THEREFORE, use N={0:N0}", m);
+          Log.WriteLine("======================");
+
+          System.Environment.Exit(0);
+        });
+
+        if (outputDir == null)
+        {
+          Log.WriteLine("No output directory was specified.");
+          return;
+        }
+        outputDir = System.IO.Path.GetFullPath(outputDir);
+        Log.WriteLine("Output directory: {0}", outputDir);
+
+        if (!System.IO.Directory.Exists(outputDir))
+        {
+          Log.WriteLine("Output directory doesn't exist.");
+          return;
+        }
+
         string configTag = string.Format("{0}_{1}_{2}", fontProvider.DisplayName, pixelFormat.PixelFormatString, partitionManager);
         outputDir = System.IO.Path.Combine(outputDir, configTag);
         Log.WriteLine("Creating directory: {0}", outputDir);
@@ -478,6 +569,9 @@ namespace PetsciiMapgen
             infoFile.WriteLine(arg);
           }
         }
+
+
+
 
         Timings t = new Timings();
         t.EnterTask("--- MAP GENERATION");
