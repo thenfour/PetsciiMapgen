@@ -412,32 +412,7 @@ namespace PetsciiMapgen
             a = System.Environment.ProcessorCount - a;
           coresToUtilize = a;
         });
-
-        args.ProcessArg("-pf", s =>
-        {
-          switch (s.ToLowerInvariant())
-          {
-            case "hsl":
-              pixelFormat = HSLPixelFormat.ProcessArgs(args);
-              break;
-            case "lab":
-              pixelFormat = LABPixelFormat.ProcessArgs(args);
-              break;
-            default:
-            case "yuv":
-              pixelFormat = NaiveYUVPixelFormat.ProcessArgs(args);
-              break;
-            case "yuv5":
-              pixelFormat = NaiveYUV5PixelFormat.ProcessArgs(args);
-              break;
-          }
-        });
-
-        if (pixelFormat == null)
-        {
-          pixelFormat = NaiveYUVPixelFormat.ProcessArgs(args);
-        }
-
+        
         FontFamilyFontProvider fontFamilyProvider = null;
 
         args.ProcessArg("-fonttype", s =>
@@ -461,6 +436,30 @@ namespace PetsciiMapgen
           }
         });
 
+        args.ProcessArg("-pf", s =>
+        {
+          switch (s.ToLowerInvariant())
+          {
+            case "hsl":
+              pixelFormat = HSLPixelFormat.ProcessArgs(args);
+              break;
+            case "lab":
+              pixelFormat = LABPixelFormat.ProcessArgs(args);
+              break;
+            default:
+            case "yuv":
+              pixelFormat = NaiveYUVPixelFormat.ProcessArgs(args);
+              break;
+            case "yuv5":
+              pixelFormat = NaiveYUV5PixelFormat.ProcessArgs(args, fontProvider);
+              break;
+          }
+        });
+
+        if (pixelFormat == null)
+        {
+          pixelFormat = NaiveYUVPixelFormat.ProcessArgs(args);
+        }
         // emoji12-C64_YUV-2v5x5+2
         if (fontProvider == null)
         {

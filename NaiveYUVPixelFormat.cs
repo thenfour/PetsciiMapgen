@@ -231,19 +231,20 @@ namespace PetsciiMapgen
       sb.AppendLine(string.Format("chromaMult={0}", this.chromaMult));
     }
 
-    public NaiveYUV5PixelFormat(int valuesPerComponent, bool useChroma, double lumaMult = 1.5, double chromaMult = 1) :
-      base(valuesPerComponent, useChroma)
+    public NaiveYUV5PixelFormat(int valuesPerComponent, bool useChroma, float rot, IFontProvider font, double lumaMult = 1.5, double chromaMult = 1) :
+      base(valuesPerComponent, useChroma, rot, font)
     {
       this.lumaMult = lumaMult;
       this.chromaMult = chromaMult;
     }
 
-    public static NaiveYUV5PixelFormat ProcessArgs(string[] args)
+    public static NaiveYUV5PixelFormat ProcessArgs(string[] args, IFontProvider font)
     {
       int valuesPerComponent;
       bool useChroma;
-      LCC5PixelFormat.ProcessArgs(args, out valuesPerComponent, out useChroma);
-      return new NaiveYUV5PixelFormat(valuesPerComponent, useChroma);
+      float rot;
+      LCC5PixelFormat.ProcessArgs(args, out valuesPerComponent, out useChroma, out rot);
+      return new NaiveYUV5PixelFormat(valuesPerComponent, useChroma, rot, font);
     }
 
     public override unsafe double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, bool verboseDebugInfo = false)
