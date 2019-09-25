@@ -251,32 +251,32 @@ namespace PetsciiMapgen
           // mappings overflow when there are so many chars in the font that
           // it can't be held in memory.
 
-          // take 80% for safety.
-          ulong charCount = (ulong)fontProvider.CharCount;
-          ulong maxTheoreticalMappingCount = (ulong)coresToUtilize * (ulong)UInt32.MaxValue * (ulong)partitionCount * 3 / 4;
-          ulong maxKeyCount = maxTheoreticalMappingCount / charCount;
-          ulong NbasedOnMappings = (ulong)Math.Floor(Math.Pow(maxKeyCount, 1.0 / pixelFormat.DimensionCount));
+          //// take 80% for safety.
+          //ulong charCount = (ulong)fontProvider.CharCount;
+          //ulong maxTheoreticalMappingCount = (ulong)coresToUtilize * (ulong)UInt32.MaxValue * (ulong)partitionCount * 3 / 4;
+          //ulong maxKeyCount = maxTheoreticalMappingCount / charCount;
+          //ulong NbasedOnMappings = (ulong)Math.Floor(Math.Pow(maxKeyCount, 1.0 / pixelFormat.DimensionCount));
 
-          Log.WriteLine("Based on the map size requested, N can be as much as        {0:N0}", NbasedOnMapSize);
-          Log.WriteLine("Based on the charset and mapping array, N can be as much as {0:N0}", NbasedOnMappings);
-          ulong m = Math.Min(NbasedOnMapSize, NbasedOnMappings);
+          //Log.WriteLine("Based on the map size requested, N can be as much as        {0:N0}", NbasedOnMapSize);
+          //Log.WriteLine("Based on the charset and mapping array, N can be as much as {0:N0}", NbasedOnMappings);
+          //ulong m = Math.Min(NbasedOnMapSize, NbasedOnMappings);
 
-          ulong keyCount = (ulong)Math.Pow(m, pixelFormat.DimensionCount);
-          ulong sizeofMapping = (ulong)Marshal.SizeOf<Mapping>();
-          Log.WriteLine("Which will use {0:N0} of memory for mappings", keyCount * charCount / partitionCount * sizeofMapping);
+          //ulong keyCount = (ulong)Math.Pow(m, pixelFormat.DimensionCount);
+          //ulong sizeofMapping = (ulong)Marshal.SizeOf<Mapping>();
+          //Log.WriteLine("Which will use {0:N0} of memory for mappings", keyCount * charCount / partitionCount * sizeofMapping);
 
-          ulong maxmem = Utils.GbToBytes(150);
-          args.ProcessArg("-maxmemgb", gb => {
-            maxmem = Utils.GbToBytes(ulong.Parse(gb));
-          });
-          Log.WriteLine("Max memory to use: {0:N0}", maxmem);
+          //ulong maxmem = Utils.GbToBytes(150);
+          //args.ProcessArg("-maxmemgb", gb => {
+          //  maxmem = Utils.GbToBytes(ulong.Parse(gb));
+          //});
+          //Log.WriteLine("Max memory to use: {0:N0}", maxmem);
 
-          // reduce keycount to conform.
-          maxKeyCount = maxmem / (charCount * sizeofMapping / partitionCount);
-          ulong NbasedOnMem = (ulong)Math.Floor(Math.Pow(maxKeyCount, 1.0 / pixelFormat.DimensionCount));
-          Log.WriteLine("Based on memory usage, N can be as much as                  {0:N0}", NbasedOnMem);
+          //// reduce keycount to conform.
+          //maxKeyCount = maxmem / (charCount * sizeofMapping / partitionCount);
+          //ulong NbasedOnMem = (ulong)Math.Floor(Math.Pow(maxKeyCount, 1.0 / pixelFormat.DimensionCount));
+          //Log.WriteLine("Based on memory usage, N can be as much as                  {0:N0}", NbasedOnMem);
 
-          m = Math.Min(m, NbasedOnMem);
+          //m = Math.Min(m, NbasedOnMem);
           Log.WriteLine("======================");
           Log.WriteLine("== THEREFORE, use N={0:N0}", m);
           Log.WriteLine("======================");

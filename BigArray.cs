@@ -33,10 +33,6 @@ namespace PetsciiMapgen
     public Mapping[] Values = new Mapping[30000000]; // RESERVED values therefore don't use Values.Length or do set operations like Values.sort()
     public int Length { get; private set; } = 0;
 
-    public MappingArray(int chunkSizeIgnored)
-    {
-    }
-
     private void SuperficialClear()
     {
       Length = 0;

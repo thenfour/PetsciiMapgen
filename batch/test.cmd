@@ -11,11 +11,9 @@ bin\Release\PetsciiMapgen.exe ^
   -processImagesInDir "C:\root\git\thenfour\PetsciiMapgen\img\testImages" ^
   -testpalette ThreeBit ^
 
-  -partitions 4x8 ^
+  -partitions 1x1 ^
   -pf yuv5 ^
-  -pfargs 16v5+2 ^
-  -cores 6 ^
-  -batchesPerCore 2 ^
+  -pfargs 4v5+2 ^
 
   -fonttype normal ^
   -fontImage "C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark12.png" ^

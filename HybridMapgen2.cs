@@ -133,82 +133,84 @@ namespace PetsciiMapgen
       Log.WriteLine("  Theoretical mapping count: " + theoreticalMappings.ToString("N0"));
 
       List<Task> comparisonBatches = new List<Task>();
-      List<MappingArray> allMappingsArray = new List<MappingArray>(coreCount);
+      //List<MappingArray> allMappingsArray = new List<MappingArray>(coreCount);
       var Map = new Mapping[Keys.Length];// indices need to be synchronized with Keys.
 
-      for (int ibatch = 0; ibatch < coreCount; ++ibatch)
+      for (int icore = 0; icore < coreCount; ++icore)
       {
-        allMappingsArray.Add(new MappingArray(0));
+        //allMappingsArray.Add(new MappingArray(0));
 
         // create a task to process a segment of keys
-        ulong keyBegin = (ulong)ibatch;
+        ulong keyBegin = (ulong)icore;
         keyBegin *= (ulong)Keys.Length;
         keyBegin /= (ulong)coreCount;
 
-        ulong keyEnd = (ulong)ibatch + 1;
+        ulong keyEnd = (ulong)icore + 1;
         keyEnd *= (ulong)Keys.Length;
         keyEnd /= (ulong)coreCount;
 
-        int batchID = ibatch;
+        int coreID = icore;
+        bool isLastCore = (icore == coreCount - 1);
 
         comparisonBatches.Add(Task.Run(() =>
         {
-          int mapEntriesToPopulate = (int)keyEnd - (int)keyBegin;
-          MappingArray allMappings = allMappingsArray[batchID];// new MappingArray(0);
-          Log.WriteLine("    Batch processing idx {0:N0} to {1:N0}", keyBegin, keyEnd);
-          var pr = (batchID == coreCount - 1) ? new ProgressReporter((ulong)mapEntriesToPopulate) : null;
-          for (int ikey = (int)keyBegin; ikey < (int)keyEnd; ++ikey)
-          {
-            pr?.Visit((ulong)ikey - keyBegin);
-            var chars = pm.GetItemsInSamePartition(this.Keys[ikey], true);
-            double p = ikey - (int)keyBegin;
-            p /= keyEnd - keyBegin;
-            foreach (var ci in chars)
-            {
-              Mapping n;
-              n.icharInfo = ci.srcIndex;
-              n.imapKey = ikey;
-              double fdist = pixelFormatProvider.CalcKeyToColorDist(this.Keys[ikey], ci.actualValues);
-              n.dist = fdist;
-              allMappings.Add(n, p);
+          PopulateMap(keyBegin, keyEnd, coreID, isLastCore, pm, Map);
+          //int mapEntriesToPopulate = (int)keyEnd - (int)keyBegin;
+          ////MappingArray allMappings = allMappingsArray[batchID];// new MappingArray(0);
+          //Log.WriteLine("    Batch processing idx {0:N0} to {1:N0}", keyBegin, keyEnd);
+          //var pr = isLastCore ? new ProgressReporter((ulong)mapEntriesToPopulate) : null;
+          //for (int ikey = (int)keyBegin; ikey < (int)keyEnd; ++ikey)
+          //{
+          //  pr?.Visit((ulong)ikey - keyBegin);
+          //  var chars = pm.GetItemsInSamePartition(this.Keys[ikey], true);
+          //  double p = ikey - (int)keyBegin;
+          //  p /= keyEnd - keyBegin;
+          //  foreach (var ci in chars)
+          //  {
+          //    Mapping n;
+          //    n.icharInfo = ci.srcIndex;
+          //    n.imapKey = ikey;
+          //    double fdist = pixelFormatProvider.CalcKeyToColorDist(this.Keys[ikey], ci.actualValues);
+          //    n.dist = fdist;
+          //    allMappings.Add(n, p);
 
-              this.Keys[ikey].MinDistFound = Math.Min(this.Keys[ikey].MinDistFound, fdist);
-              this.Keys[ikey].Visited = true;
-            }
-          }
+          //    this.Keys[ikey].MinDistFound = Math.Min(this.Keys[ikey].MinDistFound, fdist);
+          //    this.Keys[ikey].Visited = true;
+          //  }
+          //}
 
-          Log.WriteLine("    Mappings generated: {0}. Now sorting them.", allMappings.Length.ToString("N0"));
+          //Log.WriteLine("    Mappings generated: {0}. Now sorting them.", allMappings.Length.ToString("N0"));
 
-          allMappings.Sort();
+          //allMappings.Sort();
 
-          Log.WriteLine("    Sorted batch {0}. Now enumerating and filling in map.", batchID);
+          //Log.WriteLine("    Sorted batch {0}. Now enumerating and filling in map.", batchID);
 
-          ulong i = 0;
-          int mapEntriesPopulated = 0;
-          pr = (batchID == coreCount - 1) ? new ProgressReporter((ulong)allMappings.Length) : null;
-          foreach (var m in allMappings.GetEnumerator())
-          {
-            pr?.Visit(i++);
-            if (Keys[m.imapKey].Mapped)
-            {
-              continue;
-            }
+          //ulong i = 0;
+          //int mapEntriesPopulated = 0;
+          //pr = (batchID == coreCount - 1) ? new ProgressReporter((ulong)allMappings.Length) : null;
+          //foreach (var m in allMappings.GetEnumerator())
+          //{
+          //  pr?.Visit(i++);
+          //  if (Keys[m.imapKey].Mapped)
+          //  {
+          //    continue;
+          //  }
 
-            CharInfo thisCh = this.CharInfo[m.icharInfo];
+          //  CharInfo thisCh = this.CharInfo[m.icharInfo];
 
-            Map[m.imapKey] = m;
-            this.Keys[m.imapKey].Mapped = true;
-            thisCh.usages++;
-            mapEntriesPopulated++;
-            if (mapEntriesPopulated == mapEntriesToPopulate)
-              break;
-          }
+          //  Map[m.imapKey] = m;
+          //  this.Keys[m.imapKey].Mapped = true;
+          //  thisCh.usages++;
+          //  mapEntriesPopulated++;
+          //  if (mapEntriesPopulated == mapEntriesToPopulate)
+          //    break;
+          //}
 
-          double prevmem = Utils.BytesToMb(Utils.UsedMemoryBytes);
-          allMappings = null;
-          allMappingsArray[batchID] = null;
-          GC.Collect();
-          Log.WriteLine("Finished batch; GC mem {0:0.00} mb => {1:0.00}", prevmem, Utils.BytesToMb(Utils.UsedMemoryBytes));
+          //double prevmem = Utils.BytesToMb(Utils.UsedMemoryBytes);
+          ////allMappings = null;
+          ////allMappingsArray[batchID] = null;
+          //GC.Collect();
+          //Log.WriteLine("Finished batch; GC mem {0:0.00} mb => {1:0.00}", prevmem, Utils.BytesToMb(Utils.UsedMemoryBytes));
 
         }));
       }
@@ -265,9 +267,9 @@ namespace PetsciiMapgen
       }
 #endif
       Log.WriteLine("Process currently using {0:0.00} mb of memory)", Utils.BytesToMb(Utils.UsedMemoryBytes));
-      allMappingsArray = null;
-      GC.Collect();
-      Log.WriteLine("Process currently using {0:0.00} mb of memory after GC)", Utils.BytesToMb(Utils.UsedMemoryBytes));
+      //allMappingsArray = null;
+      //GC.Collect();
+      //Log.WriteLine("Process currently using {0:0.00} mb of memory after GC)", Utils.BytesToMb(Utils.UsedMemoryBytes));
 
       OutputFullMap(fullMapPath, Map);
 
@@ -322,6 +324,78 @@ namespace PetsciiMapgen
       Log.WriteLine("  Number of total char repetitions: " + numRepetitions);
     }
 
+    private void PopulateMap(ulong keyBegin, ulong keyEnd, int coreID, bool isLastCore, PartitionManager pm, Mapping[] Map)
+    {
+      int mapEntriesToPopulate = (int)keyEnd - (int)keyBegin;
+      //MappingArray allMappings = new MappingArray();
+      Log.WriteLine("    Batch processing idx {0:N0} to {1:N0}", keyBegin, keyEnd);
+      var pr = isLastCore ? new ProgressReporter((ulong)mapEntriesToPopulate) : null;
+      for (int ikey = (int)keyBegin; ikey < (int)keyEnd; ++ikey)
+      {
+        pr?.Visit((ulong)ikey - keyBegin);
+        var chars = pm.GetItemsInSamePartition(this.Keys[ikey], true);
+        double p = ikey - (int)keyBegin;
+        p /= keyEnd - keyBegin;
+
+        CharInfo ciNearest = null;
+        double closestDist = double.MaxValue;
+
+        foreach (var ci in chars)
+        {
+          //Mapping n;
+          //n.icharInfo = ci.srcIndex;
+          //n.imapKey = ikey;
+          double fdist = this.PixelFormatProvider.CalcKeyToColorDist(this.Keys[ikey], ci.actualValues);
+          //n.dist = fdist;
+          //allMappings.Add(n, p);
+          if (fdist < closestDist)
+          {
+            this.Keys[ikey].MinDistFound = fdist;// Math.Min(this.Keys[ikey].MinDistFound, fdist);
+            closestDist = fdist;
+            ciNearest = ci;
+          }
+          //this.Keys[ikey].Visited = true;
+        }
+
+        Map[ikey].dist = closestDist;
+        Map[ikey].icharInfo = ciNearest.srcIndex;
+        Map[ikey].imapKey = ikey;
+      }
+
+      //Log.WriteLine("    Mappings generated: {0}. Now sorting them.", allMappings.Length.ToString("N0"));
+
+      //allMappings.Sort();
+
+      //Log.WriteLine("    Sorted batch {0}. Now enumerating and filling in map.", batchID);
+
+      //ulong i = 0;
+      //int mapEntriesPopulated = 0;
+      //pr = (batchID == coreCount - 1) ? new ProgressReporter((ulong)allMappings.Length) : null;
+      //foreach (var m in allMappings.GetEnumerator())
+      //{
+      //  pr?.Visit(i++);
+      //  if (Keys[m.imapKey].Mapped)
+      //  {
+      //    continue;
+      //  }
+
+      //  CharInfo thisCh = this.CharInfo[m.icharInfo];
+
+      //  Map[m.imapKey] = m;
+      //  this.Keys[m.imapKey].Mapped = true;
+      //  thisCh.usages++;
+      //  mapEntriesPopulated++;
+      //  if (mapEntriesPopulated == mapEntriesToPopulate)
+      //    break;
+      //}
+
+      //double prevmem = Utils.BytesToMb(Utils.UsedMemoryBytes);
+      ////allMappings = null;
+      ////allMappingsArray[batchID] = null;
+      //GC.Collect();
+      //Log.WriteLine("Finished batch; GC mem {0:0.00} mb => {1:0.00}", prevmem, Utils.BytesToMb(Utils.UsedMemoryBytes));
+    }
+
     // when a color looks wrong, let's try and trace it back. outputs mapping information for this color,
     // top char matches, and outputs an image showing the chars found.
     public void TestColor(string outputDir, ColorF rgb, params Point[] charPixPosWUT)
@@ -348,7 +422,7 @@ namespace PetsciiMapgen
       Log.WriteLine("   -> " + this.Keys[mapid]);
 
       // now display top 10 characters for that mapid.
-      MappingArray marr = new MappingArray(1000000);
+      MappingArray marr = new MappingArray();
       Utils.ValueRangeInspector r = new Utils.ValueRangeInspector();
       foreach (CharInfo ci in this.CharInfo)
       {

@@ -12,8 +12,6 @@ Command options:
 -calcn maxkeys            calculates maximum values per colorant. use
                           -pfargs and -partitions to specify other parameters.
                           *Specify -maxmem as well.
--maxmemgb N               Used with -calcn, specifies the amount of gb of RAM
-                          to not exceed, roughly.
 
 -testcolor #ff00ff        outputs an image and log testing matching a certain color
 -testpalette              same as -testcolor but over a whole named palette
