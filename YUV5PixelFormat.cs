@@ -273,7 +273,7 @@ namespace PetsciiMapgen
         for (int px = 0; px < font.CharSizeNoPadding.Width; ++ px)
         {
           ColorF pc = font.GetPixel(ci.srcIndex, px, py);
-          charRGB.Add(pc);
+          charRGB = charRGB.Add(pc);
           int lumaIdx = GetLumaTileIndexOfPixelPosInCell(px, py, font.CharSizeNoPadding);
           lumaRGB[lumaIdx] = lumaRGB[lumaIdx].Add(pc);
           pixelCounts[lumaIdx]++;
@@ -326,7 +326,7 @@ namespace PetsciiMapgen
         for (int px = 0; px < sz.Width; ++px)
         {
           ColorF pc = ColorFUtils.From(img.GetPixel(x + px, y + py));
-          charRGB.Add(pc);
+          charRGB = charRGB.Add(pc);
           int lumaIdx = GetLumaTileIndexOfPixelPosInCell(px, py, sz);
           lumaRGB[lumaIdx] = lumaRGB[lumaIdx].Add(pc);
           pixelCounts[lumaIdx]++;

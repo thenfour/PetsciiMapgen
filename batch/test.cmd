@@ -4,21 +4,22 @@ pushd %~dp0..
 
 
 
-REM
+REM Emoji 12, color
+REM palettes: BlackAndWhite, Gray3, Gray4, Gray5, ThreeBit, RGBPrimariesHalftone16
 bin\Release\PetsciiMapgen.exe ^
   -outdir C:\temp ^
   -processImagesInDir "C:\root\git\thenfour\PetsciiMapgen\img\testImages" ^
   -testpalette ThreeBit ^
-  -testpalette C64Color ^
 
-  -partitions 3x8 ^
+  -partitions 4x8 ^
   -pf yuv5 ^
-  -pfargs 6v3x3+0 ^
+  -pfargs 16v5+2 ^
+  -cores 6 ^
+  -batchesPerCore 2 ^
 
-  -fonttype mono ^
-  -fontImage img\fonts\c64opt160.png ^
-  -charsize 8x16 ^
-  -palette C64ColorGray8B ^
+  -fonttype normal ^
+  -fontImage "C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark12.png" ^
+  -charsize 12x12 
 REM  -calcn 80000000
 
 

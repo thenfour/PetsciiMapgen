@@ -52,6 +52,19 @@ namespace PetsciiMapgen
       }
     }
 
+    public static Color[] Gray4
+    {
+      get
+      {
+        return new Color[] {
+        Color.FromArgb(  0,   0,   0),// black
+        Color.FromArgb( 85,  85,  85),//gray
+        Color.FromArgb(170, 170, 170),//gray
+        Color.FromArgb(255, 255, 255),//white
+        };
+      }
+    }
+
     public static Color[] Gray5
     {
       get
@@ -62,6 +75,23 @@ namespace PetsciiMapgen
         Color.FromArgb(128, 128, 128),//gray
         Color.FromArgb(192, 192, 192),//gray
         Color.FromArgb(255, 255, 255),//white
+        };
+      }
+    }
+
+    public static Color[] Gray8
+    {
+      get
+      {
+        return new Color[] {
+        Color.FromArgb(0, 0, 0),
+        Color.FromArgb(36, 36, 36), // 255/7
+        Color.FromArgb(72, 72, 72),
+        Color.FromArgb(109, 109, 109),
+        Color.FromArgb(145, 145, 145),
+        Color.FromArgb(182, 182, 182),
+        Color.FromArgb(218, 218, 218),
+        Color.FromArgb(255, 255, 255),
         };
       }
     }

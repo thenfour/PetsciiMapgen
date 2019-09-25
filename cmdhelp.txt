@@ -22,6 +22,7 @@ Command options:
 -outdir path              required to do any output
 -processImagesInDir path
 -processImage path
+
 -cores N                  if N<=0, we use (processor count - N)
 
 -pf ID                    Pixel format: YUV, LAB, HSL, YUV5

@@ -50,12 +50,12 @@ namespace PetsciiMapgen
     public unsafe HybridMap2(IFontProvider fontProvider,
       PartitionManager pm, IPixelFormatProvider pixelFormatProvider,
       string fullMapPath, string refMapPath, string refFontPath,
-      int BatchCount)
+      int coreCount)
     {
       Timings timings = new Timings();
 
-      if (BatchCount < 1)
-        BatchCount = System.Environment.ProcessorCount - BatchCount;
+      if (coreCount < 1)
+        coreCount = System.Environment.ProcessorCount - coreCount;
 
       this.FontProvider = fontProvider;
       this.PixelFormatProvider = pixelFormatProvider;
@@ -133,21 +133,21 @@ namespace PetsciiMapgen
       Log.WriteLine("  Theoretical mapping count: " + theoreticalMappings.ToString("N0"));
 
       List<Task> comparisonBatches = new List<Task>();
-      List<MappingArray> allMappingsArray = new List<MappingArray>(BatchCount);
+      List<MappingArray> allMappingsArray = new List<MappingArray>(coreCount);
       var Map = new Mapping[Keys.Length];// indices need to be synchronized with Keys.
 
-      for (int ibatch = 0; ibatch < BatchCount; ++ibatch)
+      for (int ibatch = 0; ibatch < coreCount; ++ibatch)
       {
         allMappingsArray.Add(new MappingArray(0));
 
         // create a task to process a segment of keys
         ulong keyBegin = (ulong)ibatch;
         keyBegin *= (ulong)Keys.Length;
-        keyBegin /= (ulong)BatchCount;
+        keyBegin /= (ulong)coreCount;
 
         ulong keyEnd = (ulong)ibatch + 1;
         keyEnd *= (ulong)Keys.Length;
-        keyEnd /= (ulong)BatchCount;
+        keyEnd /= (ulong)coreCount;
 
         int batchID = ibatch;
 
@@ -156,7 +156,7 @@ namespace PetsciiMapgen
           int mapEntriesToPopulate = (int)keyEnd - (int)keyBegin;
           MappingArray allMappings = allMappingsArray[batchID];// new MappingArray(0);
           Log.WriteLine("    Batch processing idx {0:N0} to {1:N0}", keyBegin, keyEnd);
-          var pr = (batchID == BatchCount - 1) ? new ProgressReporter((ulong)mapEntriesToPopulate) : null;
+          var pr = (batchID == coreCount - 1) ? new ProgressReporter((ulong)mapEntriesToPopulate) : null;
           for (int ikey = (int)keyBegin; ikey < (int)keyEnd; ++ikey)
           {
             pr?.Visit((ulong)ikey - keyBegin);
@@ -185,7 +185,7 @@ namespace PetsciiMapgen
 
           ulong i = 0;
           int mapEntriesPopulated = 0;
-          pr = (batchID == BatchCount - 1) ? new ProgressReporter((ulong)allMappings.Length) : null;
+          pr = (batchID == coreCount - 1) ? new ProgressReporter((ulong)allMappings.Length) : null;
           foreach (var m in allMappings.GetEnumerator())
           {
             pr?.Visit(i++);
@@ -203,6 +203,13 @@ namespace PetsciiMapgen
             if (mapEntriesPopulated == mapEntriesToPopulate)
               break;
           }
+
+          double prevmem = Utils.BytesToMb(Utils.UsedMemoryBytes);
+          allMappings = null;
+          allMappingsArray[batchID] = null;
+          GC.Collect();
+          Log.WriteLine("Finished batch; GC mem {0:0.00} mb => {1:0.00}", prevmem, Utils.BytesToMb(Utils.UsedMemoryBytes));
+
         }));
       }
       Task.WaitAll(comparisonBatches.ToArray());

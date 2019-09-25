@@ -37,6 +37,11 @@ namespace PetsciiMapgen
     {
     }
 
+    private void SuperficialClear()
+    {
+      Length = 0;
+    }
+
     private void Add__(Mapping m, int potentialNewLength)
     {
       if (Values.Length <= Length)
