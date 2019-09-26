@@ -126,37 +126,39 @@ namespace PetsciiMapgen
       //  var x = 0;
       //}
 
+      string rootDir = @"f:\maps";
+
       var common = Args(
         "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
         "-testpalette", "ThreeBit");
 
       //-pf [Square, FiveTile]    Pixel format: Square, FiveTile
-      //var grayscalePixelFormats = Or(
-      //  Args("-pf", "square", "-pfargs", "8192v1x1+0", "-partitions", "1x1"),
-      //  Args("-pf", "square", "-pfargs", "128v2x2+0", "-partitions", "2x3"),
-      //  Args("-pf", "square", "-pfargs", "8v3x3+0", "-partitions", "2x3"),
-      //  Args("-pf", "fivetile", "-pfargs", "48v5+0", "-partitions", "2x3")
-      //  );
-
-      //var colorPixelFormats = Or(
-      //  Args("-pf", "square", "-pfargs", "645v1x1+2", "-partitions", "1x1"),
-      //  Args("-pf", "square", "-pfargs", "24v2x2+2", "-partitions", "2x3"),
-      //  Args("-pf", "square", "-pfargs", "5v3x3+2", "-partitions", "1x1"),
-      //  Args("-pf", "fivetile", "-pfargs", "16v5+2", "-partitions", "2x3")
-      //  );
-
-      // budget versions
       var grayscalePixelFormats = Or(
-        Args("-pf", "square", "-pfargs", "256v1x1+0", "-partitions", "1x1"),
-        Args("-pf", "square", "-pfargs", "16v2x2+0", "-partitions", "2x3"),
-        Args("-pf", "fivetile", "-pfargs", "12v5+0", "-partitions", "2x3")
+        Args("-pf", "square", "-pfargs", "8192v1x1+0", "-partitions", "1x1"),
+        Args("-pf", "square", "-pfargs", "128v2x2+0", "-partitions", "2x3"),
+        Args("-pf", "square", "-pfargs", "8v3x3+0", "-partitions", "2x3"),
+        Args("-pf", "fivetile", "-pfargs", "48v5+0", "-partitions", "2x3")
         );
 
       var colorPixelFormats = Or(
-        Args("-pf", "square", "-pfargs", "16v1x1+2", "-partitions", "1x1"),
-        Args("-pf", "square", "-pfargs", "8v2x2+2", "-partitions", "2x3"),
-        Args("-pf", "fivetile", "-pfargs", "6v5+2", "-partitions", "2x3")
+        Args("-pf", "square", "-pfargs", "645v1x1+2", "-partitions", "1x1"),
+        Args("-pf", "square", "-pfargs", "24v2x2+2", "-partitions", "2x3"),
+        Args("-pf", "square", "-pfargs", "5v3x3+2", "-partitions", "1x1"),
+        Args("-pf", "fivetile", "-pfargs", "16v5+2", "-partitions", "2x3")
         );
+
+      //// budget versions
+      //var grayscalePixelFormats = Or(
+      //  Args("-pf", "square", "-pfargs", "256v1x1+0", "-partitions", "1x1"),
+      //  Args("-pf", "square", "-pfargs", "16v2x2+0", "-partitions", "2x3"),
+      //  Args("-pf", "fivetile", "-pfargs", "12v5+0", "-partitions", "2x3")
+      //  );
+
+      //var colorPixelFormats = Or(
+      //  Args("-pf", "square", "-pfargs", "16v1x1+2", "-partitions", "1x1"),
+      //  Args("-pf", "square", "-pfargs", "8v2x2+2", "-partitions", "2x3"),
+      //  Args("-pf", "fivetile", "-pfargs", "6v5+2", "-partitions", "2x3")
+      //  );
 
       var allLCCColorspaces = Or(
         Args("-cs", "jpeg"),
@@ -179,8 +181,8 @@ namespace PetsciiMapgen
           Args("-palette", "C64Color")
           );
 
-      var C64Color = Args("-outdir", @"C:\temp\C64 color") + c64fontAndPalettes_Color + colorPixelFormats + allLCCColorspaces;
-      var C64Grayscale = Args("-outdir", @"C:\temp\C64 grayscale") + c64fontAndPalettes_Grayscale + grayscalePixelFormats + allLCCColorspaces;
+      var C64Color = Args("-outdir", rootDir + @"\C64 color") + c64fontAndPalettes_Color + colorPixelFormats + allLCCColorspaces;
+      var C64Grayscale = Args("-outdir", rootDir + @"\C64 grayscale") + c64fontAndPalettes_Grayscale + grayscalePixelFormats + allLCCColorspaces;
 
       // mz700 ============================
       var mz700font = Args(
@@ -200,16 +202,108 @@ namespace PetsciiMapgen
         Args("-palette", "Gray8")
         );
 
-      var mz700color = Args("-outdir", @"C:\temp\MZ700 color") + mz700font + mz700ColorPalettes + colorPixelFormats + allLCCColorspaces;
-      var mz700grayscale = Args("-outdir", @"C:\temp\MZ700 grayscale") + mz700font + mz700GrayPalettes + grayscalePixelFormats + allLCCColorspaces;
+      var mz700color = Args("-outdir", rootDir + @"\MZ700 color") + mz700font + mz700ColorPalettes + colorPixelFormats + allLCCColorspaces;
+      var mz700grayscale = Args("-outdir", rootDir + @"\MZ700 grayscale") + mz700font + mz700GrayPalettes + grayscalePixelFormats + allLCCColorspaces;
 
+      // topaz ============================
+      var topazFont = Args(
+        "-fonttype", "mono",
+        "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\topaz96.gif",
+        "-charsize", "8x16");
+
+      var topazPalettes = Or(
+        Args("-palette", "Workbench134"),
+        Args("-palette", "Workbench314")
+        );
+
+      var topazGrayscale = Args("-outdir", rootDir + @"\Topaz grayscale") + topazFont + topazPalettes + grayscalePixelFormats + allLCCColorspaces;
+
+      // DOS ============================
+      var dosFont = Args(
+  "-fonttype", "mono",
+  "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\VGA240.png",
+  "-charsize", "8x16");
+
+      var dosColorPalettes = Or(
+        Args("-palette", "RGBPrimariesHalftone16"),
+        Args("-palette", "ThreeBit")
+        );
+      var dosGrayPalettes = Or(
+        Args("-palette", "BlackAndWhite"),
+        Args("-palette", "Gray3"),
+        Args("-palette", "Gray4"),
+        Args("-palette", "Gray5"),
+        Args("-palette", "Gray8")
+        );
+
+      var dosColor = Args("-outdir", rootDir + @"\Dos color") + dosFont + dosColorPalettes + colorPixelFormats + allLCCColorspaces;
+      var dosGrayscale = Args("-outdir", rootDir + @"\Dos grayscale") + dosFont + dosGrayPalettes + grayscalePixelFormats + allLCCColorspaces;
+
+      // VGAboxonly45.png ============================
+      var dosBoxFont = Args(
+"-fonttype", "mono",
+"-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\VGAboxonly45.png",
+"-charsize", "8x16");
+
+      var dosBoxColor = Args("-outdir", rootDir + @"\Dos box color") + dosBoxFont + dosColorPalettes + colorPixelFormats + allLCCColorspaces;
+      var dosBoxGrayscale = Args("-outdir", rootDir + @"\Dos box grayscale") + dosBoxFont + dosGrayPalettes + grayscalePixelFormats + allLCCColorspaces;
+
+      // emojidark.png ============================
+      var emojidark12Font = Args(
+"-fonttype", "normal",
+"-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark12.png",
+"-charsize", "12x12");
+
+      var emojidark12color = Args("-outdir", rootDir + @"\Emoji dark 12 Color") + emojidark12Font + colorPixelFormats + allLCCColorspaces;
+      var emojidark12grayscale = Args("-outdir", rootDir + @"\Emoji dark 12 Grayscale") + emojidark12Font + grayscalePixelFormats + allLCCColorspaces;
+
+      var emojidark16Font = Args(
+"-fonttype", "normal",
+"-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark16.png",
+"-charsize", "16x16");
+
+      var emojidark16color = Args("-outdir", rootDir + @"\Emoji dark 16 Color") + emojidark16Font + colorPixelFormats + allLCCColorspaces;
+      var emojidark16grayscale = Args("-outdir", rootDir + @"\Emoji dark 16 Grayscale") + emojidark16Font + grayscalePixelFormats + allLCCColorspaces;
+
+      var emojidark24Font = Args(
+"-fonttype", "normal",
+"-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark24.png",
+"-charsize", "24x24");
+
+      var emojidark24color = Args("-outdir", rootDir + @"\Emoji dark 24 Color") + emojidark24Font + colorPixelFormats + allLCCColorspaces;
+      var emojidark24grayscale = Args("-outdir", rootDir + @"\Emoji dark 24 Grayscale") + emojidark24Font + grayscalePixelFormats + allLCCColorspaces;
+
+      var emojidark32Font = Args(
+"-fonttype", "normal",
+"-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark32.png",
+"-charsize", "32x32");
+
+      var emojidark32color = Args("-outdir", rootDir + @"\Emoji dark 32 Color") + emojidark32Font + colorPixelFormats + allLCCColorspaces;
+      var emojidark32grayscale = Args("-outdir", rootDir + @"\Emoji dark 32 Grayscale") + emojidark32Font + grayscalePixelFormats + allLCCColorspaces;
+
+      var emojidark64Font = Args(
+"-fonttype", "normal",
+"-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark64.png",
+"-charsize", "64x64");
+
+      var emojidark64color = Args("-outdir", rootDir + @"\Emoji dark 64 Color") + emojidark64Font + colorPixelFormats + allLCCColorspaces;
+      var emojidark64grayscale = Args("-outdir", rootDir + @"\Emoji dark 64 Grayscale") + emojidark64Font + grayscalePixelFormats + allLCCColorspaces;
 
       // All ============================
       var All = common + Or(
         C64Color, C64Grayscale,
-        mz700color, mz700grayscale);
+        topazGrayscale,
+        mz700color, mz700grayscale,
+        dosColor, dosGrayscale,
+        dosBoxColor, dosBoxGrayscale,
+        emojidark12color, emojidark12grayscale,
+        emojidark16color, emojidark16grayscale,
+        emojidark24color, emojidark24grayscale,
+        emojidark32color, emojidark32grayscale,
+        emojidark64color, emojidark64grayscale
+        );
 
-      string batchLogPath = @"c:\temp\batchLog.txt";
+      string batchLogPath = rootDir + @"\batchLog.txt";
       int ibatch = 0;
       foreach (var argset in All.argSets)
       {
