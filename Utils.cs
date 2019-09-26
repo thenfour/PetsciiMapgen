@@ -712,15 +712,15 @@ namespace PetsciiMapgen
       return false;
     }
 
-    // 1v2x3+2
-    public static void ParsePFArgs(string o, out int valuesPerComponent_, out bool useChroma_, out Size lumaTiles_)
-    {
-      valuesPerComponent_ = int.Parse(o.Split('v')[0]);
-      o = o.Split('v')[1];// 2x3+2
-      useChroma_ = int.Parse(o.Split('+')[1]) == 2;
-      o = o.Split('+')[0];// 2x3
-      lumaTiles_ = new Size(int.Parse(o.Split('x')[0]), int.Parse(o.Split('x')[1]));
-    }
+    //// 1v2x3+2
+    //public static void ParsePFArgs(string o, out int valuesPerComponent_, out bool useChroma_, out Size lumaTiles_)
+    //{
+    //  valuesPerComponent_ = int.Parse(o.Split('v')[0]);
+    //  o = o.Split('v')[1];// 2x3+2
+    //  useChroma_ = int.Parse(o.Split('+')[1]) == 2;
+    //  o = o.Split('+')[0];// 2x3
+    //  lumaTiles_ = new Size(int.Parse(o.Split('x')[0]), int.Parse(o.Split('x')[1]));
+    //}
 
     public static ulong GbToBytes(ulong gb)
     {
@@ -782,6 +782,55 @@ namespace PetsciiMapgen
         ID = mapSize - 1;
       }
       return ID;
+    }
+
+    public static double EuclidianColorDist(ValueSet key /* DENORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, int lumaElements, int chromaElements)
+    {
+      Debug.Assert(key.ValuesLength == actual.ValuesLength);
+      Debug.Assert(key.ValuesLength == (lumaElements + chromaElements));
+      double acc = 0;
+      for (int i = 0; i < lumaElements; ++ i)
+      {
+        double d = Math.Abs(key[i] - actual[i]);
+        acc += d * d;
+      }
+      acc /= lumaElements;
+      for (int i = 0; i < chromaElements; ++i)
+      {
+        double d = Math.Abs(key[lumaElements + i] - actual[lumaElements + i]);
+        acc += d * d;
+      }
+      return acc;
+    }
+
+    public static ILCCColorSpace ParseRequiredLCCColorSpaceArgs(string[] args)
+    {
+      ILCCColorSpace ret = null;
+      args.ProcessArg("-cs", o =>
+      {
+        switch (o.ToLowerInvariant())
+        {
+          case "jpeg":
+            ret = new JPEGColorspace();
+            break;
+          case "nyuv":
+            ret = new NaiveYUVColorspace();
+            break;
+          case "lab":
+            ret = new LABColorspace();
+            break;
+          case "hsl":
+            ret = new HSLColorspace();
+            break;
+          default:
+            throw new Exception(string.Format("Unknown LCC colorspace: {0}", o));
+        }
+      });
+      if (ret == null)
+      {
+        throw new Exception("Colorspace not specified");
+      }
+      return ret;
     }
   }
 }

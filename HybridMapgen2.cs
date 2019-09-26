@@ -359,6 +359,7 @@ namespace PetsciiMapgen
 
         Map[ikey].dist = closestDist;
         Map[ikey].icharInfo = ciNearest.srcIndex;
+        ciNearest.usages ++;
         Map[ikey].imapKey = ikey;
       }
 
@@ -429,10 +430,6 @@ namespace PetsciiMapgen
         Mapping m;
         m.icharInfo = ci.srcIndex;
         m.imapKey = mapid;
-        if (ci.srcIndex == 1639)
-        {
-          int a = 0;
-        }
         m.dist = PixelFormatProvider.CalcKeyToColorDist(this.Keys[mapid], ci.actualValues);
         r.Visit(m.dist);
 

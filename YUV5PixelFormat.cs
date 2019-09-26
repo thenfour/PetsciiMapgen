@@ -43,18 +43,24 @@ using System.Runtime.InteropServices;
 namespace PetsciiMapgen
 {
   // base class for pixel formats using colorspace represented by separate luminance + 2 chroma-ish colorants
-  public abstract class LCC5PixelFormat : IPixelFormatProvider
+  public class FiveTilePixelFormat : IPixelFormatProvider
   {
     // abstract stuff:
-    protected abstract string FormatID { get; }
-    public abstract double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, bool verboseDebugInfo = false);
-    protected abstract LCCColorDenorm RGBToHCL(ColorF c);
-    protected abstract double NormalizeL(double x);
-    protected abstract double NormalizeC1(double x);
-    protected abstract double NormalizeC2(double x);
-    protected abstract double DenormalizeL(double x);
-    protected abstract double DenormalizeC1(double x);
-    protected abstract double DenormalizeC2(double x);
+    //protected abstract string FormatID { get; }
+
+    public double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, bool verboseDebugInfo = false)
+    {
+      Denormalize(ref key);
+      return this.Colorspace.ColorDistance(key, actual, LumaComponentCount, ChromaComponentCount);
+    }
+    //public abstract double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, bool verboseDebugInfo = false);
+    //protected abstract LCCColorDenorm RGBToHCL(ColorF c);
+    //protected abstract double NormalizeL(double x);
+    //protected abstract double NormalizeC1(double x);
+    //protected abstract double NormalizeC2(double x);
+    //protected abstract double DenormalizeL(double x);
+    //protected abstract double DenormalizeC1(double x);
+    //protected abstract double DenormalizeC2(double x);
 
     public int DimensionCount { get; private set; } // # of dimensions (UV + Y*size)
     public float[] DiscreteNormalizedValues { get; private set; }
@@ -65,12 +71,14 @@ namespace PetsciiMapgen
     protected bool UseChroma { get; private set; }
     protected float Rotation { get; private set; } // 0-1, default 0.5
 
-    public virtual void WriteConfig(StringBuilder sb)
-    {
-      sb.AppendLine("# LCC5 pixel format provider config");
-      sb.AppendLine(string.Format("valuesPerComponent={0}", DiscreteNormalizedValues.Length));
-      sb.AppendLine(string.Format("chromaComponents={0}", ChromaComponentCount));
-    }
+    protected ILCCColorSpace Colorspace { get; private set; }
+
+    //public virtual void WriteConfig(StringBuilder sb)
+    //{
+    //  sb.AppendLine("# LCC5 pixel format provider config");
+    //  sb.AppendLine(string.Format("valuesPerComponent={0}", DiscreteNormalizedValues.Length));
+    //  sb.AppendLine(string.Format("chromaComponents={0}", ChromaComponentCount));
+    //}
 
     public string PixelFormatString
     {
@@ -81,56 +89,46 @@ namespace PetsciiMapgen
         {
           rotstring = string.Format("r{0:0.00}", this.Rotation);
         }
-        return string.Format("{3}{0}v{1}+{2}{4}", DiscreteNormalizedValues.Length, LumaComponentCount, UseChroma ? 2 : 0, FormatID, rotstring);
+        return string.Format("FiveTile{3}{0}v{1}+{2}{4}",
+          DiscreteNormalizedValues.Length,
+          LumaComponentCount,
+          UseChroma ? 2 : 0,
+          Colorspace.FormatString,
+          rotstring);
       }
     }
 
-    public static void ProcessArgs(string[] args, out int valuesPerComponent, out bool useChroma, out float rot)
+    public static FiveTilePixelFormat ProcessArgs(string[] args, IFontProvider font)
     {
-      int valuesPerComponent_ = 255;
-      bool useChroma_ = false;
-      float rot_ = 0.5f;
+      FiveTilePixelFormat ret = new FiveTilePixelFormat();
+      int valuesPerComponent = 255;
+      //bool useChroma_ = false;
+      //float rot_ = 0.5f;
       args.ProcessArg("-pfargs", s =>
       {
-        valuesPerComponent_ = int.Parse(s.Split('v')[0]);
-        useChroma_ = int.Parse(s.Split('+')[1]) > 1;
+        valuesPerComponent = int.Parse(s.Split('v')[0]);
+        ret.UseChroma = int.Parse(s.Split('+')[1]) > 1;
       });
       args.ProcessArg("-yuv5rot", s => 
       {
-        rot_ = float.Parse(s);
+        ret.Rotation = float.Parse(s);
       });
-      valuesPerComponent = valuesPerComponent_;
-      useChroma = useChroma_;
-      rot = rot_;
-    }
 
-    public int MapEntryCount
-    {
-      get
-      {
-        return (int)Utils.Pow(DiscreteNormalizedValues.LongLength, (uint)DimensionCount);
-      }
-    }
+      ret.Colorspace = Utils.ParseRequiredLCCColorSpaceArgs(args);
+      ret.ChromaComponentCount = (ret.UseChroma ? 2 : 0);
+      ret.DimensionCount = ret.LumaComponentCount + ret.ChromaComponentCount;
 
-    public LCC5PixelFormat(int valuesPerComponent, bool useChroma, float rot, IFontProvider font)
-    {
-      this.UseChroma = useChroma;
-      ChromaComponentCount = (useChroma ? 2 : 0);
-      this.Rotation = rot;
-
-      DimensionCount = LumaComponentCount + ChromaComponentCount;
-
-      this.DiscreteNormalizedValues = Utils.GetDiscreteNormalizedValues(valuesPerComponent);
+      ret.DiscreteNormalizedValues = Utils.GetDiscreteNormalizedValues(valuesPerComponent);
 
       // OUTput a visual of the tiling
       Log.WriteLine("Luma tiling breakdown for charsize {0}:", font.CharSizeNoPadding);
-      int[] pixelCounts = new int[this.LumaComponentCount];
+      int[] pixelCounts = new int[ret.LumaComponentCount];
       for (int py = 0; py < font.CharSizeNoPadding.Height; ++py)
       {
         string l = "  ";
         for (int px = 0; px < font.CharSizeNoPadding.Width; ++px)
         {
-          int lumaIdx = GetLumaTileIndexOfPixelPosInCell(px, py, font.CharSizeNoPadding);
+          int lumaIdx = ret.GetLumaTileIndexOfPixelPosInCell(px, py, font.CharSizeNoPadding);
           pixelCounts[lumaIdx]++;
           switch (lumaIdx)
           {
@@ -155,11 +153,24 @@ namespace PetsciiMapgen
         Log.WriteLine(l);
       }
 
-      for (int i = 0; i < this.LumaComponentCount; ++ i)
+      for (int i = 0; i < ret.LumaComponentCount; ++i)
       {
         Log.WriteLine("Tile {0}: {1} pixels", i, pixelCounts[i]);
       }
 
+      return ret;
+    }
+
+    public int MapEntryCount
+    {
+      get
+      {
+        return (int)Utils.Pow(DiscreteNormalizedValues.LongLength, (uint)DimensionCount);
+      }
+    }
+
+    private FiveTilePixelFormat()
+    {
     }
 
     internal int GetValueLIndex(int l)
@@ -175,13 +186,13 @@ namespace PetsciiMapgen
       return LumaComponentCount + 1;
     }
 
-    public LCCColorNorm RGBToNormalizedHCL(ColorF c)
+    public LCCColorNorm RGBToNormalizedLCC(ColorF c)
     {
-      LCCColorDenorm d = RGBToHCL(c);
+      LCCColorDenorm d = Colorspace.RGBToLCC(c);
       LCCColorNorm ret;
-      ret.L = NormalizeL(d.L);
-      ret.C1 = NormalizeC1(d.C1);
-      ret.C2 = NormalizeC2(d.C2);
+      ret.L = Colorspace.NormalizeL(d.L);
+      ret.C1 = Colorspace.NormalizeC1(d.C1);
+      ret.C2 = Colorspace.NormalizeC2(d.C2);
       return ret;
     }
 
@@ -190,12 +201,12 @@ namespace PetsciiMapgen
       // changes normalized 0-1 values to YUV-ranged values. depends on value format and stuff.
       if (UseChroma)
       {
-        v[GetValueC1Index()] = (float)DenormalizeC1(v[GetValueC1Index()]);
-        v[GetValueC2Index()] = (float)DenormalizeC2(v[GetValueC2Index()]);
+        v[GetValueC1Index()] = (float)Colorspace.DenormalizeC1(v[GetValueC1Index()]);
+        v[GetValueC2Index()] = (float)Colorspace.DenormalizeC2(v[GetValueC2Index()]);
       }
       for (int i = 0; i < LumaComponentCount; ++i)
       {
-        v[i] = (float)DenormalizeL(v[i]);
+        v[i] = (float)Colorspace.DenormalizeL(v[i]);
       }
     }
     public unsafe double NormalizeElement(ValueSet v, int elementToNormalize)
@@ -203,11 +214,11 @@ namespace PetsciiMapgen
       if (UseChroma)
       {
         if (elementToNormalize == GetValueC1Index())
-          return NormalizeC1(v[elementToNormalize]);
+          return Colorspace.NormalizeC1(v[elementToNormalize]);
         if (elementToNormalize == GetValueC2Index())
-          return NormalizeC2(v[elementToNormalize]);
+          return Colorspace.NormalizeC2(v[elementToNormalize]);
       }
-      return NormalizeL(v[elementToNormalize]);
+      return Colorspace.NormalizeL(v[elementToNormalize]);
     }
 
     public int NormalizedValueSetToMapID(float[] vals)
@@ -217,7 +228,7 @@ namespace PetsciiMapgen
 
     public int DebugGetMapIndexOfColor(ColorF charRGB)
     {
-      var norm = RGBToNormalizedHCL(charRGB);
+      var norm = RGBToNormalizedLCC(charRGB);
       Log.WriteLine("  norm: " + norm);
       float[] vals = new float[DimensionCount];
       for (int i = 0; i < LumaComponentCount; ++i)
@@ -289,14 +300,14 @@ namespace PetsciiMapgen
           throw new Exception("!!!!!! Your fonts are just too small; i can't sample them properly.");
         }
         lc = lc.Div(pc);
-        LCCColorDenorm lccc = RGBToHCL(lc);
+        LCCColorDenorm lccc = Colorspace.RGBToLCC(lc);
         ci.actualValues[i] = (float)lccc.L;
       }
 
       if (UseChroma)
       {
         charRGB = charRGB.Div(Utils.Product(font.CharSizeNoPadding));
-        LCCColorDenorm charLAB = RGBToHCL(charRGB);
+        LCCColorDenorm charLAB = Colorspace.RGBToLCC(charRGB);
         ci.actualValues[GetValueC1Index()] = (float)charLAB.C1;
         ci.actualValues[GetValueC2Index()] = (float)charLAB.C2;
       }
@@ -336,14 +347,14 @@ namespace PetsciiMapgen
       for (int i = 0; i < LumaComponentCount; ++i)
       {
         ColorF lc = lumaRGB[i].Div(pixelCounts[i]);
-        LCCColorNorm lccc = RGBToNormalizedHCL(lc);
+        LCCColorNorm lccc = RGBToNormalizedLCC(lc);
         vals[i] = (float)lccc.L;
       }
 
       if (UseChroma)
       {
         charRGB = charRGB.Div(Utils.Product(sz));
-        LCCColorNorm charLAB = RGBToNormalizedHCL(charRGB);
+        LCCColorNorm charLAB = RGBToNormalizedLCC(charRGB);
         vals[GetValueC1Index()] = (float)charLAB.C1;
         vals[GetValueC2Index()] = (float)charLAB.C2;
       }

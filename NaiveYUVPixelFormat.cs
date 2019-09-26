@@ -34,15 +34,21 @@ namespace PetsciiMapgen
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   public interface ILCCColorSpace
   {
+    string FormatString { get; }
     LCCColorDenorm RGBToLCC(ColorF c); // convert 0-255 RGB to denormalized LCC.
-    // for LCC, L is assumed to be 0-1. but C can be anything in denormalized form.
-    double NormalizeC(double x);
-    double DenormalizeC(double x);
+    double NormalizeL(double x);
+    double DenormalizeL(double x);
+    double NormalizeC1(double x);
+    double DenormalizeC1(double x);
+    double NormalizeC2(double x);
+    double DenormalizeC2(double x);
+    double ColorDistance(ValueSet lhs, ValueSet rhs, int lumaComponents, int chromaComponents);
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   public class JPEGColorspace : ILCCColorSpace
   {
+    public string FormatString { get { return "JPEG"; } }
     public LCCColorDenorm RGBToLCC(ColorF rgb)
     {
       double Y = (0.2989 * rgb.R + 0.5866 * rgb.G + 0.1145 * rgb.B);
@@ -56,25 +62,34 @@ namespace PetsciiMapgen
       return ret;
     }
 
-    public double NormalizeC(double x)
+    public double NormalizeC1(double x)
     {
       //x /= 2;
       if (x < 0)
         x += 1;
       return Utils.Clamp(x, 0, 1);
     }
-    public double DenormalizeC(double x)
+    public double DenormalizeC1(double x)
     {
       if (x > .5)
         x -= 1;
       return x;// * 2;
     }
+    public double NormalizeC2(double x) { return NormalizeC1(x); }
+    public double DenormalizeC2(double x) { return DenormalizeC1(x); }
+    public double NormalizeL(double x) { return Utils.Clamp(x, 0, 1); }
+    public double DenormalizeL(double x) { return x; }
 
+    public double ColorDistance(ValueSet lhs, ValueSet rhs, int lumaComponents, int chromaComponents)
+    {
+      return Utils.EuclidianColorDist(lhs, rhs, lumaComponents, chromaComponents);
+    }
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   public class NaiveYUVColorspace : ILCCColorSpace
   {
+    public string FormatString { get { return "NYUV"; } }
     public LCCColorDenorm RGBToLCC(ColorF c)
     {
       LCCColorDenorm ret;
@@ -88,7 +103,7 @@ namespace PetsciiMapgen
       return ret;
     }
 
-    public double NormalizeC(double x)
+    public double NormalizeC1(double x)
     {
       // normalized UV values should map .5 => 0, so our mapping granularity plays better. we'll always have an exactly 0
       // point, but we won't always have .5 in our discrete values.
@@ -98,151 +113,158 @@ namespace PetsciiMapgen
       // 0 to .5, or .5 to 1
       return Utils.Clamp(x, 0, 1);
     }
-    public double DenormalizeC(double x)
+    public double DenormalizeC1(double x)
     {
       if (x > .5)
         x -= 1;
       return x * 2;
     }
+    public double NormalizeC2(double x) { return NormalizeC1(x); }
+    public double DenormalizeC2(double x) { return DenormalizeC1(x); }
+    public double NormalizeL(double x) { return Utils.Clamp(x, 0, 1); }
+    public double DenormalizeL(double x) { return x; }
 
-  }
-
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  public class NaiveYUV5PixelFormat : LCC5PixelFormat
-  {
-    JPEGColorspace colorspace = new JPEGColorspace();
-
-    protected override LCCColorDenorm RGBToHCL(ColorF c)
+    public double ColorDistance(ValueSet lhs, ValueSet rhs, int lumaComponents, int chromaComponents)
     {
-      return colorspace.RGBToLCC(c);
-    }
-
-    protected override string FormatID { get { return "YUV"; } }
-    protected override double NormalizeL(double x)
-    {
-      return Utils.Clamp(x, 0, 1);
-    }
-    protected override double NormalizeC1(double x)
-    {
-      return colorspace.NormalizeC(x);
-    }
-    protected override double NormalizeC2(double x) { return NormalizeC1(x); }
-    protected override double DenormalizeL(double x) { return x; }
-    protected override double DenormalizeC1(double x)
-    {
-      return colorspace.DenormalizeC(x);
-    }
-    protected override double DenormalizeC2(double x) { return DenormalizeC1(x); }
-
-    public NaiveYUV5PixelFormat(int valuesPerComponent, bool useChroma, float rot, IFontProvider font) :
-      base(valuesPerComponent, useChroma, rot, font)
-    {
-    }
-
-    public static NaiveYUV5PixelFormat ProcessArgs(string[] args, IFontProvider font)
-    {
-      int valuesPerComponent;
-      bool useChroma;
-      float rot;
-      LCC5PixelFormat.ProcessArgs(args, out valuesPerComponent, out useChroma, out rot);
-      return new NaiveYUV5PixelFormat(valuesPerComponent, useChroma, rot, font);
-    }
-
-    public override unsafe double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, bool verboseDebugInfo = false)
-    {
-      double acc = 0;
-      Denormalize(ref key);
-
-      for (int i = 0; i < LumaComponentCount; ++ i)
-      {
-        double d = Math.Abs(key[GetValueLIndex(i)] - actual[GetValueLIndex(i)]);
-        acc += d * d;
-      }
-      acc /= LumaComponentCount;
-
-      if (UseChroma)
-      {
-        double d = Math.Abs(key[GetValueC1Index()] - actual[GetValueC1Index()]);
-        acc += d * d;
-
-        d = Math.Abs(key[GetValueC2Index()] - actual[GetValueC2Index()]);
-        acc += d * d;
-      }
-
-      //acc = Math.Sqrt(acc); <-- not needed.
-
-      return acc;
+      return Utils.EuclidianColorDist(lhs, rhs, lumaComponents, chromaComponents);
     }
   }
 
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //public class NaiveYUV5PixelFormat : LCC5PixelFormat
+  //{
+  //  JPEGColorspace colorspace = new JPEGColorspace();
 
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  public class NaiveYUVPixelFormat : LCCPixelFormatProvider
-  {
-    NaiveYUVColorspace colorspace = new NaiveYUVColorspace();
+  //  //protected override LCCColorDenorm RGBToLCC(ColorF c)
+  //  //{
+  //  //  return colorspace.RGBToLCC(c);
+  //  //}
 
-    protected override LCCColorDenorm RGBToHCL(ColorF c)
-    {
-      return colorspace.RGBToLCC(c);
-    }
+  //  protected override string FormatID { get { return "NYUV"; } }
+  //  //protected override double NormalizeL(double x)
+  //  //{
+  //  //  return Utils.Clamp(x, 0, 1);
+  //  //}
+  //  //protected override double NormalizeC1(double x)
+  //  //{
+  //  //  return colorspace.NormalizeC(x);
+  //  //}
+  //  //protected override double NormalizeC2(double x) { return NormalizeC1(x); }
+  //  //protected override double DenormalizeL(double x) { return x; }
+  //  //protected override double DenormalizeC1(double x)
+  //  //{
+  //  //  return colorspace.DenormalizeC(x);
+  //  //}
+  //  //protected override double DenormalizeC2(double x) { return DenormalizeC1(x); }
 
-    protected override string FormatID { get { return "YUV"; } }
-    protected override double NormalizeL(double x)
-    {
-      return Utils.Clamp(x, 0, 1);
-    }
-    protected override double NormalizeC1(double x)
-    {
-      return colorspace.NormalizeC(x);
-    }
-    protected override double NormalizeC2(double x) { return NormalizeC1(x); }
-    protected override double DenormalizeL(double x) { return x; }
-    protected override double DenormalizeC1(double x)
-    {
-      return colorspace.DenormalizeC(x);
-    }
-    protected override double DenormalizeC2(double x) { return DenormalizeC1(x); }
+  //  public NaiveYUV5PixelFormat(int valuesPerComponent, bool useChroma, float rot, IFontProvider font) :
+  //    base(valuesPerComponent, useChroma, rot, font)
+  //  {
+  //  }
 
-    public NaiveYUVPixelFormat(int valuesPerComponent, Size lumaTiles, bool useChroma) :
-      base(valuesPerComponent, lumaTiles, useChroma)
-    {
-    }
+  //  public static NaiveYUV5PixelFormat ProcessArgs(string[] args, IFontProvider font)
+  //  {
+  //    int valuesPerComponent;
+  //    bool useChroma;
+  //    float rot;
+  //    LCC5PixelFormat.ProcessArgs(args, out valuesPerComponent, out useChroma, out rot);
+  //    return new NaiveYUV5PixelFormat(valuesPerComponent, useChroma, rot, font);
+  //  }
 
-    public static NaiveYUVPixelFormat ProcessArgs(string[] args)
-    {
-      int valuesPerComponent;
-      bool useChroma;
-      Size lumaTiles;
-      LCCPixelFormatProvider.ProcessArgs(args, out valuesPerComponent, out lumaTiles, out useChroma);
-      return new NaiveYUVPixelFormat(valuesPerComponent, lumaTiles, useChroma);
-    }
+  //  public override unsafe double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, bool verboseDebugInfo = false)
+  //  {
+  //    double acc = 0;
+  //    Denormalize(ref key);
 
-    public override unsafe double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, bool verboseDebugInfo = false)
-    {
-      double acc = 0;
-      Denormalize(ref key);
+  //    for (int i = 0; i < LumaComponentCount; ++ i)
+  //    {
+  //      double d = Math.Abs(key[GetValueLIndex(i)] - actual[GetValueLIndex(i)]);
+  //      acc += d * d;
+  //    }
+  //    acc /= LumaComponentCount;
 
-      for (int i = 0; i < LumaComponentCount; ++i)
-      {
-        double d = Math.Abs(key[GetValueLIndex(i)] - actual[GetValueLIndex(i)]);
-        acc += d * d;
-      }
-      acc /= LumaComponentCount;
+  //    if (UseChroma)
+  //    {
+  //      double d = Math.Abs(key[GetValueC1Index()] - actual[GetValueC1Index()]);
+  //      acc += d * d;
 
-      if (UseChroma)
-      {
-        double d = Math.Abs(key[GetValueC1Index()] - actual[GetValueC1Index()]);
-        acc += d * d;
+  //      d = Math.Abs(key[GetValueC2Index()] - actual[GetValueC2Index()]);
+  //      acc += d * d;
+  //    }
 
-        d = Math.Abs(key[GetValueC2Index()] - actual[GetValueC2Index()]);
-        acc += d * d;
-      }
+  //    //acc = Math.Sqrt(acc); <-- not needed.
 
-      //acc = Math.Sqrt(acc);
+  //    return acc;
+  //  }
+  //}
 
-      return acc;
-    }
-  }
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //public class NaiveYUVPixelFormat : LCCPixelFormatProvider
+  //{
+
+  //  protected override LCCColorDenorm RGBToHCL(ColorF c)
+  //  {
+  //    return colorspace.RGBToLCC(c);
+  //  }
+
+  //  protected override string FormatID { get { return "YUV"; } }
+  //  protected override double NormalizeL(double x)
+  //  {
+  //    return Utils.Clamp(x, 0, 1);
+  //  }
+  //  protected override double NormalizeC1(double x)
+  //  {
+  //    return colorspace.NormalizeC(x);
+  //  }
+  //  protected override double NormalizeC2(double x) { return NormalizeC1(x); }
+  //  protected override double DenormalizeL(double x) { return x; }
+  //  protected override double DenormalizeC1(double x)
+  //  {
+  //    return colorspace.DenormalizeC(x);
+  //  }
+  //  protected override double DenormalizeC2(double x) { return DenormalizeC1(x); }
+
+  //  public NaiveYUVPixelFormat(int valuesPerComponent, Size lumaTiles, bool useChroma, ILCCColorSpace colorspace) :
+  //    base(valuesPerComponent, lumaTiles, useChroma)
+  //  {
+  //  }
+
+  //  public static NaiveYUVPixelFormat ProcessArgs(string[] args)
+  //  {
+  //    int valuesPerComponent;
+  //    bool useChroma;
+  //    Size lumaTiles;
+  //    LCCPixelFormatProvider.ProcessArgs(args, out valuesPerComponent, out lumaTiles, out useChroma);
+  //    return new NaiveYUVPixelFormat(valuesPerComponent, lumaTiles, useChroma);
+  //  }
+
+  //  public override unsafe double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, bool verboseDebugInfo = false)
+  //  {
+  //    double acc = 0;
+  //    Denormalize(ref key);
+
+  //    //for (int i = 0; i < LumaComponentCount; ++i)
+  //    //{
+  //    //  double d = Math.Abs(key[GetValueLIndex(i)] - actual[GetValueLIndex(i)]);
+  //    //  acc += d * d;
+  //    //}
+  //    //acc /= LumaComponentCount;
+
+  //    //if (UseChroma)
+  //    //{
+  //    //  double d = Math.Abs(key[GetValueC1Index()] - actual[GetValueC1Index()]);
+  //    //  acc += d * d;
+
+  //    //  d = Math.Abs(key[GetValueC2Index()] - actual[GetValueC2Index()]);
+  //    //  acc += d * d;
+  //    //}
+
+  //    //acc = Math.Sqrt(acc);
+
+  //    return acc;
+  //  }
+  //}
 
 }
 

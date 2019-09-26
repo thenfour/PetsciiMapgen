@@ -39,123 +39,170 @@ using System.Runtime.InteropServices;
 
 namespace PetsciiMapgen
 {
-  public class LABPixelFormat : LCCPixelFormatProvider
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  public class LABColorspace : ILCCColorSpace
   {
-    protected override LCCColorDenorm RGBToHCL(ColorF c)
+    public LABColorspace()
+    {
+    }
+    public string FormatString { get { return "LAB"; } }
+    public LCCColorDenorm RGBToLCC(ColorF c)
     {
       var rgb = new ColorMine.ColorSpaces.Rgb { R = c.R, G = c.G, B = c.B };
       var lab = rgb.To<ColorMine.ColorSpaces.Lab>();
       // https://github.com/hvalidi/ColorMine/blob/master/ColorMine/ColorSpaces/ColorSpaces.xml
       LCCColorDenorm ret;
-      ret.L = lab.L;
-      ret.C1 = lab.A;
-      ret.C2 = lab.B;
+      ret.L = lab.L;// 0-100
+      ret.C1 = lab.A;// -127 to 127
+      ret.C2 = lab.B;// -127 to 127
       return ret;
     }
-    protected override string FormatID {  get { return "LAB"; } }
-    protected override double NormalizeL(double x) { return Utils.Clamp(x / 100, 0, 1); }
-    protected override double NormalizeC1(double x) { return Utils.Clamp((x / 255) + .5f, 0, 1); }
-    protected override double NormalizeC2(double x) { return NormalizeC1(x); }
 
-    protected override double DenormalizeL(double x) { return x * 100; }
-    protected override double DenormalizeC1(double x) { return (x - .5) * 255; }
-    protected override double DenormalizeC2(double x) { return DenormalizeC1(x); }
-
-    public LABPixelFormat(int valuesPerComponent, Size lumaTiles, bool useChroma) :
-      base(valuesPerComponent, lumaTiles, useChroma)
+    public double NormalizeL(double x) { return Utils.Clamp(x / 100, 0, 1); }
+    public double NormalizeC1(double x)
     {
+      // center point around 0.5
+      double ret = x / 255;// -.5 to .5
+      if (ret < 0)
+        ret += 1;
+      return Utils.Clamp(ret, 0, 1);
     }
+    public double NormalizeC2(double x) { return NormalizeC1(x); }
 
-    public static LABPixelFormat ProcessArgs(string[] args)
+    public double DenormalizeL(double x) { return x * 100; }
+    public double DenormalizeC1(double x)
     {
-      int valuesPerComponent;
-      bool useChroma;
-      Size lumaTiles;
-      LABPixelFormat.ProcessArgs(args, out valuesPerComponent, out lumaTiles, out useChroma);
-      return new LABPixelFormat(valuesPerComponent, lumaTiles, useChroma);
+      if (x > .5)
+        x -= 1;
+      return x * 255;
+      //return (x - .5) * 255;
     }
+    public double DenormalizeC2(double x) { return DenormalizeC1(x); }
 
-    public override unsafe double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, bool verboseDebugInfo = false)
+    public double ColorDistance(ValueSet lhs, ValueSet rhs, int lumaComponents, int chromaComponents)
     {
-      double acc = 0.0f;
-      double m;
-      if (verboseDebugInfo)
-      {
-        Log.WriteLine("      : Calculating distance between");
-        Log.WriteLine("      : denormalized actual values: " + actual);
-        Log.WriteLine("      : normalized key: " + key);
-      }
-
-      Denormalize(ref key);
-      if (verboseDebugInfo)
-      {
-        Log.WriteLine("      : denormalized key: " + key);
-      }
-
-      if (!UseChroma)
-      {
-        for (int i = 0; i < LumaComponentCount; ++i)
-        {
-          double keyY = key[i];
-          double actualY = actual[i];
-          m = Math.Abs(keyY - actualY);
-
-          double tileAcc = m * m;
-          acc += Math.Sqrt(tileAcc);
-
-          if (verboseDebugInfo)
-          {
-            Log.WriteLine("      : Luma component {0}", i);
-            Log.WriteLine("      :   dist between Y {0} and {1}", keyY, actualY);
-            Log.WriteLine("      :   m={0}; m*m={1}", m, m * m);
-            Log.WriteLine("      :   acc = " + acc);
-          }
-        }
-        if (verboseDebugInfo)
-        {
-          Log.WriteLine("      : retdist={0}", acc);
-        }
-        return acc;
-      }
-      double actualU = actual[GetValueC1Index()];
-      double actualV = actual[GetValueC2Index()];
-      double keyU = key[GetValueC1Index()];
-      double keyV = key[GetValueC2Index()];
-
-      for (int i = 0; i < LumaComponentCount; ++i)
-      {
-        double keyY = key[i];
-        double actualY = actual[i];
-        double dY = Math.Abs(keyY - actualY);
-        double tileAcc = dY * dY;
-        double dU = Math.Abs(actualU - keyU);// * f;
-        //tileAcc += m * m;
-        double dV = Math.Abs(actualV - keyV);// * f;
-        double chromaComponent = (dU * dU + dV * dV);
-        tileAcc += chromaComponent;
-
-        acc += Math.Sqrt(tileAcc);
-
-        if (verboseDebugInfo)
-        {
-          Log.WriteLine("      : Luma component {0}", i);
-          Log.WriteLine("      :   dist between Y {0} and {1}", keyY, actualY);
-          Log.WriteLine("      :   dY={0}; dY*dY={1}", dY, dY * dY);
-          Log.WriteLine("      :   dU={0}; dU*dU={1}", dU, dU * dU);
-          Log.WriteLine("      :   dV={0}; dV*dV={1}", dV, dV * dV);
-          Log.WriteLine("      :   du+dv*1-lw={0}", chromaComponent);
-          Log.WriteLine("      :   dy+du+dv={0}", tileAcc);
-          Log.WriteLine("      :   Sqrt = {0}", Math.Sqrt(tileAcc));
-          Log.WriteLine("      :   acc = " + acc);
-        }
-      }
-      if (verboseDebugInfo)
-      {
-        Log.WriteLine("      : retdist={0}", acc);
-      }
-      return acc;
+      return Utils.EuclidianColorDist(lhs, rhs, lumaComponents, chromaComponents);
     }
   }
+
+
+  //public class LABPixelFormat : LCCPixelFormatProvider
+  //{
+  //  protected override LCCColorDenorm RGBToLCC(ColorF c)
+  //  {
+  //    var rgb = new ColorMine.ColorSpaces.Rgb { R = c.R, G = c.G, B = c.B };
+  //    var lab = rgb.To<ColorMine.ColorSpaces.Lab>();
+  //    // https://github.com/hvalidi/ColorMine/blob/master/ColorMine/ColorSpaces/ColorSpaces.xml
+  //    LCCColorDenorm ret;
+  //    ret.L = lab.L;
+  //    ret.C1 = lab.A;
+  //    ret.C2 = lab.B;
+  //    return ret;
+  //  }
+  //  protected override string FormatID {  get { return "LAB"; } }
+  //  protected override double NormalizeL(double x) { return Utils.Clamp(x / 100, 0, 1); }
+  //  protected override double NormalizeC1(double x) { return Utils.Clamp((x / 255) + .5f, 0, 1); }
+  //  protected override double NormalizeC2(double x) { return NormalizeC1(x); }
+
+  //  protected override double DenormalizeL(double x) { return x * 100; }
+  //  protected override double DenormalizeC1(double x) { return (x - .5) * 255; }
+  //  protected override double DenormalizeC2(double x) { return DenormalizeC1(x); }
+
+  //  public LABPixelFormat(int valuesPerComponent, Size lumaTiles, bool useChroma) :
+  //    base(valuesPerComponent, lumaTiles, useChroma)
+  //  {
+  //  }
+
+  //  public static LABPixelFormat ProcessArgs(string[] args)
+  //  {
+  //    int valuesPerComponent;
+  //    bool useChroma;
+  //    Size lumaTiles;
+  //    LABPixelFormat.ProcessArgs(args, out valuesPerComponent, out lumaTiles, out useChroma);
+  //    return new LABPixelFormat(valuesPerComponent, lumaTiles, useChroma);
+  //  }
+
+  //  public override unsafe double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, bool verboseDebugInfo = false)
+  //  {
+  //    double acc = 0.0f;
+  //    double m;
+  //    if (verboseDebugInfo)
+  //    {
+  //      Log.WriteLine("      : Calculating distance between");
+  //      Log.WriteLine("      : denormalized actual values: " + actual);
+  //      Log.WriteLine("      : normalized key: " + key);
+  //    }
+
+  //    Denormalize(ref key);
+  //    if (verboseDebugInfo)
+  //    {
+  //      Log.WriteLine("      : denormalized key: " + key);
+  //    }
+
+  //    if (!UseChroma)
+  //    {
+  //      for (int i = 0; i < LumaComponentCount; ++i)
+  //      {
+  //        double keyY = key[i];
+  //        double actualY = actual[i];
+  //        m = Math.Abs(keyY - actualY);
+
+  //        double tileAcc = m * m;
+  //        acc += Math.Sqrt(tileAcc);
+
+  //        if (verboseDebugInfo)
+  //        {
+  //          Log.WriteLine("      : Luma component {0}", i);
+  //          Log.WriteLine("      :   dist between Y {0} and {1}", keyY, actualY);
+  //          Log.WriteLine("      :   m={0}; m*m={1}", m, m * m);
+  //          Log.WriteLine("      :   acc = " + acc);
+  //        }
+  //      }
+  //      if (verboseDebugInfo)
+  //      {
+  //        Log.WriteLine("      : retdist={0}", acc);
+  //      }
+  //      return acc;
+  //    }
+  //    double actualU = actual[GetValueC1Index()];
+  //    double actualV = actual[GetValueC2Index()];
+  //    double keyU = key[GetValueC1Index()];
+  //    double keyV = key[GetValueC2Index()];
+
+  //    for (int i = 0; i < LumaComponentCount; ++i)
+  //    {
+  //      double keyY = key[i];
+  //      double actualY = actual[i];
+  //      double dY = Math.Abs(keyY - actualY);
+  //      double tileAcc = dY * dY;
+  //      double dU = Math.Abs(actualU - keyU);// * f;
+  //      //tileAcc += m * m;
+  //      double dV = Math.Abs(actualV - keyV);// * f;
+  //      double chromaComponent = (dU * dU + dV * dV);
+  //      tileAcc += chromaComponent;
+
+  //      acc += Math.Sqrt(tileAcc);
+
+  //      if (verboseDebugInfo)
+  //      {
+  //        Log.WriteLine("      : Luma component {0}", i);
+  //        Log.WriteLine("      :   dist between Y {0} and {1}", keyY, actualY);
+  //        Log.WriteLine("      :   dY={0}; dY*dY={1}", dY, dY * dY);
+  //        Log.WriteLine("      :   dU={0}; dU*dU={1}", dU, dU * dU);
+  //        Log.WriteLine("      :   dV={0}; dV*dV={1}", dV, dV * dV);
+  //        Log.WriteLine("      :   du+dv*1-lw={0}", chromaComponent);
+  //        Log.WriteLine("      :   dy+du+dv={0}", tileAcc);
+  //        Log.WriteLine("      :   Sqrt = {0}", Math.Sqrt(tileAcc));
+  //        Log.WriteLine("      :   acc = " + acc);
+  //      }
+  //    }
+  //    if (verboseDebugInfo)
+  //    {
+  //      Log.WriteLine("      : retdist={0}", acc);
+  //    }
+  //    return acc;
+  //  }
+  //}
 
 }
 

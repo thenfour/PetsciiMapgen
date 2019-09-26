@@ -23,14 +23,14 @@ Command options:
 
 -cores N                  if N<=0, we use (processor count - N)
 
--pf ID                    Pixel format: YUV, LAB, HSL, YUV5
--cs ID                    Colorspace: LAB, HSL, NYUV, JPEG
+-pf [Square, FiveTile]    Pixel format: Square, FiveTile
+-cs [LAB, HSL, NYUV, JPEG] Colorspace which defines color matching and distribution
 -pfargs NvXvY+C           defines the pixel format parameters
                           N = number of discrete values per colorant
                           X = number of Luma columns per cell
                           Y = number of Luma rows per cell
                           C = 0 or 2, to include chroma information
--yuv5rot 0.0-1.0          For the YUV5 pixelformat, specifies the amount of
+-yuv5rot 0.0-1.0          For the FiveTile pixelformat, specifies the amount of
                           rotation of the tile grid. Default = .5.
 
 -fonttype ID              normal, mono, colorkey, fontfamily

@@ -53,18 +53,18 @@ namespace PetsciiMapgen
 
   "-outdir", @"C:\temp",
   "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-  //"-testpalette", "ThreeBit",
-  "-testcolor", "#0503f0",
+  "-testpalette", "ThreeBit",
+  //"-testcolor", "#0503f0",
 
-  "-partitions", "1x1",
-  "-pf", "yuv5",
-  "-pfargs", "5v5+2",
+  "-partitions", "3x6",
+  "-pf", "square",
+  "-pfargs", "12v2x2+2",
+  "-cs", "lab",
+  "-cores", "6",
 
   "-fonttype", "normal",
   "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark12.png",
   "-charsize", "12x12",
-
-
 
         };
 
@@ -192,25 +192,21 @@ namespace PetsciiMapgen
         {
           switch (s.ToLowerInvariant())
           {
-            case "hsl":
-              pixelFormat = HSLPixelFormat.ProcessArgs(args);
-              break;
-            case "lab":
-              pixelFormat = LABPixelFormat.ProcessArgs(args);
+            case "square":
+              pixelFormat = SquareLCCPixelFormat.ProcessArgs(args);// HSLPixelFormat.ProcessArgs(args);
               break;
             default:
-            case "yuv":
-              pixelFormat = NaiveYUVPixelFormat.ProcessArgs(args);
-              break;
-            case "yuv5":
-              pixelFormat = NaiveYUV5PixelFormat.ProcessArgs(args, fontProvider);
+            case "fivetile":
+              pixelFormat = FiveTilePixelFormat.ProcessArgs(args, fontProvider);
               break;
           }
         });
 
         if (pixelFormat == null)
         {
-          pixelFormat = NaiveYUVPixelFormat.ProcessArgs(args);
+          Log.WriteLine("Pixel format not specified.");
+          return;
+          //pixelFormat = NaiveYUVPixelFormat.ProcessArgs(args);
         }
         // emoji12-C64_YUV-2v5x5+2
         if (fontProvider == null)
