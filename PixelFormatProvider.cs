@@ -62,7 +62,7 @@ namespace PetsciiMapgen
     // abstract stuff:
     protected abstract string FormatID { get; }
     public abstract double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, bool verboseDebugInfo = false);
-    protected abstract LCCColor RGBToHCL(ColorF c);
+    protected abstract LCCColorDenorm RGBToHCL(ColorF c);
     protected abstract double NormalizeL(double x);
     protected abstract double NormalizeC1(double x);
     protected abstract double NormalizeC2(double x);
@@ -131,9 +131,14 @@ namespace PetsciiMapgen
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal int GetValueLIndex(int l)
+    {
+      return l;
+    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal int GetValueLIndex(int tx, int ty)
     {
-      return (ty * LumaTiles.Width) + tx;
+      return GetValueLIndex((ty * LumaTiles.Width) + tx);
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal int GetValueC1Index()
@@ -162,7 +167,7 @@ namespace PetsciiMapgen
           ColorF tileRGB = font.GetRegionColor(ci.srcIndex, tilePos, tileSize, LumaTiles, tx, ty);
 
           charRGB = charRGB.Add(tileRGB);
-          LCCColor tileLAB = RGBToHCL(tileRGB);
+          LCCColorDenorm tileLAB = RGBToHCL(tileRGB);
           ci.actualValues[GetValueLIndex(tx, ty)] = (float)tileLAB.L;
         }
       }
@@ -170,7 +175,7 @@ namespace PetsciiMapgen
       if (UseChroma)
       {
         charRGB = charRGB.Div(Utils.Product(LumaTiles));
-        LCCColor charLAB = RGBToHCL(charRGB);
+        LCCColorDenorm charLAB = RGBToHCL(charRGB);
         ci.actualValues[GetValueC1Index()] = (float)charLAB.C1;
         ci.actualValues[GetValueC2Index()] = (float)charLAB.C2;
       }
@@ -178,12 +183,13 @@ namespace PetsciiMapgen
 
 
 
-    public LCCColor RGBToNormalizedHCL(ColorF c)
+    public LCCColorNorm RGBToNormalizedHCL(ColorF c)
     {
-      LCCColor ret = RGBToHCL(c);
-      ret.L = NormalizeL(ret.L);
-      ret.C1 = NormalizeC1(ret.C1);
-      ret.C2 = NormalizeC2(ret.C2);
+      LCCColorDenorm d = RGBToHCL(c);
+      LCCColorNorm ret;
+      ret.L = NormalizeL(d.L);
+      ret.C1 = NormalizeC1(d.C1);
+      ret.C2 = NormalizeC2(d.C2);
       return ret;
     }
 
@@ -279,8 +285,8 @@ namespace PetsciiMapgen
     public int GetMapIndexOfRegion(Bitmap img, int x, int y, Size sz)
     {
       ColorF rgb = ColorF.Init;
-      LCCColor lab = LCCColor.Init;
-      LCCColor norm = LCCColor.Init;
+      LCCColorDenorm lab = LCCColorDenorm.Init;
+      LCCColorNorm norm = LCCColorNorm.Init;
       float[] vals = new float[DimensionCount];
       ColorF charRGB = ColorF.Init;
       for (int ty = LumaTiles.Height - 1; ty >= 0; --ty)

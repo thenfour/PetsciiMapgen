@@ -31,49 +31,91 @@ using System.Runtime.InteropServices;
 
 namespace PetsciiMapgen
 {
-  public class NaiveYUV5PixelFormat : LCC5PixelFormat
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  public interface ILCCColorSpace
   {
-    protected override LCCColor RGBToHCL(ColorF c)
-    {
-      return RGBToYCbCr(c);
-      //LCCColor ret;
-      //c.R /= 255;
-      //c.G /= 255;
-      //c.B /= 255;
-      ////ret.L = (c.R * .299) + (c.G * .587) + (c.B * .114);// don't use balanced grayscale because it ruins the ratios in the chroma components
-      //ret.L = (c.R + c.G + c.B) / 3;
-      //ret.C1 = ret.L - c.G;// - c.B;
-      //ret.C2 = ret.L - c.B;// c.B - c.R;
-      //return ret;
-    }
+    LCCColorDenorm RGBToLCC(ColorF c); // convert 0-255 RGB to denormalized LCC.
+    // for LCC, L is assumed to be 0-1. but C can be anything in denormalized form.
+    double NormalizeC(double x);
+    double DenormalizeC(double x);
+  }
 
-    public static LCCColor RGBToYCbCr(ColorF rgb)
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  public class JPEGColorspace : ILCCColorSpace
+  {
+    public LCCColorDenorm RGBToLCC(ColorF rgb)
     {
-      //var rgb = new ColorMine.ColorSpaces.Rgb { R = c.R, G = c.G, B = c.B };
-      //var lab = rgb.To<ColorMine.ColorSpaces.Lab>();
-      //// https://github.com/hvalidi/ColorMine/blob/master/ColorMine/ColorSpaces/ColorSpaces.xml
-      //LCCColor ret;
-      //ret.L = lab.L;
-      //ret.C1 = lab.A;
-      //ret.C2 = lab.B;
-      //return ret;
-
       double Y = (0.2989 * rgb.R + 0.5866 * rgb.G + 0.1145 * rgb.B);
-      double Cb = (-0.1687 * rgb.R - 0.3313 * rgb.G + 0.5000 * rgb.B); 
+      double Cb = (-0.1687 * rgb.R - 0.3313 * rgb.G + 0.5000 * rgb.B);
       double Cr = (0.5000 * rgb.R - 0.4184 * rgb.G - 0.0816 * rgb.B);
 
-      //double Y = rgb.R + rgb.G + rgb.B;// 0 to 1
-      //double Cb = rgb.B - Y;// -2 to 1
-      //double Cr = rgb.R - Y;// -2 to 1
-
-      LCCColor ret;
+      LCCColorDenorm ret;
       ret.L = Y / 255;
-      ret.C1 = Cb / 255; // center 0
-      ret.C2 = Cr / 255; // center 0
+      ret.C1 = Cb / 255; // -.5, .5 center 0
+      ret.C2 = Cr / 255; // -.5, .5 center 0
       return ret;
     }
 
+    public double NormalizeC(double x)
+    {
+      //x /= 2;
+      if (x < 0)
+        x += 1;
+      return Utils.Clamp(x, 0, 1);
+    }
+    public double DenormalizeC(double x)
+    {
+      if (x > .5)
+        x -= 1;
+      return x;// * 2;
+    }
 
+  }
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  public class NaiveYUVColorspace : ILCCColorSpace
+  {
+    public LCCColorDenorm RGBToLCC(ColorF c)
+    {
+      LCCColorDenorm ret;
+      c.R /= 255;
+      c.G /= 255;
+      c.B /= 255;
+      //ret.L = (c.R * .299) + (c.G * .587) + (c.B * .114);// don't use balanced grayscale because it ruins the ratios in the chroma components
+      ret.L = (c.R + c.G + c.B) / 3;// 0-1
+      ret.C1 = c.G - c.B;
+      ret.C2 = c.R - c.B;
+      return ret;
+    }
+
+    public double NormalizeC(double x)
+    {
+      // normalized UV values should map .5 => 0, so our mapping granularity plays better. we'll always have an exactly 0
+      // point, but we won't always have .5 in our discrete values.
+      x /= 2;// -.5 to .5
+      if (x < 0)
+        x += 1;
+      // 0 to .5, or .5 to 1
+      return Utils.Clamp(x, 0, 1);
+    }
+    public double DenormalizeC(double x)
+    {
+      if (x > .5)
+        x -= 1;
+      return x * 2;
+    }
+
+  }
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  public class NaiveYUV5PixelFormat : LCC5PixelFormat
+  {
+    JPEGColorspace colorspace = new JPEGColorspace();
+
+    protected override LCCColorDenorm RGBToHCL(ColorF c)
+    {
+      return colorspace.RGBToLCC(c);
+    }
 
     protected override string FormatID { get { return "YUV"; } }
     protected override double NormalizeL(double x)
@@ -82,42 +124,19 @@ namespace PetsciiMapgen
     }
     protected override double NormalizeC1(double x)
     {
-      // normalized UV values should map .5 => 0, so our mapping granularity plays better. we'll always have an exactly 0
-      // point, but we won't always have .5 in our discrete values.
-      //x /= 2;// -.5 to .5
-      if (x < 0)
-        x += 1;
-      // 0 to .5, or .5 to 1
-      return Utils.Clamp(x, 0, 1);
-      //return Utils.Clamp((x / 2)+ .5, 0, 1);
+      return colorspace.NormalizeC(x);
     }
     protected override double NormalizeC2(double x) { return NormalizeC1(x); }
-
     protected override double DenormalizeL(double x) { return x; }
     protected override double DenormalizeC1(double x)
     {
-      //return (x - .5) * 2;
-      if (x > .5)
-        x -= 1;
-      return x;// * 2;
+      return colorspace.DenormalizeC(x);
     }
     protected override double DenormalizeC2(double x) { return DenormalizeC1(x); }
 
-    double lumaMult;
-    double chromaMult;
-
-    public override void WriteConfig(StringBuilder sb)
-    {
-      base.WriteConfig(sb);
-      sb.AppendLine(string.Format("lumaMult={0}", this.lumaMult));
-      sb.AppendLine(string.Format("chromaMult={0}", this.chromaMult));
-    }
-
-    public NaiveYUV5PixelFormat(int valuesPerComponent, bool useChroma, float rot, IFontProvider font, double lumaMult = 1.5, double chromaMult = 1) :
+    public NaiveYUV5PixelFormat(int valuesPerComponent, bool useChroma, float rot, IFontProvider font) :
       base(valuesPerComponent, useChroma, rot, font)
     {
-      this.lumaMult = lumaMult;
-      this.chromaMult = chromaMult;
     }
 
     public static NaiveYUV5PixelFormat ProcessArgs(string[] args, IFontProvider font)
@@ -131,144 +150,62 @@ namespace PetsciiMapgen
 
     public override unsafe double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, bool verboseDebugInfo = false)
     {
-      double acc = 0.0f;
-      double m;
-      if (verboseDebugInfo)
-      {
-        Log.WriteLine("      : Calculating distance between");
-        Log.WriteLine("      : denormalized actual values: " + actual);
-        Log.WriteLine("      : normalized key: " + key);
-      }
-
+      double acc = 0;
       Denormalize(ref key);
-      if (verboseDebugInfo)
+
+      for (int i = 0; i < LumaComponentCount; ++ i)
       {
-        Log.WriteLine("      : denormalized key: " + key);
+        double d = Math.Abs(key[GetValueLIndex(i)] - actual[GetValueLIndex(i)]);
+        acc += d * d;
+      }
+      acc /= LumaComponentCount;
+
+      if (UseChroma)
+      {
+        double d = Math.Abs(key[GetValueC1Index()] - actual[GetValueC1Index()]);
+        acc += d * d;
+
+        d = Math.Abs(key[GetValueC2Index()] - actual[GetValueC2Index()]);
+        acc += d * d;
       }
 
-      if (!UseChroma)
-      {
-        for (int i = 0; i < LumaComponentCount; ++i)
-        {
-          double keyY = key[i];
-          double actualY = actual[i];
-          m = Math.Abs(keyY - actualY);
+      //acc = Math.Sqrt(acc); <-- not needed.
 
-          double tileAcc = m * m;
-          acc += Math.Sqrt(tileAcc);
-
-          if (verboseDebugInfo)
-          {
-            Log.WriteLine("      : Luma component {0}", i);
-            Log.WriteLine("      :   dist between Y {0} and {1}", keyY, actualY);
-            Log.WriteLine("      :   m={0}; m*m={1}", m, m * m);
-            Log.WriteLine("      :   acc = " + acc);
-          }
-        }
-        if (verboseDebugInfo)
-        {
-          Log.WriteLine("      : retdist={0}", acc);
-        }
-        return acc;
-      }
-      double actualU = actual[GetValueC1Index()];
-      double actualV = actual[GetValueC2Index()];
-      double keyU = key[GetValueC1Index()];
-      double keyV = key[GetValueC2Index()];
-
-      for (int i = 0; i < LumaComponentCount; ++i)
-      {
-        double keyY = key[i];
-        double actualY = actual[i];
-
-        double dY = Math.Abs(keyY - actualY) * lumaMult;
-        double tileAcc = dY * dY;
-        double dU = Math.Abs(actualU - keyU);// * f;
-        double dV = Math.Abs(actualV - keyV);// * f;
-        double chromaComponent = (dU * dU + dV * dV) * chromaMult;
-        tileAcc += chromaComponent;
-
-        acc += Math.Sqrt(tileAcc);
-
-        if (verboseDebugInfo)
-        {
-          Log.WriteLine("      : Luma component {0}", i);
-          Log.WriteLine("      :   dist between Y {0} and {1}", keyY, actualY);
-          Log.WriteLine("      :   dY={0}; dY*dY={1}", dY, dY * dY);
-          Log.WriteLine("      :   dU={0}; dU*dU={1}", dU, dU * dU);
-          Log.WriteLine("      :   dV={0}; dV*dV={1}", dV, dV * dV);
-          Log.WriteLine("      :   du+dv*1-lw={0}", chromaComponent);
-          Log.WriteLine("      :   dy+du+dv={0}", tileAcc);
-          Log.WriteLine("      :   Sqrt = {0}", Math.Sqrt(tileAcc));
-          Log.WriteLine("      :   acc = " + acc);
-        }
-      }
-      if (verboseDebugInfo)
-      {
-        Log.WriteLine("      : retdist={0}", acc);
-      }
       return acc;
     }
   }
 
 
-
-
-
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   public class NaiveYUVPixelFormat : LCCPixelFormatProvider
   {
-    protected override LCCColor RGBToHCL(ColorF c)
+    NaiveYUVColorspace colorspace = new NaiveYUVColorspace();
+
+    protected override LCCColorDenorm RGBToHCL(ColorF c)
     {
-      LCCColor ret;
-      c.R /= 255;
-      c.G /= 255;
-      c.B /= 255;
-      //ret.L = (c.R * .299) + (c.G * .587) + (c.B * .114);// don't use balanced grayscale because it ruins the ratios in the chroma components
-      ret.L = (c.R + c.G + c.B) / 3;
-      ret.C1 = c.G - c.B;
-      ret.C2 = c.R - c.B;
-      return ret;
+      return colorspace.RGBToLCC(c);
     }
+
     protected override string FormatID { get { return "YUV"; } }
-    protected override double NormalizeL(double x) { return Utils.Clamp(x, 0, 1); }
+    protected override double NormalizeL(double x)
+    {
+      return Utils.Clamp(x, 0, 1);
+    }
     protected override double NormalizeC1(double x)
     {
-      // normalized UV values should map .5 => 0, so our mapping granularity plays better. we'll always have an exactly 0
-      // point, but we won't always have .5 in our discrete values.
-      x /= 2;// -.5 to .5
-      if (x < 0)
-        x += 1;
-      // 0 to .5, or .5 to 1
-      return Utils.Clamp(x, 0, 1);
-      //return Utils.Clamp((x / 2)+ .5, 0, 1);
+      return colorspace.NormalizeC(x);
     }
     protected override double NormalizeC2(double x) { return NormalizeC1(x); }
-
     protected override double DenormalizeL(double x) { return x; }
     protected override double DenormalizeC1(double x)
     {
-      //return (x - .5) * 2;
-      if (x > .5)
-        x -= 1;
-      return x * 2;
+      return colorspace.DenormalizeC(x);
     }
     protected override double DenormalizeC2(double x) { return DenormalizeC1(x); }
 
-    double lumaMult;
-    double chromaMult;
-
-    public override void WriteConfig(StringBuilder sb)
-    {
-      base.WriteConfig(sb);
-      sb.AppendLine(string.Format("lumaMult={0}", this.lumaMult));
-      sb.AppendLine(string.Format("chromaMult={0}", this.chromaMult));
-    }
-
-    public NaiveYUVPixelFormat(int valuesPerComponent, Size lumaTiles, bool useChroma, double lumaMult = 1.5, double chromaMult = 1) :
+    public NaiveYUVPixelFormat(int valuesPerComponent, Size lumaTiles, bool useChroma) :
       base(valuesPerComponent, lumaTiles, useChroma)
     {
-      this.lumaMult = lumaMult;
-      this.chromaMult = chromaMult;
     }
 
     public static NaiveYUVPixelFormat ProcessArgs(string[] args)
@@ -282,86 +219,30 @@ namespace PetsciiMapgen
 
     public override unsafe double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, bool verboseDebugInfo = false)
     {
-      double acc = 0.0f;
-      double m;
-      if (verboseDebugInfo)
-      {
-        Log.WriteLine("      : Calculating distance between");
-        Log.WriteLine("      : denormalized actual values: " + actual);
-        Log.WriteLine("      : normalized key: " + key);
-      }
-
+      double acc = 0;
       Denormalize(ref key);
-      if (verboseDebugInfo)
-      {
-        Log.WriteLine("      : denormalized key: " + key);
-      }
-
-      if (!UseChroma)
-      {
-        for (int i = 0; i < LumaComponentCount; ++i)
-        {
-          double keyY = key[i];
-          double actualY = actual[i];
-          m = Math.Abs(keyY - actualY);
-
-          double tileAcc = m * m;
-          acc += Math.Sqrt(tileAcc);
-
-          if (verboseDebugInfo)
-          {
-            Log.WriteLine("      : Luma component {0}", i);
-            Log.WriteLine("      :   dist between Y {0} and {1}", keyY, actualY);
-            Log.WriteLine("      :   m={0}; m*m={1}", m, m * m);
-            Log.WriteLine("      :   acc = " + acc);
-          }
-        }
-        if (verboseDebugInfo)
-        {
-          Log.WriteLine("      : retdist={0}", acc);
-        }
-        return acc;
-      }
-      double actualU = actual[GetValueC1Index()];
-      double actualV = actual[GetValueC2Index()];
-      double keyU = key[GetValueC1Index()];
-      double keyV = key[GetValueC2Index()];
 
       for (int i = 0; i < LumaComponentCount; ++i)
       {
-        double keyY = key[i];
-        double actualY = actual[i];
-
-        double dY = Math.Abs(keyY - actualY) * lumaMult;
-        double tileAcc = dY * dY;
-        double dU = Math.Abs(actualU - keyU);// * f;
-        double dV = Math.Abs(actualV - keyV);// * f;
-        double chromaComponent = (dU * dU + dV * dV) * chromaMult;
-        tileAcc += chromaComponent;
-
-        acc += Math.Sqrt(tileAcc);
-
-        if (verboseDebugInfo)
-        {
-          Log.WriteLine("      : Luma component {0}", i);
-          Log.WriteLine("      :   dist between Y {0} and {1}", keyY, actualY);
-          Log.WriteLine("      :   dY={0}; dY*dY={1}", dY, dY * dY);
-          Log.WriteLine("      :   dU={0}; dU*dU={1}", dU, dU * dU);
-          Log.WriteLine("      :   dV={0}; dV*dV={1}", dV, dV * dV);
-          Log.WriteLine("      :   du+dv*1-lw={0}", chromaComponent);
-          Log.WriteLine("      :   dy+du+dv={0}", tileAcc);
-          Log.WriteLine("      :   Sqrt = {0}", Math.Sqrt(tileAcc));
-          Log.WriteLine("      :   acc = " + acc);
-        }
+        double d = Math.Abs(key[GetValueLIndex(i)] - actual[GetValueLIndex(i)]);
+        acc += d * d;
       }
-      if (verboseDebugInfo)
+      acc /= LumaComponentCount;
+
+      if (UseChroma)
       {
-        Log.WriteLine("      : retdist={0}", acc);
+        double d = Math.Abs(key[GetValueC1Index()] - actual[GetValueC1Index()]);
+        acc += d * d;
+
+        d = Math.Abs(key[GetValueC2Index()] - actual[GetValueC2Index()]);
+        acc += d * d;
       }
+
+      //acc = Math.Sqrt(acc);
+
       return acc;
     }
   }
-
 
 }
 

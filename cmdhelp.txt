@@ -24,6 +24,7 @@ Command options:
 -cores N                  if N<=0, we use (processor count - N)
 
 -pf ID                    Pixel format: YUV, LAB, HSL, YUV5
+-cs ID                    Colorspace: LAB, HSL, NYUV, JPEG
 -pfargs NvXvY+C           defines the pixel format parameters
                           N = number of discrete values per colorant
                           X = number of Luma columns per cell

@@ -27,12 +27,12 @@ namespace PetsciiMapgen
 {
   public class HSLPixelFormat : LCCPixelFormatProvider
   {
-    protected override LCCColor RGBToHCL(ColorF c)
+    protected override LCCColorDenorm RGBToHCL(ColorF c)
     {
       var rgb = new ColorMine.ColorSpaces.Rgb { R = c.R, G = c.G, B = c.B };
       var lab = rgb.To<ColorMine.ColorSpaces.Hsl>();
       // https://github.com/hvalidi/ColorMine/blob/master/ColorMine/ColorSpaces/ColorSpaces.xml
-      LCCColor ret;
+      LCCColorDenorm ret;
       ret.L = lab.L;
       ret.C1 = lab.H;
       ret.C2 = lab.S;

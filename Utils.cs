@@ -159,7 +159,8 @@ namespace PetsciiMapgen
     double colorant2 { get; }
     double colorant3 { get; }
   }
-  public struct LCCColor : IColor
+
+  public struct LCCColorDenorm : IColor
   {
     public double L;
     public double C1;
@@ -168,11 +169,38 @@ namespace PetsciiMapgen
     public double colorant2 { get { return C1; } }
     public double colorant3 { get { return C2; } }
 
-    public static LCCColor Init
+    public static LCCColorDenorm Init
     {
       get
       {
-        LCCColor ret;
+        LCCColorDenorm ret;
+        ret.L = 0;
+        ret.C1 = 0;
+        ret.C2 = 0;
+        return ret;
+      }
+    }
+
+    public override string ToString()
+    {
+      return string.Format("[{0},{1},{2}]", L.ToString("0.00"), C1.ToString("0.00"), C2.ToString("0.00"));
+    }
+  }
+
+  public struct LCCColorNorm : IColor
+  {
+    public double L;
+    public double C1;
+    public double C2;
+    public double colorant1 { get { return L; } }
+    public double colorant2 { get { return C1; } }
+    public double colorant3 { get { return C2; } }
+
+    public static LCCColorNorm Init
+    {
+      get
+      {
+        LCCColorNorm ret;
         ret.L = 0;
         ret.C1 = 0;
         ret.C2 = 0;
@@ -232,7 +260,7 @@ namespace PetsciiMapgen
   public class CharInfo
   {
     public int srcIndex;// index from the font provider.
-    public ValueSet actualValues;// N-dimension values
+    public ValueSet actualValues;// N-dimension values. For chardata, this is denormalized values. for map, it's normalized.
     public int usages = 0;
     public int refFontIndex;// index in the ref font texture
                             //public UInt32 mapKeysVisited = 0;

@@ -41,11 +41,11 @@ namespace PetsciiMapgen
 #endif
         Log.WriteLine("----------------------------------------");
 
-        foreach (var c in Palettes.ThreeBit)
-        {
-          var x = NaiveYUV5PixelFormat.RGBToYCbCr(ColorF.From(c));
-          Log.WriteLine("RGB:{0} => {1:0.00} {2:0.00} {3:0.00}", c, x.L, x.C1, x.C2);
-        }
+        //foreach (var c in Palettes.ThreeBit)
+        //{
+        //  var x = NaiveYUV5PixelFormat.RGBToYCbCr(ColorF.From(c));
+        //  Log.WriteLine("RGB:{0} => {1:0.00} {2:0.00} {3:0.00}", c, x.L, x.C1, x.C2);
+        //}
 
 
         //args = new string[] { "-argsfile", @"C:\temp\emojidark12_YUV4v5+2_p1x1\args.txt" };
@@ -54,7 +54,7 @@ namespace PetsciiMapgen
   "-outdir", @"C:\temp",
   "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
   //"-testpalette", "ThreeBit",
-  "-testcolor", "#0000ff",
+  "-testcolor", "#0503f0",
 
   "-partitions", "1x1",
   "-pf", "yuv5",

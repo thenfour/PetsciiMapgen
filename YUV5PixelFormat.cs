@@ -48,7 +48,7 @@ namespace PetsciiMapgen
     // abstract stuff:
     protected abstract string FormatID { get; }
     public abstract double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, bool verboseDebugInfo = false);
-    protected abstract LCCColor RGBToHCL(ColorF c);
+    protected abstract LCCColorDenorm RGBToHCL(ColorF c);
     protected abstract double NormalizeL(double x);
     protected abstract double NormalizeC1(double x);
     protected abstract double NormalizeC2(double x);
@@ -175,12 +175,13 @@ namespace PetsciiMapgen
       return LumaComponentCount + 1;
     }
 
-    public LCCColor RGBToNormalizedHCL(ColorF c)
+    public LCCColorNorm RGBToNormalizedHCL(ColorF c)
     {
-      LCCColor ret = RGBToHCL(c);
-      ret.L = NormalizeL(ret.L);
-      ret.C1 = NormalizeC1(ret.C1);
-      ret.C2 = NormalizeC2(ret.C2);
+      LCCColorDenorm d = RGBToHCL(c);
+      LCCColorNorm ret;
+      ret.L = NormalizeL(d.L);
+      ret.C1 = NormalizeC1(d.C1);
+      ret.C2 = NormalizeC2(d.C2);
       return ret;
     }
 
@@ -288,14 +289,14 @@ namespace PetsciiMapgen
           throw new Exception("!!!!!! Your fonts are just too small; i can't sample them properly.");
         }
         lc = lc.Div(pc);
-        LCCColor lccc = RGBToHCL(lc);
+        LCCColorDenorm lccc = RGBToHCL(lc);
         ci.actualValues[i] = (float)lccc.L;
       }
 
       if (UseChroma)
       {
         charRGB = charRGB.Div(Utils.Product(font.CharSizeNoPadding));
-        LCCColor charLAB = RGBToHCL(charRGB);
+        LCCColorDenorm charLAB = RGBToHCL(charRGB);
         ci.actualValues[GetValueC1Index()] = (float)charLAB.C1;
         ci.actualValues[GetValueC2Index()] = (float)charLAB.C2;
       }
@@ -335,14 +336,14 @@ namespace PetsciiMapgen
       for (int i = 0; i < LumaComponentCount; ++i)
       {
         ColorF lc = lumaRGB[i].Div(pixelCounts[i]);
-        LCCColor lccc = RGBToHCL(lc);
+        LCCColorNorm lccc = RGBToNormalizedHCL(lc);
         vals[i] = (float)lccc.L;
       }
 
       if (UseChroma)
       {
         charRGB = charRGB.Div(Utils.Product(sz));
-        LCCColor charLAB = RGBToHCL(charRGB);
+        LCCColorNorm charLAB = RGBToNormalizedHCL(charRGB);
         vals[GetValueC1Index()] = (float)charLAB.C1;
         vals[GetValueC2Index()] = (float)charLAB.C2;
       }

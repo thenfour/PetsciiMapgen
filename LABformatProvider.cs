@@ -41,12 +41,12 @@ namespace PetsciiMapgen
 {
   public class LABPixelFormat : LCCPixelFormatProvider
   {
-    protected override LCCColor RGBToHCL(ColorF c)
+    protected override LCCColorDenorm RGBToHCL(ColorF c)
     {
       var rgb = new ColorMine.ColorSpaces.Rgb { R = c.R, G = c.G, B = c.B };
       var lab = rgb.To<ColorMine.ColorSpaces.Lab>();
       // https://github.com/hvalidi/ColorMine/blob/master/ColorMine/ColorSpaces/ColorSpaces.xml
-      LCCColor ret;
+      LCCColorDenorm ret;
       ret.L = lab.L;
       ret.C1 = lab.A;
       ret.C2 = lab.B;
