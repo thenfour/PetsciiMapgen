@@ -23,15 +23,210 @@ using System.Windows.Media;
 
 namespace PetsciiMapgen
 {
+  class ArgSet
+  {
+    public string[] args;
+    public ArgSet(params string[] a)
+    {
+      args = a;
+    }
+    public static ArgSet operator +(ArgSet a, ArgSet b)
+    {
+      ArgSet n = new ArgSet();
+      n.args = a.args.Concat(b.args).ToArray();
+      return n;
+    }
+    public override string ToString()
+    {
+      return string.Join(" ", args);
+    }
+  }
+
+  class ArgSetList
+  {
+    public ArgSet[] argSets;
+    public static ArgSetList operator +(ArgSetList a, ArgSetList b)
+    {
+      ArgSetList ret = new ArgSetList();
+      List<ArgSet> x = new List<ArgSet>();
+      foreach (var ao in a.argSets)
+      {
+        foreach (var bo in b.argSets)
+        {
+          ArgSet n = new ArgSet();
+          List<string> args = ao.args.ToList();
+          args.AddRange(bo.args);
+          n.args = args.ToArray();
+          x.Add(n);
+        }
+      }
+      ret.argSets = x.ToArray();
+      return ret;
+    }
+    public static ArgSetList operator +(ArgSetList a, ArgSet b)
+    {
+      // this just adds args to the end of all arglists
+      ArgSetList ret = new ArgSetList();
+      List<ArgSet> x = new List<ArgSet>();// a.argSets.ToList();
+      foreach (var ao in a.argSets)
+      {
+        x.Add(ao + b);
+      }
+      ret.argSets = x.ToArray();
+      return ret;
+    }
+    public static ArgSetList operator +(ArgSet a, ArgSetList b)
+    {
+      // this just adds args to the end of all arglists
+      ArgSetList ret = new ArgSetList();
+      List<ArgSet> x = new List<ArgSet>();// a.argSets.ToList();
+      foreach (var bo in b.argSets)
+      {
+        x.Add(a + bo);
+      }
+      ret.argSets = x.ToArray();
+      return ret;
+    }
+  }
+
   class Program
   {
+    static ArgSet Args(params string[] a)
+    {
+      return new ArgSet(a);
+    }
+    static ArgSetList Or(params ArgSet[] argSets)
+    {
+      var ret = new ArgSetList();
+      ret.argSets = argSets;
+      return ret;
+    }
+    static ArgSetList Or(params ArgSetList[] argsetLists)
+    {
+      var ret = new ArgSetList();
+      List<ArgSet> l = new List<ArgSet>();
+      foreach (var x in argsetLists)
+      {
+        l.AddRange(x.argSets);
+      }
+      ret.argSets = l.ToArray();
+      return ret;
+    }
+    static void Main(string[] args)
+    {
+      //{
+      //  var c = Args("c64") + Or(Args("color"), Args("grayscale"));
+      //  var r = Args("z80") + Or(Args("small"), Args("big"));
+      //  var f = Or(c, r);
+
+      //  var a = c + r;
+      //  var b = Args("hello") + Args("world");
+      //  var d = Or(Args("hello"), Args("Goodbye")) + Args("world");
+      //  var e = Args("Hello") + Or(Args("world"), Args("jimbo"));
+      //  var x = 0;
+      //}
+
+      var common = Args(
+        "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+        "-testpalette", "ThreeBit");
+
+      //-pf [Square, FiveTile]    Pixel format: Square, FiveTile
+      //var grayscalePixelFormats = Or(
+      //  Args("-pf", "square", "-pfargs", "8192v1x1+0", "-partitions", "1x1"),
+      //  Args("-pf", "square", "-pfargs", "128v2x2+0", "-partitions", "2x3"),
+      //  Args("-pf", "square", "-pfargs", "8v3x3+0", "-partitions", "2x3"),
+      //  Args("-pf", "fivetile", "-pfargs", "48v5+0", "-partitions", "2x3")
+      //  );
+
+      //var colorPixelFormats = Or(
+      //  Args("-pf", "square", "-pfargs", "645v1x1+2", "-partitions", "1x1"),
+      //  Args("-pf", "square", "-pfargs", "24v2x2+2", "-partitions", "2x3"),
+      //  Args("-pf", "square", "-pfargs", "5v3x3+2", "-partitions", "1x1"),
+      //  Args("-pf", "fivetile", "-pfargs", "16v5+2", "-partitions", "2x3")
+      //  );
+
+      // budget versions
+      var grayscalePixelFormats = Or(
+        Args("-pf", "square", "-pfargs", "256v1x1+0", "-partitions", "1x1"),
+        Args("-pf", "square", "-pfargs", "16v2x2+0", "-partitions", "2x3"),
+        Args("-pf", "fivetile", "-pfargs", "12v5+0", "-partitions", "2x3")
+        );
+
+      var colorPixelFormats = Or(
+        Args("-pf", "square", "-pfargs", "16v1x1+2", "-partitions", "1x1"),
+        Args("-pf", "square", "-pfargs", "8v2x2+2", "-partitions", "2x3"),
+        Args("-pf", "fivetile", "-pfargs", "6v5+2", "-partitions", "2x3")
+        );
+
+      var allLCCColorspaces = Or(
+        Args("-cs", "jpeg"),
+        Args("-cs", "nyuv"),
+        Args("-cs", "lab"));
+
+      // C64 ============================
+      var C64Font = Args(
+        "-fonttype", "mono",
+        "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\c64opt160.png",
+        "-charsize", "8x8");
+
+      var c64fontAndPalettes_Color = C64Font + Args("-palette", "C64Color");
+
+      var c64fontAndPalettes_Grayscale = C64Font + Or(
+          Args("-palette", "BlackAndWhite"),
+          Args("-palette", "C64ColorGray8A"),
+          Args("-palette", "C64Grays"),
+          Args("-palette", "C64ColorGray8B"),
+          Args("-palette", "C64Color")
+          );
+
+      var C64Color = Args("-outdir", @"C:\temp\C64 color") + c64fontAndPalettes_Color + colorPixelFormats + allLCCColorspaces;
+      var C64Grayscale = Args("-outdir", @"C:\temp\C64 grayscale") + c64fontAndPalettes_Grayscale + grayscalePixelFormats + allLCCColorspaces;
+
+      // mz700 ============================
+      var mz700font = Args(
+        "-fonttype", "mono",
+        "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\mz700.png",
+        "-charsize", "8x8");
+
+      var mz700ColorPalettes = Or(
+        Args("-palette", "RGBPrimariesHalftone16"),
+        Args("-palette", "ThreeBit")
+        );
+      var mz700GrayPalettes = Or(
+        Args("-palette", "BlackAndWhite"),
+        Args("-palette", "Gray3"),
+        Args("-palette", "Gray4"),
+        Args("-palette", "Gray5"),
+        Args("-palette", "Gray8")
+        );
+
+      var mz700color = Args("-outdir", @"C:\temp\MZ700 color") + mz700font + mz700ColorPalettes + colorPixelFormats + allLCCColorspaces;
+      var mz700grayscale = Args("-outdir", @"C:\temp\MZ700 grayscale") + mz700font + mz700GrayPalettes + grayscalePixelFormats + allLCCColorspaces;
+
+
+      // All ============================
+      var All = common + Or(
+        C64Color, C64Grayscale,
+        mz700color, mz700grayscale);
+
+      string batchLogPath = @"c:\temp\batchLog.txt";
+      int ibatch = 0;
+      foreach (var argset in All.argSets)
+      {
+        Main2(argset.args);
+        System.IO.File.AppendAllLines(batchLogPath, new string[]{
+          string.Format("Completed batch #{0} with args: {1}", ibatch, argset)
+        });
+        ibatch++;
+      }
+    }
 
     enum MapSource
     {
       Create,
       Load
     }
-    static void Main(string[] args)
+    static void Main2(string[] args)
     {
 #if !DEBUG
       try
@@ -40,33 +235,6 @@ namespace PetsciiMapgen
       {
 #endif
         Log.WriteLine("----------------------------------------");
-
-        //foreach (var c in Palettes.ThreeBit)
-        //{
-        //  var x = NaiveYUV5PixelFormat.RGBToYCbCr(ColorF.From(c));
-        //  Log.WriteLine("RGB:{0} => {1:0.00} {2:0.00} {3:0.00}", c, x.L, x.C1, x.C2);
-        //}
-
-
-  //      //args = new string[] { "-argsfile", @"C:\temp\emojidark12_YUV4v5+2_p1x1\args.txt" };
-  //      args = new string[]{
-
-  //"-outdir", @"C:\temp",
-  //"-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-  //"-testpalette", "ThreeBit",
-  ////"-testcolor", "#0503f0",
-
-  //"-partitions", "2x3",
-  //"-pf", "fivetile",
-  //"-pfargs", "8v5+2",
-  //"-cs", "nyuv",
-  //"-cores", "6",
-
-  //"-fonttype", "normal",
-  //"-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark12.png",
-  //"-charsize", "12x12",
-
-  //      };
 
         PartitionManager partitionManager = new PartitionManager(1, 1);
         IPixelFormatProvider pixelFormat = null;
@@ -118,7 +286,7 @@ namespace PetsciiMapgen
 
         MapSource mapSource = MapSource.Create;
 
-        args.ProcessArg("-loadmap", s => 
+        args.ProcessArg("-loadmap", s =>
         {
           mapSource = MapSource.Load;
           // if you're loading, then we want to process the args from that directory.
@@ -130,11 +298,13 @@ namespace PetsciiMapgen
           args = lines.Concat(args).ToArray();
         });
 
-        args.ProcessArg("-testpalette", s => {
+        args.ProcessArg("-testpalette", s =>
+        {
           var palette = (System.Drawing.Color[])typeof(Palettes).GetProperty(s).GetValue(null);
           testColors.AddRange(palette);
         });
-        args.ProcessArg("-testcolor", s => {
+        args.ProcessArg("-testcolor", s =>
+        {
           testColors.Add(System.Drawing.ColorTranslator.FromHtml(s));
         });
 
@@ -225,7 +395,8 @@ namespace PetsciiMapgen
           return;
         }
 
-        args.ProcessArg("-calcn", s => {
+        args.ProcessArg("-calcn", s =>
+        {
           //Size luma = new Size(1, 1);
           //bool useChroma = false;
           //ulong partB = 1, partD = 1;
@@ -312,8 +483,9 @@ namespace PetsciiMapgen
 
         if (!System.IO.Directory.Exists(outputDir))
         {
-          Log.WriteLine("Output directory doesn't exist.");
-          return;
+          System.IO.Directory.CreateDirectory(outputDir);
+          //Log.WriteLine("Output directory doesn't exist.");
+          //return;
         }
 
         string configTag = string.Format("{0}_{1}_{2}", fontProvider.DisplayName, pixelFormat.PixelFormatString, partitionManager);
@@ -346,7 +518,7 @@ namespace PetsciiMapgen
 
         HybridMap2 map = null;
 
-        switch(mapSource)
+        switch (mapSource)
         {
           case MapSource.Create:
             map = new HybridMap2(fontProvider, partitionManager, pixelFormat,

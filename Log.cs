@@ -59,7 +59,7 @@ namespace PetsciiMapgen
 
     public static void SetLogFile(string path)
     {
-      List<string> l = Interlocked.Exchange<List<string>>(ref lines, null);
+      List<string> l = Interlocked.Exchange<List<string>>(ref lines, new List<string>());
 
       using (var sw = System.IO.File.AppendText(path))
       {
