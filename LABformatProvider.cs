@@ -44,6 +44,29 @@ namespace PetsciiMapgen
   {
     public LABColorspace()
     {
+      var lcc = RGBToLCC(ColorF.FromRGB(255, 255, 255));
+      ValueSet lhs;
+      ValueSet rhs;
+      lhs.ValuesLength = 3;
+      lhs.Mapped = false;
+      lhs.MinDistFound = 0;
+      lhs.Visited = false;
+      lhs.ID = 0;
+      lhs[0] = (float)lcc.L;
+      lhs[1] = (float)lcc.C1;
+      lhs[2] = (float)lcc.C2;
+
+      var lcc2 = RGBToLCC(ColorF.FromRGB(0, 0, 0));
+      rhs.ValuesLength = 3;
+      rhs.Mapped = false;
+      rhs.MinDistFound = 0;
+      rhs.Visited = false;
+      rhs.ID = 0;
+      rhs[0] = (float)lcc2.L;
+      rhs[1] = (float)lcc2.C1;
+      rhs[2] = (float)lcc2.C2;
+
+      double d = ColorDistance(lhs, rhs, 1, 2);
     }
     public string FormatString { get { return "LAB"; } }
     public LCCColorDenorm RGBToLCC(ColorF c)

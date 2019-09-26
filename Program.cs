@@ -48,25 +48,25 @@ namespace PetsciiMapgen
         //}
 
 
-        //args = new string[] { "-argsfile", @"C:\temp\emojidark12_YUV4v5+2_p1x1\args.txt" };
-        args = new string[]{
+  //      //args = new string[] { "-argsfile", @"C:\temp\emojidark12_YUV4v5+2_p1x1\args.txt" };
+  //      args = new string[]{
 
-  "-outdir", @"C:\temp",
-  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-  "-testpalette", "ThreeBit",
-  //"-testcolor", "#0503f0",
+  //"-outdir", @"C:\temp",
+  //"-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+  //"-testpalette", "ThreeBit",
+  ////"-testcolor", "#0503f0",
 
-  "-partitions", "3x6",
-  "-pf", "square",
-  "-pfargs", "12v2x2+2",
-  "-cs", "lab",
-  "-cores", "6",
+  //"-partitions", "2x3",
+  //"-pf", "fivetile",
+  //"-pfargs", "8v5+2",
+  //"-cs", "nyuv",
+  //"-cores", "6",
 
-  "-fonttype", "normal",
-  "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark12.png",
-  "-charsize", "12x12",
+  //"-fonttype", "normal",
+  //"-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark12.png",
+  //"-charsize", "12x12",
 
-        };
+  //      };
 
         PartitionManager partitionManager = new PartitionManager(1, 1);
         IPixelFormatProvider pixelFormat = null;

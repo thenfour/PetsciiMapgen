@@ -786,21 +786,27 @@ namespace PetsciiMapgen
 
     public static double EuclidianColorDist(ValueSet key /* DENORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, int lumaElements, int chromaElements)
     {
+      //double lumaMul = .8;
+      //double chromaMul = .2;
       Debug.Assert(key.ValuesLength == actual.ValuesLength);
       Debug.Assert(key.ValuesLength == (lumaElements + chromaElements));
-      double acc = 0;
+      double accLuma = 0;
       for (int i = 0; i < lumaElements; ++ i)
       {
         double d = Math.Abs(key[i] - actual[i]);
-        acc += d * d;
+        accLuma += d * d;
       }
-      acc /= lumaElements;
+      accLuma /= lumaElements;
+      //accLuma *= lumaMul;
+
+      double accChroma = 0;
       for (int i = 0; i < chromaElements; ++i)
       {
         double d = Math.Abs(key[lumaElements + i] - actual[lumaElements + i]);
-        acc += d * d;
+        accChroma += d * d;
       }
-      return acc;
+      //accChroma *= chromaMul;
+      return accChroma + accLuma;
     }
 
     public static ILCCColorSpace ParseRequiredLCCColorSpaceArgs(string[] args)
