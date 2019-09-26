@@ -189,12 +189,12 @@ namespace PetsciiMapgen
       // changes normalized 0-1 values to YUV-ranged values. depends on value format and stuff.
       if (UseChroma)
       {
-        v.ColorData[GetValueC1Index()] = (float)DenormalizeC1(v.ColorData[GetValueC1Index()]);
-        v.ColorData[GetValueC2Index()] = (float)DenormalizeC2(v.ColorData[GetValueC2Index()]);
+        v[GetValueC1Index()] = (float)DenormalizeC1(v[GetValueC1Index()]);
+        v[GetValueC2Index()] = (float)DenormalizeC2(v[GetValueC2Index()]);
       }
       for (int i = 0; i < LumaComponentCount; ++i)
       {
-        v.ColorData[i] = (float)DenormalizeL(v.ColorData[i]);
+        v[i] = (float)DenormalizeL(v[i]);
       }
     }
     public unsafe double NormalizeElement(ValueSet v, int elementToNormalize)
@@ -202,11 +202,11 @@ namespace PetsciiMapgen
       if (UseChroma)
       {
         if (elementToNormalize == GetValueC1Index())
-          return NormalizeC1(v.ColorData[elementToNormalize]);
+          return NormalizeC1(v[elementToNormalize]);
         if (elementToNormalize == GetValueC2Index())
-          return NormalizeC2(v.ColorData[elementToNormalize]);
+          return NormalizeC2(v[elementToNormalize]);
       }
-      return NormalizeL(v.ColorData[elementToNormalize]);
+      return NormalizeL(v[elementToNormalize]);
     }
 
     public int NormalizedValueSetToMapID(float[] vals)
@@ -234,10 +234,9 @@ namespace PetsciiMapgen
       return ID;
     }
 
-
+    // this defines the tiling
     public int GetLumaTileIndexOfPixelPosInCell(int x, int y, Size cellSize)
     {
-      //if (x == 0 && y == 0) return 4;
       vec2 posInCell01 = vec2.Init(x, y)
         .add(.5f)// center in the pixel
         .dividedBy(cellSize);
@@ -259,12 +258,12 @@ namespace PetsciiMapgen
 
     public unsafe void PopulateCharColorData(CharInfo ci, IFontProvider font)
     {
-      ColorF charRGB = ColorFUtils.Init;
+      ColorF charRGB = ColorF.Init;
       ColorF[] lumaRGB = new ColorF[LumaComponentCount];
       int[] pixelCounts = new int[LumaComponentCount];
       for (int i = 0; i < LumaComponentCount; ++ i)
       {
-        lumaRGB[i] = ColorFUtils.Init;
+        lumaRGB[i] = ColorF.Init;
         pixelCounts[i] = 0;
       }
 
@@ -290,15 +289,15 @@ namespace PetsciiMapgen
         }
         lc = lc.Div(pc);
         LCCColor lccc = RGBToHCL(lc);
-        ci.actualValues.ColorData[i] = (float)lccc.L;
+        ci.actualValues[i] = (float)lccc.L;
       }
 
       if (UseChroma)
       {
         charRGB = charRGB.Div(Utils.Product(font.CharSizeNoPadding));
         LCCColor charLAB = RGBToHCL(charRGB);
-        ci.actualValues.ColorData[GetValueC1Index()] = (float)charLAB.C1;
-        ci.actualValues.ColorData[GetValueC2Index()] = (float)charLAB.C2;
+        ci.actualValues[GetValueC1Index()] = (float)charLAB.C1;
+        ci.actualValues[GetValueC2Index()] = (float)charLAB.C2;
       }
     }
 
@@ -310,12 +309,12 @@ namespace PetsciiMapgen
      */
     public int GetMapIndexOfRegion(Bitmap img, int x, int y, Size sz)
     {
-      ColorF charRGB = ColorFUtils.Init;
+      ColorF charRGB = ColorF.Init;
       ColorF[] lumaRGB = new ColorF[LumaComponentCount];
       int[] pixelCounts = new int[LumaComponentCount];
       for (int i = 0; i < LumaComponentCount; ++i)
       {
-        lumaRGB[i] = ColorFUtils.Init;
+        lumaRGB[i] = ColorF.Init;
         pixelCounts[i] = 0;
       }
 
@@ -325,7 +324,7 @@ namespace PetsciiMapgen
       {
         for (int px = 0; px < sz.Width; ++px)
         {
-          ColorF pc = ColorFUtils.From(img.GetPixel(x + px, y + py));
+          ColorF pc = ColorF.From(img.GetPixel(x + px, y + py));
           charRGB = charRGB.Add(pc);
           int lumaIdx = GetLumaTileIndexOfPixelPosInCell(px, py, sz);
           lumaRGB[lumaIdx] = lumaRGB[lumaIdx].Add(pc);

@@ -35,7 +35,7 @@ namespace PetsciiMapgen
       r.ValuesLength = Convert.ToInt32(d["ValuesLength"]);
       for (int i = 0; i < r.ValuesLength; ++i)
       {
-        r.ColorData[i] = (float)Convert.ToDouble(d["v" + i.ToString("00")]);
+        r[i] = (float)Convert.ToDouble(d["v" + i.ToString("00")]);
       }
       return r;
     }
@@ -47,7 +47,7 @@ namespace PetsciiMapgen
       d["ID"] = value.ID;
       for(int i = 0; i < value.ValuesLength; ++ i)
       {
-        d["v" + i.ToString("00")] = value.ColorData[i];
+        d["v" + i.ToString("00")] = value[i];
       }
       serializer.Serialize(writer, d);
     }
@@ -63,6 +63,12 @@ namespace PetsciiMapgen
     public bool Mapped;
     public bool Visited;
     public double MinDistFound;
+
+    public unsafe float this[int n]
+    {
+      get { return this.ColorData[n]; }
+      set { this.ColorData[n] = value; }
+    }
 
     public override string ToString()
     {
@@ -80,7 +86,7 @@ namespace PetsciiMapgen
     //#else
     //[Newtonsoft.Json.JsonArray()]
     const int MaxDimensions = 20;
-    public fixed float ColorData[MaxDimensions];
+    private fixed float ColorData[MaxDimensions];
 //#endif
     //public fixed float NormValues[20];// values 0-1
 

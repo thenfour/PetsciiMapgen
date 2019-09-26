@@ -141,7 +141,7 @@ namespace PetsciiMapgen
     public ColorF GetPixel(int ichar, int px, int py)
     {
       Point o = GetCharOriginInPixels(ichar);
-      var c = ColorFUtils.From(this.Bitmap.GetPixel(o.X + px, o.Y + py));
+      var c = ColorF.From(this.Bitmap.GetPixel(o.X + px, o.Y + py));
       // TODO: dither
       return c;
     }
@@ -152,12 +152,12 @@ namespace PetsciiMapgen
       Point o = GetCharOriginInPixels(ichar);
       o = Utils.Add(o, topLeft);
       int tilePixelCount = 0;
-      ColorF tileC = ColorFUtils.Init;
+      ColorF tileC = ColorF.Init;
       for (int py = 0; py < size.Height; ++py)
       {
         for (int px = 0; px < size.Width; ++px)
         {
-          var c = ColorFUtils.From(this.Bitmap.GetPixel(o.X + px, o.Y + py));
+          var c = ColorF.From(this.Bitmap.GetPixel(o.X + px, o.Y + py));
 
           if (this.DitherProvider != null)
           {

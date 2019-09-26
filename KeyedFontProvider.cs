@@ -169,7 +169,7 @@ namespace PetsciiMapgen
       Point o = GetCharOriginInPixels(ichar);
       var c = this.Bitmap.GetPixel(o.X + px, o.Y + py);
       c = SelectColor(ichar, c);
-      return ColorFUtils.From(c);
+      return ColorF.From(c);
     }
 
     public ColorF GetRegionColor(int ichar, Point topLeft, Size size, Size cellsPerChar, int cellOffsetX, int cellOffsetY)
@@ -178,14 +178,14 @@ namespace PetsciiMapgen
       Point o = GetCharOriginInPixels(ichar);
       o = Utils.Add(o, topLeft);
       int tilePixelCount = 0;
-      ColorF tileC = ColorFUtils.Init;
+      ColorF tileC = ColorF.Init;
       for (int py = 0; py < size.Height; ++py)
       {
         for (int px = 0; px < size.Width; ++px)
         {
           var c = this.Bitmap.GetPixel(o.X + px, o.Y + py);
           c = SelectColor(ichar, c);
-          tileC = tileC.Add(ColorFUtils.From(c));
+          tileC = tileC.Add(ColorF.From(c));
           tilePixelCount++;
         }
       }

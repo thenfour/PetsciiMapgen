@@ -421,7 +421,7 @@ namespace PetsciiMapgen
       Log.WriteLine("  which lands in mapID: " + mapid);
       Log.WriteLine("   -> " + this.Keys[mapid]);
 
-      // now display top 10 characters for that mapid.
+      // now display top N characters for that mapid.
       MappingArray marr = new MappingArray();
       Utils.ValueRangeInspector r = new Utils.ValueRangeInspector();
       foreach (CharInfo ci in this.CharInfo)
@@ -429,6 +429,10 @@ namespace PetsciiMapgen
         Mapping m;
         m.icharInfo = ci.srcIndex;
         m.imapKey = mapid;
+        if (ci.srcIndex == 1639)
+        {
+          int a = 0;
+        }
         m.dist = PixelFormatProvider.CalcKeyToColorDist(this.Keys[mapid], ci.actualValues);
         r.Visit(m.dist);
 
@@ -680,14 +684,14 @@ namespace PetsciiMapgen
 
         using (var g = Graphics.FromImage(destImg))
         {
-          ColorF srcColor = ColorFUtils.Init;
-          ColorF yuv = ColorFUtils.Init;
+          ColorF srcColor = ColorF.Init;
+          ColorF yuv = ColorF.Init;
           for (int srcCellY = 0; srcCellY < rows; ++srcCellY)
           {
             for (int srcCellX = 0; srcCellX < columns; ++srcCellX)
             {
               // sample in the cell to determine the "key" "ID".
-              ColorF charC = ColorFUtils.Init;
+              ColorF charC = ColorF.Init;
               int ID = PixelFormatProvider.GetMapIndexOfRegion(testBmp,
                 srcCellX * FontProvider.CharSizeNoPadding.Width,
                 srcCellY * FontProvider.CharSizeNoPadding.Height,

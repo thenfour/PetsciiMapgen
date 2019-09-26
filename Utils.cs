@@ -37,6 +37,11 @@ namespace PetsciiMapgen
       ret.y = y;
       return ret;
     }
+
+    public override string ToString()
+    {
+      return string.Format("vec2({0:0.00},{1:0.00})", x, y);
+    }
   }
 
   public static class vec2Utils
@@ -103,6 +108,10 @@ namespace PetsciiMapgen
   {
     public int x;
     public int y;
+    public override string ToString()
+    {
+      return string.Format("vec2({0},{1})", x, y);
+    }
   }
 
   public struct ColorF
@@ -114,6 +123,33 @@ namespace PetsciiMapgen
     public override string ToString()
     {
       return string.Format("[{0},{1},{2}]", R.ToString("0.00"), G.ToString("0.00"), B.ToString("0.00"));
+    }
+    public static ColorF From(Color c)
+    {
+      ColorF ret;
+      ret.R = c.R;
+      ret.G = c.G;
+      ret.B = c.B;
+      return ret;
+    }
+    public static ColorF FromRGB(double r, double g, double b)
+    {
+      ColorF ret;
+      ret.R = r;
+      ret.G = g;
+      ret.B = b;
+      return ret;
+    }
+    public static ColorF Init
+    {
+      get
+      {
+        ColorF ret;
+        ret.R = 0;
+        ret.G = 0;
+        ret.B = 0;
+        return ret;
+      }
     }
   }
 
@@ -142,6 +178,11 @@ namespace PetsciiMapgen
         ret.C2 = 0;
         return ret;
       }
+    }
+
+    public override string ToString()
+    {
+      return string.Format("[{0},{1},{2}]", L.ToString("0.00"), C1.ToString("0.00"), C2.ToString("0.00"));
     }
   }
 
@@ -184,33 +225,6 @@ namespace PetsciiMapgen
       c.G = Utils.Clamp(c.G, 0, 255);
       c.B = Utils.Clamp(c.B, 0, 255);
       return c;
-    }
-    public static ColorF From(Color c)
-    {
-      ColorF ret;
-      ret.R = c.R;
-      ret.G = c.G;
-      ret.B = c.B;
-      return ret;
-    }
-    public static ColorF FromRGB(double r, double g, double b)
-    {
-      ColorF ret;
-      ret.R = r;
-      ret.G = g;
-      ret.B = b;
-      return ret;
-    }
-    public static ColorF Init
-    {
-      get
-      {
-        ColorF ret;
-        ret.R = 0;
-        ret.G = 0;
-        ret.B = 0;
-        return ret;
-      }
     }
   }
 
@@ -342,7 +356,7 @@ namespace PetsciiMapgen
     public static unsafe ColorF GetPixel(this BitmapData data, long x, long y)
     {
       byte* p = data.GetRGBPointer(x, y);
-      return ColorFUtils.From(Color.FromArgb(p[2], p[1], p[0]));
+      return ColorF.From(Color.FromArgb(p[2], p[1], p[0]));
     }
 
     // assumes 24 bits per pixel RGB

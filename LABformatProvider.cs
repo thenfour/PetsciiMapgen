@@ -96,8 +96,8 @@ namespace PetsciiMapgen
       {
         for (int i = 0; i < LumaComponentCount; ++i)
         {
-          double keyY = key.ColorData[i];
-          double actualY = actual.ColorData[i];
+          double keyY = key[i];
+          double actualY = actual[i];
           m = Math.Abs(keyY - actualY);
 
           double tileAcc = m * m;
@@ -117,15 +117,15 @@ namespace PetsciiMapgen
         }
         return acc;
       }
-      double actualU = actual.ColorData[GetValueC1Index()];
-      double actualV = actual.ColorData[GetValueC2Index()];
-      double keyU = key.ColorData[GetValueC1Index()];
-      double keyV = key.ColorData[GetValueC2Index()];
+      double actualU = actual[GetValueC1Index()];
+      double actualV = actual[GetValueC2Index()];
+      double keyU = key[GetValueC1Index()];
+      double keyV = key[GetValueC2Index()];
 
       for (int i = 0; i < LumaComponentCount; ++i)
       {
-        double keyY = key.ColorData[i];
-        double actualY = actual.ColorData[i];
+        double keyY = key[i];
+        double actualY = actual[i];
         double dY = Math.Abs(keyY - actualY);
         double tileAcc = dY * dY;
         double dU = Math.Abs(actualU - keyU);// * f;

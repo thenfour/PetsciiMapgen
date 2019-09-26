@@ -82,8 +82,8 @@ namespace PetsciiMapgen
       {
         for (int i = 0; i < LumaComponentCount; ++i)
         {
-          double keyY = key.ColorData[i];
-          double actualY = actual.ColorData[i];
+          double keyY = key[i];
+          double actualY = actual[i];
           m = Math.Abs(keyY - actualY);
 
           double tileAcc = m * m;
@@ -104,15 +104,15 @@ namespace PetsciiMapgen
         return acc;
       }
 
-      double actualH = actual.ColorData[GetValueC1Index()];
-      double actualS = actual.ColorData[GetValueC2Index()];
-      double keyH = key.ColorData[GetValueC1Index()];
-      double keyS = key.ColorData[GetValueC2Index()];
+      double actualH = actual[GetValueC1Index()];
+      double actualS = actual[GetValueC2Index()];
+      double keyH = key[GetValueC1Index()];
+      double keyS = key[GetValueC2Index()];
 
       for (int i = 0; i < LumaComponentCount; ++i)
       {
-        double keyL = key.ColorData[i];
-        double actualL = actual.ColorData[i];
+        double keyL = key[i];
+        double actualL = actual[i];
 
         // we need to ignore hue when approaching black (L) or white (L) or gray (S)
         double Sfact = 1;// Math.Min(actualL, 100 - actualL) / 100; // ignore saturation around black / white.

@@ -52,7 +52,7 @@ namespace PetsciiMapgen
     {
       //double f = ColorUtils.NormalizeElement(v, useChroma, this.Dimension);
       //double f = pixelFormatProvider.NormalizeElement(v, this.Dimension);
-      double f = isNormalized ? v.ColorData[this.Dimension] : this.PixelFormatProvider.NormalizeElement(v, this.Dimension);
+      double f = isNormalized ? v[this.Dimension] : this.PixelFormatProvider.NormalizeElement(v, this.Dimension);
       Debug.Assert(f >= 0);
       Debug.Assert(f <= 1);
       //double f = normalizedValue.ColorData[this.Dimension];

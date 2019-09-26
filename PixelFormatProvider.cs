@@ -148,7 +148,7 @@ namespace PetsciiMapgen
 
     public unsafe void PopulateCharColorData(CharInfo ci, IFontProvider font)
     {
-      ColorF charRGB = ColorFUtils.Init;
+      ColorF charRGB = ColorF.Init;
       for (int ty = 0; ty < LumaTiles.Height; ++ty)
       {
         for (int tx = 0; tx < LumaTiles.Width; ++tx)
@@ -163,7 +163,7 @@ namespace PetsciiMapgen
 
           charRGB = charRGB.Add(tileRGB);
           LCCColor tileLAB = RGBToHCL(tileRGB);
-          ci.actualValues.ColorData[GetValueLIndex(tx, ty)] = (float)tileLAB.L;
+          ci.actualValues[GetValueLIndex(tx, ty)] = (float)tileLAB.L;
         }
       }
 
@@ -171,8 +171,8 @@ namespace PetsciiMapgen
       {
         charRGB = charRGB.Div(Utils.Product(LumaTiles));
         LCCColor charLAB = RGBToHCL(charRGB);
-        ci.actualValues.ColorData[GetValueC1Index()] = (float)charLAB.C1;
-        ci.actualValues.ColorData[GetValueC2Index()] = (float)charLAB.C2;
+        ci.actualValues[GetValueC1Index()] = (float)charLAB.C1;
+        ci.actualValues[GetValueC2Index()] = (float)charLAB.C2;
       }
     }
 
@@ -192,12 +192,12 @@ namespace PetsciiMapgen
       // changes normalized 0-1 values to YUV-ranged values. depends on value format and stuff.
       if (UseChroma)
       {
-        v.ColorData[GetValueC1Index()] = (float)DenormalizeC1(v.ColorData[GetValueC1Index()]);
-        v.ColorData[GetValueC2Index()] = (float)DenormalizeC2(v.ColorData[GetValueC2Index()]);
+        v[GetValueC1Index()] = (float)DenormalizeC1(v[GetValueC1Index()]);
+        v[GetValueC2Index()] = (float)DenormalizeC2(v[GetValueC2Index()]);
       }
       for (int i = 0; i < LumaComponentCount; ++ i)
       {
-        v.ColorData[i] = (float)DenormalizeL(v.ColorData[i]);
+        v[i] = (float)DenormalizeL(v[i]);
       }
     }
     public unsafe double NormalizeElement(ValueSet v, int elementToNormalize)
@@ -205,11 +205,11 @@ namespace PetsciiMapgen
       if (UseChroma)
       {
         if (elementToNormalize == GetValueC1Index())
-          return NormalizeC1(v.ColorData[elementToNormalize]);
+          return NormalizeC1(v[elementToNormalize]);
         if (elementToNormalize == GetValueC2Index())
-          return NormalizeC2(v.ColorData[elementToNormalize]);
+          return NormalizeC2(v[elementToNormalize]);
       }
-      return NormalizeL(v.ColorData[elementToNormalize]);
+      return NormalizeL(v[elementToNormalize]);
     }
 
     public static Point GetTileOrigin(Size charSize, Size numTilesPerChar, int tx, int ty)
@@ -278,18 +278,18 @@ namespace PetsciiMapgen
 
     public int GetMapIndexOfRegion(Bitmap img, int x, int y, Size sz)
     {
-      ColorF rgb = ColorFUtils.Init;
+      ColorF rgb = ColorF.Init;
       LCCColor lab = LCCColor.Init;
       LCCColor norm = LCCColor.Init;
       float[] vals = new float[DimensionCount];
-      ColorF charRGB = ColorFUtils.Init;
+      ColorF charRGB = ColorF.Init;
       for (int ty = LumaTiles.Height - 1; ty >= 0; --ty)
       {
         for (int tx = LumaTiles.Width - 1; tx >= 0; --tx)
         {
           Point tilePos = GetTileOrigin(sz, LumaTiles, tx, ty);
           // YES this just gets 1 pixel per char-sized area.
-          rgb = ColorFUtils.From(img.GetPixel(x + tilePos.X, y + tilePos.Y));
+          rgb = ColorF.From(img.GetPixel(x + tilePos.X, y + tilePos.Y));
           lab = this.RGBToHCL(rgb);
 
           norm = RGBToNormalizedHCL(rgb);

@@ -41,9 +41,32 @@ namespace PetsciiMapgen
 #endif
         Log.WriteLine("----------------------------------------");
 
+        foreach (var c in Palettes.ThreeBit)
+        {
+          var x = NaiveYUV5PixelFormat.RGBToYCbCr(ColorF.From(c));
+          Log.WriteLine("RGB:{0} => {1:0.00} {2:0.00} {3:0.00}", c, x.L, x.C1, x.C2);
+        }
+
 
         //args = new string[] { "-argsfile", @"C:\temp\emojidark12_YUV4v5+2_p1x1\args.txt" };
+        args = new string[]{
 
+  "-outdir", @"C:\temp",
+  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+  //"-testpalette", "ThreeBit",
+  "-testcolor", "#0000ff",
+
+  "-partitions", "1x1",
+  "-pf", "yuv5",
+  "-pfargs", "5v5+2",
+
+  "-fonttype", "normal",
+  "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark12.png",
+  "-charsize", "12x12",
+
+
+
+        };
 
         PartitionManager partitionManager = new PartitionManager(1, 1);
         IPixelFormatProvider pixelFormat = null;
@@ -52,7 +75,6 @@ namespace PetsciiMapgen
         List<string> processImages = new List<string>();
         int coresToUtilize = System.Environment.ProcessorCount;
         List<System.Drawing.Color> testColors = new List<System.Drawing.Color>();
-
 
         args.ProcessArg(new string[] { "-help", "-?", "-h" }, s =>
         {
@@ -278,7 +300,7 @@ namespace PetsciiMapgen
 
           //m = Math.Min(m, NbasedOnMem);
           Log.WriteLine("======================");
-          Log.WriteLine("== THEREFORE, use N={0:N0}", m);
+          Log.WriteLine("== THEREFORE, use N={0:N0}", NbasedOnMapSize);
           Log.WriteLine("======================");
 
           System.Environment.Exit(0);
@@ -354,7 +376,7 @@ namespace PetsciiMapgen
 
         foreach (var c in testColors)
         {
-          map.TestColor(outputDir, ColorFUtils.From(c));
+          map.TestColor(outputDir, ColorF.From(c));
         }
 
 

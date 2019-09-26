@@ -13,12 +13,13 @@ bin\Release\PetsciiMapgen.exe ^
 
   -partitions 1x1 ^
   -pf yuv5 ^
-  -pfargs 4v5+2 ^
+  -pfargs 6v5+2 ^
 
   -fonttype normal ^
   -fontImage "C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark12.png" ^
   -charsize 12x12 
 REM  -calcn 80000000
+
 
 
 popd
