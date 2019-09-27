@@ -54,11 +54,5 @@ namespace PetsciiMapgen
     }
   }
 
-  //public interface IPaletteProvider
-  //{
-  //  // takes a given color and returns an array of colors to use instead.
-  //  // the idea is that you use a color key, and replace the key with various palette colors.
-  //  Color[] GetColors(Color c);
-  //}
 }
 

@@ -88,10 +88,8 @@
     <Compile Include="EmojiTest.cs" />
     <Compile Include="FontfamilyFontProvider.cs" />
     <Compile Include="FontProvider.cs" />
-    <Compile Include="HSLformatProvider.cs" />
     <Compile Include="HybridMapgen2.cs" />
     <Compile Include="KeyedFontProvider.cs" />
-    <Compile Include="LABformatProvider.cs" />
     <Compile Include="Log.cs" />
     <Compile Include="MonoPaletteFontProvider.cs" />
     <Compile Include="ColorSpaces.cs" />
@@ -102,7 +100,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utils.cs" />
     <Compile Include="ValueSet.cs" />
-    <Compile Include="YUV5PixelFormat.cs" />
+    <Compile Include="FiveTilePixelFormat.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

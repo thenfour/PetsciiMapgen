@@ -1,21 +1,4 @@
-﻿/*
- 
-the idea here is to do a "naive YUV" format, which doesn't care so much about HUMAN
-perception as much as it cares about the perspective of our horrible grainy color mapping.
-
-Here, Luminance is 0-1, grayscale
-C1 is just r-b (scale: -1 to 1)
-C2 is just r-g (scale: -1 to 1)
-
-the point is to that near blackness / whiteness, differences in R-B and R-G are
-small, so this format retains that behavior.
-
-BUT, after trying this, it works, but with lots of caveats and basically it needs
-to be tweaked, curves and stuff to ensure balance.
-...which is what LAB is for. too bad LAB doesn't work great in our context.
-
-*/
-
+﻿
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -95,7 +78,7 @@ namespace PetsciiMapgen
       c.R /= 255;
       c.G /= 255;
       c.B /= 255;
-      //ret.L = (c.R * .299) + (c.G * .587) + (c.B * .114);// don't use balanced grayscale because it ruins the ratios in the chroma components
+      //ret.L = (c.R * .299) + (c.G * .587) + (c.B * .114);
       ret.L = (c.R + c.G + c.B) / 3;// 0-1
       ret.C1 = c.G - c.B;
       ret.C2 = c.R - c.B;
@@ -128,5 +111,128 @@ namespace PetsciiMapgen
       return Utils.EuclidianColorDist(lhs, rhs, lumaComponents, chromaComponents);
     }
   }
+
+
+
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  public class LABColorspace : ILCCColorSpace
+  {
+    public LABColorspace()
+    {
+      var lcc = RGBToLCC(ColorF.FromRGB(255, 255, 255));
+      ValueSet lhs;
+      ValueSet rhs;
+      lhs.ValuesLength = 3;
+      lhs.Mapped = false;
+      lhs.MinDistFound = 0;
+      lhs.Visited = false;
+      lhs.ID = 0;
+      lhs[0] = (float)lcc.L;
+      lhs[1] = (float)lcc.C1;
+      lhs[2] = (float)lcc.C2;
+
+      var lcc2 = RGBToLCC(ColorF.FromRGB(0, 0, 0));
+      rhs.ValuesLength = 3;
+      rhs.Mapped = false;
+      rhs.MinDistFound = 0;
+      rhs.Visited = false;
+      rhs.ID = 0;
+      rhs[0] = (float)lcc2.L;
+      rhs[1] = (float)lcc2.C1;
+      rhs[2] = (float)lcc2.C2;
+
+      double d = ColorDistance(lhs, rhs, 1, 2);
+    }
+    public string FormatString { get { return "LAB"; } }
+    public LCCColorDenorm RGBToLCC(ColorF c)
+    {
+      var rgb = new ColorMine.ColorSpaces.Rgb { R = c.R, G = c.G, B = c.B };
+      var lab = rgb.To<ColorMine.ColorSpaces.Lab>();
+      // https://github.com/hvalidi/ColorMine/blob/master/ColorMine/ColorSpaces/ColorSpaces.xml
+      LCCColorDenorm ret;
+      ret.L = lab.L;// 0-100
+      ret.C1 = lab.A;// -127 to 127
+      ret.C2 = lab.B;// -127 to 127
+      return ret;
+    }
+
+    public double NormalizeL(double x) { return Utils.Clamp(x / 100, 0, 1); }
+    public double NormalizeC1(double x)
+    {
+      // center point around 0.5
+      double ret = x / 255;// -.5 to .5
+      if (ret < 0)
+        ret += 1;
+      return Utils.Clamp(ret, 0, 1);
+    }
+    public double NormalizeC2(double x) { return NormalizeC1(x); }
+
+    public double DenormalizeL(double x) { return x * 100; }
+    public double DenormalizeC1(double x)
+    {
+      if (x > .5)
+        x -= 1;
+      return x * 255;
+      //return (x - .5) * 255;
+    }
+    public double DenormalizeC2(double x) { return DenormalizeC1(x); }
+
+    public double ColorDistance(ValueSet lhs, ValueSet rhs, int lumaComponents, int chromaComponents)
+    {
+      return Utils.EuclidianColorDist(lhs, rhs, lumaComponents, chromaComponents);
+    }
+  }
+
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  public class HSLColorspace : ILCCColorSpace
+  {
+    public string FormatString { get { return "HSL"; } }
+    public LCCColorDenorm RGBToLCC(ColorF c)
+    {
+      var rgb = new ColorMine.ColorSpaces.Rgb { R = c.R, G = c.G, B = c.B };
+      var lab = rgb.To<ColorMine.ColorSpaces.Hsl>();
+      // https://github.com/hvalidi/ColorMine/blob/master/ColorMine/ColorSpaces/ColorSpaces.xml
+      LCCColorDenorm ret;
+      ret.L = lab.L;
+      ret.C1 = lab.H;
+      ret.C2 = lab.S;
+      return ret;
+    }
+
+    public double NormalizeL(double x) { return Utils.Clamp(x / 100, 0, 1); }
+    public double NormalizeC1(double x) { return Utils.Clamp(x / 360, 0, 1); }// H
+    public double NormalizeC2(double x) { return NormalizeL(x); }// S
+    public double DenormalizeL(double x) { return x * 100; }
+    public double DenormalizeC1(double x) { return x * 360; }
+    public double DenormalizeC2(double x) { return DenormalizeL(x); }
+
+    public double ColorDistance(ValueSet lhs, ValueSet rhs, int lumaComponents, int chromaComponents)
+    {
+      double acc = 0;
+      for (int i = 0; i < lumaComponents; ++i)
+      {
+        double d = Math.Abs(lhs[i] - rhs[i]);
+        acc += d * d;
+      }
+      acc /= lumaComponents;
+      if (chromaComponents == 2)
+      {
+        // C1 (HUE)
+        double dh1 = Math.Abs(lhs[lumaComponents + 1] - rhs[lumaComponents + 1]);
+        double dh2 = Math.Abs((360 - lhs[lumaComponents + 1]) - rhs[lumaComponents + 1]);
+        double dh3 = Math.Abs(lhs[lumaComponents + 1] - (360 - rhs[lumaComponents + 1]));
+        double dh = Math.Min(Math.Min(dh1, dh2), dh3);
+        acc += dh * dh;
+
+        // C2 (Saturation)
+        double ds = Math.Abs(lhs[lumaComponents + 1] - rhs[lumaComponents + 1]);
+        acc += ds * ds;
+      }
+      return acc;
+    }
+  }
+
 }
 

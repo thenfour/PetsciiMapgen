@@ -59,6 +59,8 @@ namespace PetsciiMapgen
 
     public static void SetLogFile(string path)
     {
+      if (path == logFilePath)
+        return;
       List<string> l = Interlocked.Exchange<List<string>>(ref lines, new List<string>());
 
       using (var sw = System.IO.File.AppendText(path))

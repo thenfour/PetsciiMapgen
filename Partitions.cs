@@ -50,12 +50,9 @@ namespace PetsciiMapgen
 
     public unsafe int GetChildIndex(ValueSet v, bool isNormalized)
     {
-      //double f = ColorUtils.NormalizeElement(v, useChroma, this.Dimension);
-      //double f = pixelFormatProvider.NormalizeElement(v, this.Dimension);
       double f = isNormalized ? v[this.Dimension] : this.PixelFormatProvider.NormalizeElement(v, this.Dimension);
       Debug.Assert(f >= 0);
       Debug.Assert(f <= 1);
-      //double f = normalizedValue.ColorData[this.Dimension];
       int n = (int)Math.Floor(f * children.Count);// if children=3, 0=0, .3=.9, .35 = 1.05, 1.0 = 3
       n = Utils.Clamp(n, 0, children.Count - 1);
       return n;

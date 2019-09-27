@@ -1,7 +1,4 @@
-﻿//#define DUMP_CHARINFO
-//#define DUMP_MAPINFO
-//#define DUMP_MAPCHARINFO
-
+﻿
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -65,7 +62,6 @@ namespace PetsciiMapgen
 
 
       Log.WriteLine("  DiscreteNormalizedValues:");
-      //bool foundSuitableMidpoint = false;
       for (int i = 0; i < PixelFormatProvider.DiscreteNormalizedValues.Length; ++i)
       {
         if (i > 14)
@@ -74,8 +70,6 @@ namespace PetsciiMapgen
           break;
         }
         Log.WriteLine("    {0}: {1,10:0.00}", i, PixelFormatProvider.DiscreteNormalizedValues[i]);
-        //if (Math.Abs(this.DiscreteNormalizedValues[i] - 0.5) < 0.0001)
-        //  foundSuitableMidpoint = true;
       }
 
 
@@ -90,12 +84,10 @@ namespace PetsciiMapgen
 
       // fill in char source info (actual tile values)
       timings.EnterTask("Analyze incoming font");
-      //ProgressReporter prcharinfo = new ProgressReporter(FontProvider.CharCount);
       this.CharInfo = new List<CharInfo>();
 
       for (int ichar = 0; ichar < FontProvider.CharCount; ++ichar)
       {
-        //prcharinfo.Visit();
         var ci = new CharInfo(PixelFormatProvider.DimensionCount)
         {
           srcIndex = ichar,
@@ -133,13 +125,10 @@ namespace PetsciiMapgen
       Log.WriteLine("  Theoretical mapping count: " + theoreticalMappings.ToString("N0"));
 
       List<Task> comparisonBatches = new List<Task>();
-      //List<MappingArray> allMappingsArray = new List<MappingArray>(coreCount);
       var Map = new Mapping[Keys.Length];// indices need to be synchronized with Keys.
 
       for (int icore = 0; icore < coreCount; ++icore)
       {
-        //allMappingsArray.Add(new MappingArray(0));
-
         // create a task to process a segment of keys
         ulong keyBegin = (ulong)icore;
         keyBegin *= (ulong)Keys.Length;
@@ -155,63 +144,6 @@ namespace PetsciiMapgen
         comparisonBatches.Add(Task.Run(() =>
         {
           PopulateMap(keyBegin, keyEnd, coreID, isLastCore, pm, Map);
-          //int mapEntriesToPopulate = (int)keyEnd - (int)keyBegin;
-          ////MappingArray allMappings = allMappingsArray[batchID];// new MappingArray(0);
-          //Log.WriteLine("    Batch processing idx {0:N0} to {1:N0}", keyBegin, keyEnd);
-          //var pr = isLastCore ? new ProgressReporter((ulong)mapEntriesToPopulate) : null;
-          //for (int ikey = (int)keyBegin; ikey < (int)keyEnd; ++ikey)
-          //{
-          //  pr?.Visit((ulong)ikey - keyBegin);
-          //  var chars = pm.GetItemsInSamePartition(this.Keys[ikey], true);
-          //  double p = ikey - (int)keyBegin;
-          //  p /= keyEnd - keyBegin;
-          //  foreach (var ci in chars)
-          //  {
-          //    Mapping n;
-          //    n.icharInfo = ci.srcIndex;
-          //    n.imapKey = ikey;
-          //    double fdist = pixelFormatProvider.CalcKeyToColorDist(this.Keys[ikey], ci.actualValues);
-          //    n.dist = fdist;
-          //    allMappings.Add(n, p);
-
-          //    this.Keys[ikey].MinDistFound = Math.Min(this.Keys[ikey].MinDistFound, fdist);
-          //    this.Keys[ikey].Visited = true;
-          //  }
-          //}
-
-          //Log.WriteLine("    Mappings generated: {0}. Now sorting them.", allMappings.Length.ToString("N0"));
-
-          //allMappings.Sort();
-
-          //Log.WriteLine("    Sorted batch {0}. Now enumerating and filling in map.", batchID);
-
-          //ulong i = 0;
-          //int mapEntriesPopulated = 0;
-          //pr = (batchID == coreCount - 1) ? new ProgressReporter((ulong)allMappings.Length) : null;
-          //foreach (var m in allMappings.GetEnumerator())
-          //{
-          //  pr?.Visit(i++);
-          //  if (Keys[m.imapKey].Mapped)
-          //  {
-          //    continue;
-          //  }
-
-          //  CharInfo thisCh = this.CharInfo[m.icharInfo];
-
-          //  Map[m.imapKey] = m;
-          //  this.Keys[m.imapKey].Mapped = true;
-          //  thisCh.usages++;
-          //  mapEntriesPopulated++;
-          //  if (mapEntriesPopulated == mapEntriesToPopulate)
-          //    break;
-          //}
-
-          //double prevmem = Utils.BytesToMb(Utils.UsedMemoryBytes);
-          ////allMappings = null;
-          ////allMappingsArray[batchID] = null;
-          //GC.Collect();
-          //Log.WriteLine("Finished batch; GC mem {0:0.00} mb => {1:0.00}", prevmem, Utils.BytesToMb(Utils.UsedMemoryBytes));
-
         }));
       }
       Task.WaitAll(comparisonBatches.ToArray());
@@ -233,43 +165,7 @@ namespace PetsciiMapgen
           numRepetitions += ci.usages - 1;
       }
 
-      //timings.EndTask();
-
-      // massive dump.
-#if DUMP_CHARINFO
-      Log.WriteLine("ALL CHAR INFO:");
-      foreach (CharInfo ci in charInfo)
-      {
-        Log.WriteLine("  {0}", ci);
-      }
-#endif
-#if DUMP_MAPINFO
-      Log.WriteLine("ALL MAPPING INFO:");
-      foreach (var k in keys)
-      {
-        CharInfo ci = null;
-        if (!map.TryGetValue(k.ID, out ci))
-        {
-          continue;
-        }
-
-        Log.WriteLine("  id:{1} key:{0} mindist:{2} mappedtoCharSrc:{3}",
-          k, k.ID, k.MinDistFound, ci.srcIndex);
-
-#if DUMP_MAPCHARINFO
-        foreach (CharInfo ci2 in charInfo)
-        {
-          //double fdist = CalcCellDistance(k, ci2.actualValues);
-          double fdist = pixelFormatProvider.CalcKeyToColorDist(k, ci2.actualValues);
-          Log.WriteLine("    dist {0,6:0.00} to char {1}", fdist, ci2);
-        }
-#endif
-      }
-#endif
       Log.WriteLine("Process currently using {0:0.00} mb of memory)", Utils.BytesToMb(Utils.UsedMemoryBytes));
-      //allMappingsArray = null;
-      //GC.Collect();
-      //Log.WriteLine("Process currently using {0:0.00} mb of memory after GC)", Utils.BytesToMb(Utils.UsedMemoryBytes));
 
       OutputFullMap(fullMapPath, Map);
 
@@ -297,25 +193,6 @@ namespace PetsciiMapgen
       //string jsonMap = Newtonsoft.Json.JsonConvert.SerializeObject(Map, Newtonsoft.Json.Formatting.Indented);
       //System.IO.File.WriteAllText(System.IO.Path.Combine(refMapPath, "..\\Map.json"), jsonMap);
 
-      // hm not sure what thisi s REALLY good for tbh.
-      //string infopath = System.IO.Path.Combine(refMapPath, "..\\config.config");
-      //StringBuilder sb = new StringBuilder();
-
-      //sb.AppendLine("\r\n# general config:");
-      //sb.AppendLine(string.Format("cores={0}", BatchCount));
-      //sb.AppendLine(string.Format("fullMapPath={0}", System.IO.Path.GetFileName(fullMapPath)));
-      //sb.AppendLine(string.Format("refMapPath={0}", System.IO.Path.GetFileName(refMapPath)));
-      //sb.AppendLine(string.Format("refFontPath={0}", System.IO.Path.GetFileName(refFontPath)));
-
-      //sb.AppendLine("\r\n# partition manager config:");
-      //pm.WriteConfig(sb);
-      //sb.AppendLine("\r\n# pixel format config:");
-      //pixelFormatProvider.WriteConfig(sb);
-      //sb.AppendLine("\r\n# font config:");
-      //fontProvider.WriteConfig(sb);
-
-      //System.IO.File.WriteAllText(infopath, sb.ToString());
-
       Log.WriteLine("Post-map stats:");
       Log.WriteLine("  Used char count: " + numCharsUsed);
       Log.WriteLine("  Number of unused char: " + (this.CharInfo.Count - numCharsUsed));
@@ -327,7 +204,6 @@ namespace PetsciiMapgen
     private void PopulateMap(ulong keyBegin, ulong keyEnd, int coreID, bool isLastCore, PartitionManager pm, Mapping[] Map)
     {
       int mapEntriesToPopulate = (int)keyEnd - (int)keyBegin;
-      //MappingArray allMappings = new MappingArray();
       Log.WriteLine("    Batch processing idx {0:N0} to {1:N0}", keyBegin, keyEnd);
       var pr = isLastCore ? new ProgressReporter((ulong)mapEntriesToPopulate) : null;
       for (int ikey = (int)keyBegin; ikey < (int)keyEnd; ++ikey)
@@ -342,19 +218,13 @@ namespace PetsciiMapgen
 
         foreach (var ci in chars)
         {
-          //Mapping n;
-          //n.icharInfo = ci.srcIndex;
-          //n.imapKey = ikey;
           double fdist = this.PixelFormatProvider.CalcKeyToColorDist(this.Keys[ikey], ci.actualValues);
-          //n.dist = fdist;
-          //allMappings.Add(n, p);
           if (fdist < closestDist)
           {
             this.Keys[ikey].MinDistFound = fdist;// Math.Min(this.Keys[ikey].MinDistFound, fdist);
             closestDist = fdist;
             ciNearest = ci;
           }
-          //this.Keys[ikey].Visited = true;
         }
 
         Map[ikey].dist = closestDist;
@@ -362,39 +232,6 @@ namespace PetsciiMapgen
         ciNearest.usages ++;
         Map[ikey].imapKey = ikey;
       }
-
-      //Log.WriteLine("    Mappings generated: {0}. Now sorting them.", allMappings.Length.ToString("N0"));
-
-      //allMappings.Sort();
-
-      //Log.WriteLine("    Sorted batch {0}. Now enumerating and filling in map.", batchID);
-
-      //ulong i = 0;
-      //int mapEntriesPopulated = 0;
-      //pr = (batchID == coreCount - 1) ? new ProgressReporter((ulong)allMappings.Length) : null;
-      //foreach (var m in allMappings.GetEnumerator())
-      //{
-      //  pr?.Visit(i++);
-      //  if (Keys[m.imapKey].Mapped)
-      //  {
-      //    continue;
-      //  }
-
-      //  CharInfo thisCh = this.CharInfo[m.icharInfo];
-
-      //  Map[m.imapKey] = m;
-      //  this.Keys[m.imapKey].Mapped = true;
-      //  thisCh.usages++;
-      //  mapEntriesPopulated++;
-      //  if (mapEntriesPopulated == mapEntriesToPopulate)
-      //    break;
-      //}
-
-      //double prevmem = Utils.BytesToMb(Utils.UsedMemoryBytes);
-      ////allMappings = null;
-      ////allMappingsArray[batchID] = null;
-      //GC.Collect();
-      //Log.WriteLine("Finished batch; GC mem {0:0.00} mb => {1:0.00}", prevmem, Utils.BytesToMb(Utils.UsedMemoryBytes));
     }
 
     // when a color looks wrong, let's try and trace it back. outputs mapping information for this color,
@@ -587,7 +424,6 @@ namespace PetsciiMapgen
     public Color RefFontIndexToColor(int fontIndex)
     {
       Debug.Assert(fontIndex >= 0);
-      //Debug.Assert(fontIndex < DistinctMappedChars.Length);
       int v = (int)fontIndex;// * 0x10;
       byte r = (byte)(v & 0xff);
       v >>= 8;
@@ -648,25 +484,6 @@ namespace PetsciiMapgen
     //  destImg.Save(destImagePath);
     //}
 
-    // returns map from cell => REFFONT char id
-    //public unsafe IDictionary<Point, int> ProcessImageUsingRef(string MapRefPath, string MapRefFontPath, string srcImagePath, string destImagePath)
-    //{
-    //  using (var testImg = new Bitmap(srcImagePath))
-    //  using (var refMapImage = new Bitmap(MapRefPath))
-    //  using (var refFontImage = new Bitmap(MapRefFontPath))
-    //    return ProcessImageUsingRef(refMapImage, refFontImage, testImg, destImagePath);
-    //}
-
-    // returns map from cell => charid
-    //public unsafe IDictionary<Point, int> ProcessImageUsingRef(string MapRefPath, string MapRefFontPath, string srcImagePath, Bitmap testBmp, string destImagePath)
-    //{
-    //  Log.WriteLine("  tranfsorm image using REF: " + srcImagePath);
-    //  var refMapImage = new Bitmap(MapRefPath);
-    //  //Bitmap refMapBitmap = new Bitmap(refMapImage);
-    //  var refFontImage = Bitmap.FromFile(MapRefFontPath);
-    //  var testBmp = new Bitmap(testImg);
-    //  return ProcessImageUsingRef(refMapImage, refFontImage, srcImagePath, destImagePath);
-    //}
 
     // returns map from cell => charid
     public unsafe IDictionary<Point, int> ProcessImageUsingRef(Bitmap refMapImage, Bitmap refFontImage, Bitmap testBmp, string destImagePath)

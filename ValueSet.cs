@@ -19,17 +19,12 @@ namespace PetsciiMapgen
     public override unsafe ValueSet ReadJson(JsonReader reader, Type objectType, ValueSet existingValue, bool hasExistingValue, JsonSerializer serializer)
     {
       ValueSet r;
-      //Dictionary<string, object> d = new Dictionary<string, object>();
       Newtonsoft.Json.Linq.JObject jo = (Newtonsoft.Json.Linq.JObject)serializer.Deserialize(reader);
       var d = jo.ToObject<Dictionary<string, object>>();
-      //d = (Dictionary<string, object>)serializer.Deserialize(reader);
 
       r.Mapped = false;
       r.MinDistFound = -1;
       r.Visited = true;
-
-      //r.ID = 0;
-      //r.ValuesLength = 0;
 
       r.ID = (long)d["ID"];
       r.ValuesLength = Convert.ToInt32(d["ValuesLength"]);
@@ -110,7 +105,7 @@ namespace PetsciiMapgen
 #endif
       n.ValuesLength = dimensionsPerCharacter;
       n.ID = id;
-      n.MinDistFound = double.MaxValue;// UInt32.MaxValue;
+      n.MinDistFound = double.MaxValue;
       if (normalizedValues != null)
       {
         Debug.Assert(dimensionsPerCharacter == normalizedValues.Length);

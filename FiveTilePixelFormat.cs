@@ -45,23 +45,11 @@ namespace PetsciiMapgen
   // base class for pixel formats using colorspace represented by separate luminance + 2 chroma-ish colorants
   public class FiveTilePixelFormat : IPixelFormatProvider
   {
-    // abstract stuff:
-    //protected abstract string FormatID { get; }
-
     public double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, bool verboseDebugInfo = false)
     {
       Denormalize(ref key);
       return this.Colorspace.ColorDistance(key, actual, LumaComponentCount, ChromaComponentCount);
     }
-    //public abstract double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, bool verboseDebugInfo = false);
-    //protected abstract LCCColorDenorm RGBToHCL(ColorF c);
-    //protected abstract double NormalizeL(double x);
-    //protected abstract double NormalizeC1(double x);
-    //protected abstract double NormalizeC2(double x);
-    //protected abstract double DenormalizeL(double x);
-    //protected abstract double DenormalizeC1(double x);
-    //protected abstract double DenormalizeC2(double x);
-
     public int DimensionCount { get; private set; } // # of dimensions (UV + Y*size)
     public float[] DiscreteNormalizedValues { get; private set; }
 
@@ -72,13 +60,6 @@ namespace PetsciiMapgen
     protected float Rotation { get; private set; } // 0-1, default 0.5
 
     protected ILCCColorSpace Colorspace { get; private set; }
-
-    //public virtual void WriteConfig(StringBuilder sb)
-    //{
-    //  sb.AppendLine("# LCC5 pixel format provider config");
-    //  sb.AppendLine(string.Format("valuesPerComponent={0}", DiscreteNormalizedValues.Length));
-    //  sb.AppendLine(string.Format("chromaComponents={0}", ChromaComponentCount));
-    //}
 
     public string PixelFormatString
     {
@@ -102,8 +83,6 @@ namespace PetsciiMapgen
     {
       FiveTilePixelFormat ret = new FiveTilePixelFormat();
       int valuesPerComponent = 255;
-      //bool useChroma_ = false;
-      //float rot_ = 0.5f;
       args.ProcessArg("-pfargs", s =>
       {
         valuesPerComponent = int.Parse(s.Split('v')[0]);

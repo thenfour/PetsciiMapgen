@@ -1,28 +1,4 @@
 ﻿
-/*
- 
-even though LAB + euclid distance is perceptually great, there are a number of issues with
-the way i use it:
-
-1. i combine average luminance over an area with A*B* from other regions. I am not sure
-  it's acceptable to do this.
-
-2. the fact that I use such poor granularity means rounding errors are devastating. you can have
-  a font char that perfectly matches the image region, but it won't be chosen, because the
-  in-between map key is so far off, some other char matched that better.
-
-3. for the charsets i'm using, it's probably better to specialize somehow. for example
-  HSL may actually bet preferred with pixel-art type charsets. the problem is that
-  i think for these charsets, grayscale is much preferred over wrongly-colored. basically,
-  desaturated chars should match better.
-
-  another small issue is that some map values are totally nonsense. for black and white for
-  example, there's no point in the A*B* components. we have a whole 2 dimensions there
-  which are worthless. the good news is that the mapping still works because the
-  image will map to the proper values.
- 
- */
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -57,15 +33,6 @@ namespace PetsciiMapgen
 
   public class SquareLCCPixelFormat : IPixelFormatProvider
   {
-    // abstract stuff:
-    //protected abstract string FormatID { get; }
-    //protected abstract double NormalizeL(double x);
-    //protected abstract double NormalizeC1(double x);
-    //protected abstract double NormalizeC2(double x);
-    //protected abstract double DenormalizeL(double x);
-    //protected abstract double DenormalizeC1(double x);
-    //protected abstract double DenormalizeC2(double x);
-
     public int DimensionCount { get; private set; } // # of dimensions (UV + Y*size)
     public float[] DiscreteNormalizedValues { get; private set; }
 
@@ -100,12 +67,8 @@ namespace PetsciiMapgen
       SquareLCCPixelFormat ret = new SquareLCCPixelFormat();
 
       int valuesPerComponent = 255;
-      //Size lumaTiles_ = new Size(1, 1);
-      //bool useChroma_ = false;
-      //ILCCColorSpace cs_ = new JPEGColorspace();
       args.ProcessArg("-pfargs", o =>
       {
-        //Utils.ParsePFArgs(o, out valuesPerComponent_, out useChroma_, out lumaTiles_);
         valuesPerComponent = int.Parse(o.Split('v')[0]);
         o = o.Split('v')[1];// 2x3+2
         ret.UseChroma = int.Parse(o.Split('+')[1]) == 2;

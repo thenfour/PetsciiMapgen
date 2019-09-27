@@ -23,74 +23,20 @@ using System.Windows.Media;
 
 namespace PetsciiMapgen
 {
-  class ArgSet
-  {
-    public string[] args;
-    public ArgSet(params string[] a)
-    {
-      args = a;
-    }
-    public static ArgSet operator +(ArgSet a, ArgSet b)
-    {
-      ArgSet n = new ArgSet();
-      n.args = a.args.Concat(b.args).ToArray();
-      return n;
-    }
-    public override string ToString()
-    {
-      return string.Join(" ", args);
-    }
-  }
-
-  class ArgSetList
-  {
-    public ArgSet[] argSets;
-    public static ArgSetList operator +(ArgSetList a, ArgSetList b)
-    {
-      ArgSetList ret = new ArgSetList();
-      List<ArgSet> x = new List<ArgSet>();
-      foreach (var ao in a.argSets)
-      {
-        foreach (var bo in b.argSets)
-        {
-          ArgSet n = new ArgSet();
-          List<string> args = ao.args.ToList();
-          args.AddRange(bo.args);
-          n.args = args.ToArray();
-          x.Add(n);
-        }
-      }
-      ret.argSets = x.ToArray();
-      return ret;
-    }
-    public static ArgSetList operator +(ArgSetList a, ArgSet b)
-    {
-      // this just adds args to the end of all arglists
-      ArgSetList ret = new ArgSetList();
-      List<ArgSet> x = new List<ArgSet>();// a.argSets.ToList();
-      foreach (var ao in a.argSets)
-      {
-        x.Add(ao + b);
-      }
-      ret.argSets = x.ToArray();
-      return ret;
-    }
-    public static ArgSetList operator +(ArgSet a, ArgSetList b)
-    {
-      // this just adds args to the end of all arglists
-      ArgSetList ret = new ArgSetList();
-      List<ArgSet> x = new List<ArgSet>();// a.argSets.ToList();
-      foreach (var bo in b.argSets)
-      {
-        x.Add(a + bo);
-      }
-      ret.argSets = x.ToArray();
-      return ret;
-    }
-  }
-
   class Program
   {
+    enum MapSource
+    {
+      Create,
+      Load
+    }
+    enum BatchCommand
+    {
+      List,
+      Run,
+      None
+    }
+
     static ArgSet Args(params string[] a)
     {
       return new ArgSet(a);
@@ -112,214 +58,288 @@ namespace PetsciiMapgen
       ret.argSets = l.ToArray();
       return ret;
     }
+
     static void Main(string[] args)
     {
-      //{
-      //  var c = Args("c64") + Or(Args("color"), Args("grayscale"));
-      //  var r = Args("z80") + Or(Args("small"), Args("big"));
-      //  var f = Or(c, r);
-
-      //  var a = c + r;
-      //  var b = Args("hello") + Args("world");
-      //  var d = Or(Args("hello"), Args("Goodbye")) + Args("world");
-      //  var e = Args("Hello") + Or(Args("world"), Args("jimbo"));
-      //  var x = 0;
-      //}
-
       string rootDir = @"f:\maps";
+      string batchLogPath = rootDir + @"\batchLog.txt";
 
-      var common = Args(
-        "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-        "-testpalette", "ThreeBit");
+      //args = new string[] { "-batchlist" };
 
-      //-pf [Square, FiveTile]    Pixel format: Square, FiveTile
-      var grayscalePixelFormats = Or(
-        Args("-pf", "square", "-pfargs", "8192v1x1+0", "-partitions", "1x1"),
-        Args("-pf", "square", "-pfargs", "128v2x2+0", "-partitions", "2x3"),
-        Args("-pf", "square", "-pfargs", "8v3x3+0", "-partitions", "2x3"),
-        Args("-pf", "fivetile", "-pfargs", "48v5+0", "-partitions", "2x3")
-        );
+      using (var stayon = new StayOn())
+      {
+        string[] batchKeywords = new string[] { };
+        BatchCommand batchCommand = BatchCommand.None;
+        Log.SetLogFile(batchLogPath);
 
-      var colorPixelFormats = Or(
-        Args("-pf", "square", "-pfargs", "645v1x1+2", "-partitions", "1x1"),
-        Args("-pf", "square", "-pfargs", "24v2x2+2", "-partitions", "2x3"),
-        Args("-pf", "square", "-pfargs", "5v3x3+2", "-partitions", "1x1"),
-        Args("-pf", "fivetile", "-pfargs", "16v5+2", "-partitions", "2x3")
-        );
+        args.ProcessArg2(new string[] { "-batchrun", "-batchlist" }, (thisArg, remainingArgs) => 
+        {
+          if (remainingArgs != null)
+          {
+            batchKeywords = remainingArgs.ToArray();
+          }
+          switch (thisArg.ToLowerInvariant())
+          {
+            case "-batchrun":
+              batchCommand = BatchCommand.Run;
+              break;
+            default:
+            case "-batchlist":
+              batchCommand = BatchCommand.List;
+              break;
+          }
+        });
 
-      //// budget versions
-      //var grayscalePixelFormats = Or(
-      //  Args("-pf", "square", "-pfargs", "256v1x1+0", "-partitions", "1x1"),
-      //  Args("-pf", "square", "-pfargs", "16v2x2+0", "-partitions", "2x3"),
-      //  Args("-pf", "fivetile", "-pfargs", "12v5+0", "-partitions", "2x3")
-      //  );
+        if (batchCommand == BatchCommand.None)
+        {
+          Main2(args);
+          return;
+        }
+        
+        var common = Args(
+          "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+          "-testpalette", "ThreeBit");
 
-      //var colorPixelFormats = Or(
-      //  Args("-pf", "square", "-pfargs", "16v1x1+2", "-partitions", "1x1"),
-      //  Args("-pf", "square", "-pfargs", "8v2x2+2", "-partitions", "2x3"),
-      //  Args("-pf", "fivetile", "-pfargs", "6v5+2", "-partitions", "2x3")
-      //  );
-
-      var allLCCColorspaces = Or(
-        Args("-cs", "jpeg"),
-        Args("-cs", "nyuv"),
-        Args("-cs", "lab"));
-
-      // C64 ============================
-      var C64Font = Args(
-        "-fonttype", "mono",
-        "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\c64opt160.png",
-        "-charsize", "8x8");
-
-      var c64fontAndPalettes_Color = C64Font + Args("-palette", "C64Color");
-
-      var c64fontAndPalettes_Grayscale = C64Font + Or(
-          Args("-palette", "BlackAndWhite"),
-          Args("-palette", "C64ColorGray8A"),
-          Args("-palette", "C64Grays"),
-          Args("-palette", "C64ColorGray8B"),
-          Args("-palette", "C64Color")
+        // heavy: aiming for 16384x16384 = map size 268435456
+        var grayscalePixelFormatsHeavy = Args("pftag:heavy,pftag:grayscale") + Or(
+          Args("-pf", "square", "-pfargs", "4096v1x1+0", "-partitions", "1x1"),//1
+          Args("-pf", "square", "-pfargs", "128v2x2+0", "-partitions", "2x3"),//4
+          Args("-pf", "square", "-pfargs", "8v3x3+0", "-partitions", "2x3"),//9
+          Args("-pf", "fivetile", "-pfargs", "48v5+0", "-partitions", "2x3")//5
           );
 
-      var C64Color = Args("-outdir", rootDir + @"\C64 color") + c64fontAndPalettes_Color + colorPixelFormats + allLCCColorspaces;
-      var C64Grayscale = Args("-outdir", rootDir + @"\C64 grayscale") + c64fontAndPalettes_Grayscale + grayscalePixelFormats + allLCCColorspaces;
+        var colorPixelFormatsHeavy = Args("pftag:heavy,pftag:color") + Or(
+          Args("-pf", "square", "-pfargs", "645v1x1+2", "-partitions", "1x1"),//3
+          Args("-pf", "square", "-pfargs", "24v2x2+2", "-partitions", "2x3"),//6
+          Args("-pf", "square", "-pfargs", "6v3x3+2", "-partitions", "1x1"),//11
+          Args("-pf", "fivetile", "-pfargs", "16v5+2", "-partitions", "2x3")//7
+          );
 
-      // mz700 ============================
-      var mz700font = Args(
-        "-fonttype", "mono",
-        "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\mz700.png",
-        "-charsize", "8x8");
+        // medium: aiming for 8192x8192 = map size 67108864
+        var grayscalePixelFormatsMedium = Args("pftag:medium,pftag:grayscale") + Or(
+          Args("-pf", "square", "-pfargs", "2048v1x1+0", "-partitions", "1x1"),
+          Args("-pf", "square", "-pfargs", "90v2x2+0", "-partitions", "2x3"),
+          Args("-pf", "square", "-pfargs", "7v3x3+0", "-partitions", "2x3"),
+          Args("-pf", "fivetile", "-pfargs", "36v5+0", "-partitions", "2x3")
+          );
 
-      var mz700ColorPalettes = Or(
-        Args("-palette", "RGBPrimariesHalftone16"),
-        Args("-palette", "ThreeBit")
-        );
-      var mz700GrayPalettes = Or(
-        Args("-palette", "BlackAndWhite"),
-        Args("-palette", "Gray3"),
-        Args("-palette", "Gray4"),
-        Args("-palette", "Gray5"),
-        Args("-palette", "Gray8")
-        );
+        var colorPixelFormatsMedium = Args("pftag:medium,pftag:color") + Or(
+          Args("-pf", "square", "-pfargs", "406v1x1+2", "-partitions", "1x1"),
+          Args("-pf", "square", "-pfargs", "20v2x2+2", "-partitions", "2x3"),
+          Args("-pf", "square", "-pfargs", "5v3x3+2", "-partitions", "1x1"),
+          Args("-pf", "fivetile", "-pfargs", "13v5+2", "-partitions", "2x3")
+          );
 
-      var mz700color = Args("-outdir", rootDir + @"\MZ700 color") + mz700font + mz700ColorPalettes + colorPixelFormats + allLCCColorspaces;
-      var mz700grayscale = Args("-outdir", rootDir + @"\MZ700 grayscale") + mz700font + mz700GrayPalettes + grayscalePixelFormats + allLCCColorspaces;
+        // budget versions (512x512 = 262144 map size)
+        var grayscalePixelFormatsBudget = Args("pftag:budget,pftag:grayscale") + Or(
+          Args("-pf", "square", "-pfargs", "1024v1x1+0", "-partitions", "1x1"),
+          Args("-pf", "square", "-pfargs", "22v2x2+0", "-partitions", "2x3"),
+          Args("-pf", "fivetile", "-pfargs", "12v5+0", "-partitions", "2x3")
+          );
 
-      // topaz ============================
-      var topazFont = Args(
-        "-fonttype", "mono",
-        "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\topaz96.gif",
-        "-charsize", "8x16");
+        var colorPixelFormatsBudget = Args("pftag:budget,pftag:color") + Or(
+          Args("-pf", "square", "-pfargs", "64v1x1+2", "-partitions", "1x1"),
+          Args("-pf", "square", "-pfargs", "8v2x2+2", "-partitions", "2x3"),
+          Args("-pf", "fivetile", "-pfargs", "6v5+2", "-partitions", "2x3")
+          );
 
-      var topazPalettes = Or(
-        Args("-palette", "Workbench134"),
-        Args("-palette", "Workbench314")
-        );
+        // "Example" pixel formats to show the same N but with chroma subsampling
+        var grayscaleExamplePixelFormats = Args("pftag:example,pftag:grayscale") + Or(
+          Args("-pf", "square", "-pfargs", "12v1x1+0", "-partitions", "2x3"),
+          Args("-pf", "square", "-pfargs", "12v2x2+0", "-partitions", "2x3"),
+          Args("-pf", "fivetile", "-pfargs", "12v5+0", "-partitions", "2x3")
+          );
 
-      var topazGrayscale = Args("-outdir", rootDir + @"\Topaz grayscale") + topazFont + topazPalettes + grayscalePixelFormats + allLCCColorspaces;
+        var colorPixelExampleFormats = Args("pftag:example,pftag:color") + Or(
+          Args("-pf", "square", "-pfargs", "6v1x1+2", "-partitions", "2x3"),
+          Args("-pf", "square", "-pfargs", "6v2x2+2", "-partitions", "2x3"),
+          Args("-pf", "fivetile", "-pfargs", "6v5+2", "-partitions", "2x3")
+          );
 
-      // DOS ============================
-      var dosFont = Args(
+        var allLCCColorspaces = Or(
+          Args("-cs", "jpeg"),
+          Args("-cs", "nyuv"),
+          Args("-cs", "lab"));
+
+        var grayscalePixelFormats = allLCCColorspaces + Or(
+          grayscalePixelFormatsHeavy,
+          grayscalePixelFormatsMedium,
+          grayscalePixelFormatsBudget,
+          grayscaleExamplePixelFormats);
+
+        var colorPixelFormats = allLCCColorspaces + Or(
+          colorPixelFormatsHeavy,
+          colorPixelFormatsMedium,
+          colorPixelFormatsBudget,
+          colorPixelExampleFormats);
+
+        // C64 ============================
+        var C64Font = Args(
+          "-fonttype", "mono",
+          "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\c64opt160.png",
+          "-charsize", "8x8");
+
+        var c64fontAndPalettes_Color = C64Font + Args("-palette", "C64Color");
+
+        var c64fontAndPalettes_Grayscale = C64Font + Or(
+            Args("-palette", "BlackAndWhite"),
+            Args("-palette", "C64ColorGray8A"),
+            Args("-palette", "C64Grays"),
+            Args("-palette", "C64ColorGray8B"),
+            Args("-palette", "C64Color")
+            );
+
+        var C64Color = Args("-outdir", rootDir + @"\C64 color") + c64fontAndPalettes_Color + colorPixelFormats;
+        var C64Grayscale = Args("-outdir", rootDir + @"\C64 grayscale") + c64fontAndPalettes_Grayscale + grayscalePixelFormats;
+
+        // mz700 ============================
+        var mz700font = Args(
+          "-fonttype", "mono",
+          "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\mz700.png",
+          "-charsize", "8x8");
+
+        var mz700ColorPalettes = Or(
+          Args("-palette", "RGBPrimariesHalftone16"),
+          Args("-palette", "ThreeBit")
+          );
+        var mz700GrayPalettes = Or(
+          Args("-palette", "BlackAndWhite"),
+          Args("-palette", "Gray3"),
+          Args("-palette", "Gray4"),
+          Args("-palette", "Gray5"),
+          Args("-palette", "Gray8")
+          );
+
+        var mz700color = Args("-outdir", rootDir + @"\MZ700 color") + mz700font + mz700ColorPalettes + colorPixelFormats;
+        var mz700grayscale = Args("-outdir", rootDir + @"\MZ700 grayscale") + mz700font + mz700GrayPalettes + grayscalePixelFormats;
+
+
+        // topaz ============================
+        var topazFont = Args(
+          "-fonttype", "mono",
+          "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\topaz96.gif",
+          "-charsize", "8x16");
+
+        var topazPalettes = Or(
+          Args("-palette", "Workbench134"),
+          Args("-palette", "Workbench314")
+          );
+
+        var topazGrayscale = Args("-outdir", rootDir + @"\Topaz grayscale") + topazFont + topazPalettes + grayscalePixelFormats;
+
+        // DOS ============================
+        var dosFont = Args(
+    "-fonttype", "mono",
+    "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\VGA240.png",
+    "-charsize", "8x16");
+
+        var dosColorPalettes = Or(
+          Args("-palette", "RGBPrimariesHalftone16"),
+          Args("-palette", "ThreeBit")
+          );
+        var dosGrayPalettes = Or(
+          Args("-palette", "BlackAndWhite"),
+          Args("-palette", "Gray3"),
+          Args("-palette", "Gray4"),
+          Args("-palette", "Gray5"),
+          Args("-palette", "Gray8")
+          );
+
+        var dosColor = Args("-outdir", rootDir + @"\Dos color") + dosFont + dosColorPalettes + colorPixelFormats;
+        var dosGrayscale = Args("-outdir", rootDir + @"\Dos grayscale") + dosFont + dosGrayPalettes + grayscalePixelFormats;
+
+        // VGAboxonly45.png ============================
+        var dosBoxFont = Args(
   "-fonttype", "mono",
-  "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\VGA240.png",
+  "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\VGAboxonly45.png",
   "-charsize", "8x16");
 
-      var dosColorPalettes = Or(
-        Args("-palette", "RGBPrimariesHalftone16"),
-        Args("-palette", "ThreeBit")
-        );
-      var dosGrayPalettes = Or(
-        Args("-palette", "BlackAndWhite"),
-        Args("-palette", "Gray3"),
-        Args("-palette", "Gray4"),
-        Args("-palette", "Gray5"),
-        Args("-palette", "Gray8")
-        );
+        var dosBoxColor = Args("-outdir", rootDir + @"\Dos box color") + dosBoxFont + dosColorPalettes + colorPixelFormats;
+        var dosBoxGrayscale = Args("-outdir", rootDir + @"\Dos box grayscale") + dosBoxFont + dosGrayPalettes + grayscalePixelFormats;
 
-      var dosColor = Args("-outdir", rootDir + @"\Dos color") + dosFont + dosColorPalettes + colorPixelFormats + allLCCColorspaces;
-      var dosGrayscale = Args("-outdir", rootDir + @"\Dos grayscale") + dosFont + dosGrayPalettes + grayscalePixelFormats + allLCCColorspaces;
+        // emoji ============================
+        Func<string, int, ArgSetList> emoji = delegate (string pngimagenamewoext, int dimsq)
+        {
+          var font = Args(
+    "-fonttype", "normal",
+    "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\" + pngimagenamewoext + ".png",
+    "-charsize", string.Format("{0}x{0}", dimsq));
 
-      // VGAboxonly45.png ============================
-      var dosBoxFont = Args(
-"-fonttype", "mono",
-"-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\VGAboxonly45.png",
-"-charsize", "8x16");
+          var col = Args("-outdir", rootDir + @"\" + pngimagenamewoext + " Color") + font + colorPixelFormats;
+          var gray = Args("-outdir", rootDir + @"\" + pngimagenamewoext + " Grayscale") + font + grayscalePixelFormats;
+          return Or(col, gray);
+        };
 
-      var dosBoxColor = Args("-outdir", rootDir + @"\Dos box color") + dosBoxFont + dosColorPalettes + colorPixelFormats + allLCCColorspaces;
-      var dosBoxGrayscale = Args("-outdir", rootDir + @"\Dos box grayscale") + dosBoxFont + dosGrayPalettes + grayscalePixelFormats + allLCCColorspaces;
+        // mario tiles ============================
+        var marioTilesFont = Args(
+          "-fonttype", "colorkey",
+          "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\mariotiles4.png",
+          "-colorkey", "#04c1aa",
+          "-palette", "MarioBg",
+          "-lefttoppadding", "1",
+          "-charsize", "16x16");
 
-      // emojidark.png ============================
-      var emojidark12Font = Args(
-"-fonttype", "normal",
-"-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark12.png",
-"-charsize", "12x12");
+        var marioTiles = Args("-outdir", rootDir + @"\mariotiles Color") + marioTilesFont + colorPixelFormats;
+        marioTiles += Args("-outdir", rootDir + @"\mariotiles Grayscale") + marioTilesFont + grayscalePixelFormats;
 
-      var emojidark12color = Args("-outdir", rootDir + @"\Emoji dark 12 Color") + emojidark12Font + colorPixelFormats + allLCCColorspaces;
-      var emojidark12grayscale = Args("-outdir", rootDir + @"\Emoji dark 12 Grayscale") + emojidark12Font + grayscalePixelFormats + allLCCColorspaces;
+        // All ============================
+        var All = Or(
+          C64Color,
+          C64Grayscale,
+          topazGrayscale,
+          mz700color,
+          mz700grayscale,
+          dosColor,
+          dosGrayscale,
+          dosBoxColor,
+          dosBoxGrayscale,
+          emoji("emojidark12", 12),
+          emoji("emojidark16", 16),
+          emoji("emojidark24", 24),
+          emoji("emojidark32", 32),
+          emoji("emojidark64", 64),
+          emoji("emojiappleblack12", 12),
+          emoji("emojiappleblack16", 16),
+          emoji("emojiappleblack24", 24),
+          emoji("emojiappleblack32", 32),
+          emoji("emojiappleblack64", 64),
+          marioTiles
+          ) + common;
 
-      var emojidark16Font = Args(
-"-fonttype", "normal",
-"-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark16.png",
-"-charsize", "16x16");
+        var filtered = All.Filter(batchKeywords).ToArray();
 
-      var emojidark16color = Args("-outdir", rootDir + @"\Emoji dark 16 Color") + emojidark16Font + colorPixelFormats + allLCCColorspaces;
-      var emojidark16grayscale = Args("-outdir", rootDir + @"\Emoji dark 16 Grayscale") + emojidark16Font + grayscalePixelFormats + allLCCColorspaces;
-
-      var emojidark24Font = Args(
-"-fonttype", "normal",
-"-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark24.png",
-"-charsize", "24x24");
-
-      var emojidark24color = Args("-outdir", rootDir + @"\Emoji dark 24 Color") + emojidark24Font + colorPixelFormats + allLCCColorspaces;
-      var emojidark24grayscale = Args("-outdir", rootDir + @"\Emoji dark 24 Grayscale") + emojidark24Font + grayscalePixelFormats + allLCCColorspaces;
-
-      var emojidark32Font = Args(
-"-fonttype", "normal",
-"-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark32.png",
-"-charsize", "32x32");
-
-      var emojidark32color = Args("-outdir", rootDir + @"\Emoji dark 32 Color") + emojidark32Font + colorPixelFormats + allLCCColorspaces;
-      var emojidark32grayscale = Args("-outdir", rootDir + @"\Emoji dark 32 Grayscale") + emojidark32Font + grayscalePixelFormats + allLCCColorspaces;
-
-      var emojidark64Font = Args(
-"-fonttype", "normal",
-"-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark64.png",
-"-charsize", "64x64");
-
-      var emojidark64color = Args("-outdir", rootDir + @"\Emoji dark 64 Color") + emojidark64Font + colorPixelFormats + allLCCColorspaces;
-      var emojidark64grayscale = Args("-outdir", rootDir + @"\Emoji dark 64 Grayscale") + emojidark64Font + grayscalePixelFormats + allLCCColorspaces;
-
-      // All ============================
-      var All = common + Or(
-        C64Color, C64Grayscale,
-        topazGrayscale,
-        mz700color, mz700grayscale,
-        dosColor, dosGrayscale,
-        dosBoxColor, dosBoxGrayscale,
-        emojidark12color, emojidark12grayscale,
-        emojidark16color, emojidark16grayscale,
-        emojidark24color, emojidark24grayscale,
-        emojidark32color, emojidark32grayscale,
-        emojidark64color, emojidark64grayscale
-        );
-
-      string batchLogPath = rootDir + @"\batchLog.txt";
-      int ibatch = 0;
-      foreach (var argset in All.argSets)
-      {
-        Main2(argset.args);
-        System.IO.File.AppendAllLines(batchLogPath, new string[]{
-          string.Format("Completed batch #{0} with args: {1}", ibatch, argset)
-        });
-        ibatch++;
+        switch (batchCommand)
+        {
+          case BatchCommand.None:
+            Debug.Assert(false);// handled above.
+            break;
+          case BatchCommand.List:
+            int ibatch = 0;
+            foreach (var argset in filtered)
+            {
+              Log.WriteLine("  {0}: {1}", ibatch, argset);
+              ibatch++;
+            }
+            Log.WriteLine("Batch contains {0} runs", filtered.Length);
+            break;
+          case BatchCommand.Run:
+            ibatch = 0;
+            Timings t = new Timings();
+            foreach (var argset in filtered)
+            {
+              Log.SetLogFile(batchLogPath);
+              t.EnterTask("Running batch #{0}", ibatch);
+              Log.WriteLine("Args: {0}", argset);
+              Main2(argset.args);
+              Log.SetLogFile(batchLogPath);
+              t.EndTask();
+              ibatch++;
+            }
+            break;
+        }
       }
     }
 
-    enum MapSource
-    {
-      Create,
-      Load
-    }
     static void Main2(string[] args)
     {
 #if !DEBUG
@@ -328,6 +348,7 @@ namespace PetsciiMapgen
 #else
       {
 #endif
+
         Log.WriteLine("----------------------------------------");
 
         PartitionManager partitionManager = new PartitionManager(1, 1);
@@ -491,24 +512,10 @@ namespace PetsciiMapgen
 
         args.ProcessArg("-calcn", s =>
         {
-          //Size luma = new Size(1, 1);
-          //bool useChroma = false;
-          //ulong partB = 1, partD = 1;
-
           ulong maxMapKeys = ulong.Parse(s);
-
-          //args.ProcessArg("-pfargs", o => {
-          //  Utils.ParsePFArgs(o, out int valuesPerComponent, out useChroma, out luma);
-          //});
-
-          //args.ProcessArg("-partitions", o => {
-          //  partB = ulong.Parse(o.Split('x')[0]);
-          //  partD = ulong.Parse(o.Split('x')[1]);
-          //});
 
           partitionManager.Init(pixelFormat);
 
-          //ulong partitionCount = (ulong)Utils.Pow((long)partB, (uint)partD);
           ulong partitionCount = (ulong)partitionManager.PartitionCount;
           Log.WriteLine("Partition count: {0:N0}", partitionCount);
 
@@ -519,47 +526,10 @@ namespace PetsciiMapgen
           Log.WriteLine("Adjusted partition count: {0:N0}", partitionCount);
           Log.WriteLine("Charset count: {0:N0}", fontProvider.CharCount);
           Log.WriteLine("Cores to utilize: {0:N0}", coresToUtilize);
-          //int dimensions = Utils.Product(luma) + (useChroma ? 2 : 0);
           Log.WriteLine("Luma + chroma components: {0:N0}", pixelFormat.DimensionCount);
-
-          // figure out valuespercomponent in order to not overflow our huge mapping array.
-          // maximum number of mapkeys is int.maxvalue
-          // maximum number of mappings is (int.MaxValue * cores)
-          // theoretical mappings is charcount * mapsize
-          // mapsize = N^dimensions
-          // actual mappings will divide that by partition count more-or-less
 
           ulong NbasedOnMapSize = (ulong)Math.Floor(Math.Pow(maxMapKeys, 1.0 / pixelFormat.DimensionCount));
 
-          // mappings overflow when there are so many chars in the font that
-          // it can't be held in memory.
-
-          //// take 80% for safety.
-          //ulong charCount = (ulong)fontProvider.CharCount;
-          //ulong maxTheoreticalMappingCount = (ulong)coresToUtilize * (ulong)UInt32.MaxValue * (ulong)partitionCount * 3 / 4;
-          //ulong maxKeyCount = maxTheoreticalMappingCount / charCount;
-          //ulong NbasedOnMappings = (ulong)Math.Floor(Math.Pow(maxKeyCount, 1.0 / pixelFormat.DimensionCount));
-
-          //Log.WriteLine("Based on the map size requested, N can be as much as        {0:N0}", NbasedOnMapSize);
-          //Log.WriteLine("Based on the charset and mapping array, N can be as much as {0:N0}", NbasedOnMappings);
-          //ulong m = Math.Min(NbasedOnMapSize, NbasedOnMappings);
-
-          //ulong keyCount = (ulong)Math.Pow(m, pixelFormat.DimensionCount);
-          //ulong sizeofMapping = (ulong)Marshal.SizeOf<Mapping>();
-          //Log.WriteLine("Which will use {0:N0} of memory for mappings", keyCount * charCount / partitionCount * sizeofMapping);
-
-          //ulong maxmem = Utils.GbToBytes(150);
-          //args.ProcessArg("-maxmemgb", gb => {
-          //  maxmem = Utils.GbToBytes(ulong.Parse(gb));
-          //});
-          //Log.WriteLine("Max memory to use: {0:N0}", maxmem);
-
-          //// reduce keycount to conform.
-          //maxKeyCount = maxmem / (charCount * sizeofMapping / partitionCount);
-          //ulong NbasedOnMem = (ulong)Math.Floor(Math.Pow(maxKeyCount, 1.0 / pixelFormat.DimensionCount));
-          //Log.WriteLine("Based on memory usage, N can be as much as                  {0:N0}", NbasedOnMem);
-
-          //m = Math.Min(m, NbasedOnMem);
           Log.WriteLine("======================");
           Log.WriteLine("== THEREFORE, use N={0:N0}", NbasedOnMapSize);
           Log.WriteLine("======================");

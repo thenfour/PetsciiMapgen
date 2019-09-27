@@ -293,6 +293,120 @@ namespace PetsciiMapgen
     }
   }
 
+  class StayOn : IDisposable
+  {
+    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    static extern EXECUTION_STATE SetThreadExecutionState(EXECUTION_STATE esFlags);
+
+    [FlagsAttribute]
+    public enum EXECUTION_STATE : uint
+    {
+      ES_AWAYMODE_REQUIRED = 0x00000040,
+      ES_CONTINUOUS = 0x80000000,
+      ES_DISPLAY_REQUIRED = 0x00000002,
+      ES_SYSTEM_REQUIRED = 0x00000001
+      // Legacy flag, should not be used.
+      // ES_USER_PRESENT = 0x00000004
+    }
+
+    public StayOn()
+    {
+      SetThreadExecutionState(EXECUTION_STATE.ES_CONTINUOUS | EXECUTION_STATE.ES_SYSTEM_REQUIRED | EXECUTION_STATE.ES_AWAYMODE_REQUIRED);
+    }
+
+    public void Dispose()
+    {
+      SetThreadExecutionState(EXECUTION_STATE.ES_CONTINUOUS);
+    }
+  }
+  class ArgSet
+  {
+    public string[] args;
+    public ArgSet(params string[] a)
+    {
+      args = a;
+    }
+    public static ArgSet operator +(ArgSet a, ArgSet b)
+    {
+      ArgSet n = new ArgSet();
+      n.args = a.args.Concat(b.args).ToArray();
+      return n;
+    }
+    public override string ToString()
+    {
+      return string.Join(" ", args);
+    }
+  }
+
+  class ArgSetList
+  {
+    public ArgSet[] argSets;
+
+    public IEnumerable<ArgSet> Filter(params string[] tokens)
+    {
+      foreach (var x in this.argSets)
+      {
+        string argstring = x.ToString();
+        bool satisfied = true;
+        foreach (string tok in tokens)
+        {
+          if (argstring.IndexOf(tok, StringComparison.InvariantCultureIgnoreCase) == -1)
+          {
+            satisfied = false;
+            break;
+          }
+        }
+        if (satisfied)
+        {
+          yield return x;
+        }
+      }
+    }
+
+    public static ArgSetList operator +(ArgSetList a, ArgSetList b)
+    {
+      ArgSetList ret = new ArgSetList();
+      List<ArgSet> x = new List<ArgSet>();
+      foreach (var ao in a.argSets)
+      {
+        foreach (var bo in b.argSets)
+        {
+          ArgSet n = new ArgSet();
+          List<string> args = ao.args.ToList();
+          args.AddRange(bo.args);
+          n.args = args.ToArray();
+          x.Add(n);
+        }
+      }
+      ret.argSets = x.ToArray();
+      return ret;
+    }
+    public static ArgSetList operator +(ArgSetList a, ArgSet b)
+    {
+      // this just adds args to the end of all arglists
+      ArgSetList ret = new ArgSetList();
+      List<ArgSet> x = new List<ArgSet>();// a.argSets.ToList();
+      foreach (var ao in a.argSets)
+      {
+        x.Add(ao + b);
+      }
+      ret.argSets = x.ToArray();
+      return ret;
+    }
+    public static ArgSetList operator +(ArgSet a, ArgSetList b)
+    {
+      // this just adds args to the end of all arglists
+      ArgSetList ret = new ArgSetList();
+      List<ArgSet> x = new List<ArgSet>();// a.argSets.ToList();
+      foreach (var bo in b.argSets)
+      {
+        x.Add(a + bo);
+      }
+      ret.argSets = x.ToArray();
+      return ret;
+    }
+  }
+
   public class ProgressReporter
   {
     ulong total;
@@ -678,7 +792,6 @@ namespace PetsciiMapgen
       for (int i = 0; i < args.Length; i++)
       {
         if (keyAliases.Any(o => o.Equals(args[i], StringComparison.InvariantCultureIgnoreCase)))
-        //if (args[i].Equals(key, StringComparison.InvariantCultureIgnoreCase))
         {
           if (i < args.Length - 1)
             tr(args[i + 1]);
@@ -691,6 +804,25 @@ namespace PetsciiMapgen
     public static void ProcessArg(this string[] args, string key, Action<string> tr)
     {
       args.ProcessArg(new string[] { key }, tr);
+    }
+
+    public static void ProcessArg2(this string[] args, string[] keyAliases, Action<string, IEnumerable<string>> tr)
+    {
+      for (int i = 0; i < args.Length; i++)
+      {
+        if (keyAliases.Any(o => o.Equals(args[i], StringComparison.InvariantCultureIgnoreCase)))
+        {
+          if (i < args.Length - 1)
+            tr(args[i], args.Skip(i + 1));
+          else
+            tr(args[i], null);
+        }
+      }
+    }
+
+    public static void ProcessArg2(this string[] args, string key, Action<string, IEnumerable<string>> tr)
+    {
+      args.ProcessArg2(new string[] { key }, tr);
     }
 
     //[MethodImpl(MethodImplOptions.AggressiveInlining)]
