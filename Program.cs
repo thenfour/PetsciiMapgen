@@ -64,11 +64,13 @@ namespace PetsciiMapgen
       string rootDir = @"f:\maps";
       string batchLogPath = rootDir + @"\batchLog.txt";
 
-      //args = new string[] { "-batchlist" };
+      //args = new string[] { "-batchaddarg", "-batchrun",
+      //  "apple", "16x16", "grayscale", "example", "LAB", };
 
       using (var stayon = new StayOn())
       {
         string[] batchKeywords = new string[] { };
+        List<string> batchAddArgs = new List<string>();
         BatchCommand batchCommand = BatchCommand.None;
         Log.SetLogFile(batchLogPath);
 
@@ -95,7 +97,23 @@ namespace PetsciiMapgen
           Main2(args);
           return;
         }
-        
+
+        args.ProcessArg("-batchaddarg", s =>
+        {
+          batchAddArgs.Add(s);
+        });
+
+        foreach (var arg in batchKeywords)
+        {
+          Log.WriteLine("Using batch keyword: {0}", arg);
+        }
+
+        foreach (var arg in batchAddArgs)
+        {
+          Log.WriteLine("Adding additional batch argument: {0}", arg);
+        }
+
+
         var common = Args(
           "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
           "-testpalette", "ThreeBit");
@@ -127,7 +145,7 @@ namespace PetsciiMapgen
           Args("-pf", "square", "-pfargs", "406v1x1+2", "-partitions", "1x1"),
           Args("-pf", "square", "-pfargs", "20v2x2+2", "-partitions", "2x3"),
           Args("-pf", "square", "-pfargs", "5v3x3+2", "-partitions", "1x1"),
-          Args("-pf", "fivetile", "-pfargs", "13v5+2", "-partitions", "2x3")
+          Args("-pf", "fivetile", "-pfargs", "14v5+2", "-partitions", "2x3")
           );
 
         // budget versions (512x512 = 262144 map size)
@@ -145,15 +163,15 @@ namespace PetsciiMapgen
 
         // "Example" pixel formats to show the same N but with chroma subsampling
         var grayscaleExamplePixelFormats = Args("pftag:example,pftag:grayscale") + Or(
-          Args("-pf", "square", "-pfargs", "12v1x1+0", "-partitions", "2x3"),
-          Args("-pf", "square", "-pfargs", "12v2x2+0", "-partitions", "2x3"),
-          Args("-pf", "fivetile", "-pfargs", "12v5+0", "-partitions", "2x3")
+          Args("-pf", "square", "-pfargs", "36v1x1+0", "-partitions", "2x3"),
+          Args("-pf", "square", "-pfargs", "36v2x2+0", "-partitions", "2x3"),
+          Args("-pf", "fivetile", "-pfargs", "36v5+0", "-partitions", "2x3")
           );
 
         var colorPixelExampleFormats = Args("pftag:example,pftag:color") + Or(
-          Args("-pf", "square", "-pfargs", "6v1x1+2", "-partitions", "2x3"),
-          Args("-pf", "square", "-pfargs", "6v2x2+2", "-partitions", "2x3"),
-          Args("-pf", "fivetile", "-pfargs", "6v5+2", "-partitions", "2x3")
+          Args("-pf", "square", "-pfargs", "14v1x1+2", "-partitions", "2x3"),
+          Args("-pf", "square", "-pfargs", "14v2x2+2", "-partitions", "2x3"),
+          Args("-pf", "fivetile", "-pfargs", "14v5+2", "-partitions", "2x3")
           );
 
         var allLCCColorspaces = Or(
@@ -304,7 +322,7 @@ namespace PetsciiMapgen
           emoji("emojiappleblack32", 32),
           emoji("emojiappleblack64", 64),
           marioTiles
-          ) + common;
+          ) + common + Args(batchAddArgs.ToArray());
 
         var filtered = All.Filter(batchKeywords).ToArray();
 
@@ -400,18 +418,6 @@ namespace PetsciiMapgen
         });
 
         MapSource mapSource = MapSource.Create;
-
-        args.ProcessArg("-loadmap", s =>
-        {
-          mapSource = MapSource.Load;
-          // if you're loading, then we want to process the args from that directory.
-          outputDir = System.IO.Path.GetDirectoryName(s);
-          string argspath = System.IO.Path.Combine(s, "args.txt");
-          var lines = System.IO.File.ReadAllLines(argspath)
-            .Select(l => l.Split('#')[0]) // remove comments
-            .Where(l => !string.IsNullOrWhiteSpace(l)); // remove empty lines
-          args = lines.Concat(args).ToArray();
-        });
 
         args.ProcessArg("-testpalette", s =>
         {
@@ -545,6 +551,7 @@ namespace PetsciiMapgen
         outputDir = System.IO.Path.GetFullPath(outputDir);
         Log.WriteLine("Output directory: {0}", outputDir);
 
+
         if (!System.IO.Directory.Exists(outputDir))
         {
           System.IO.Directory.CreateDirectory(outputDir);
@@ -554,27 +561,37 @@ namespace PetsciiMapgen
 
         string configTag = string.Format("{0}_{1}_{2}", fontProvider.DisplayName, pixelFormat.PixelFormatString, partitionManager);
         outputDir = System.IO.Path.Combine(outputDir, configTag);
-        Log.WriteLine("Creating directory: {0}", outputDir);
+        Log.WriteLine("Ensuring directory exists: {0}", outputDir);
         System.IO.Directory.CreateDirectory(outputDir);
 
         string logPath = System.IO.Path.Combine(outputDir, "log.txt");
-
         Log.SetLogFile(logPath);
 
-        string infopath = System.IO.Path.Combine(outputDir, "args.txt");
-        using (var infoFile = new StreamWriter(infopath))
+        args.ProcessArg("-loadmap", _ =>
         {
-          foreach (var arg in args)
+          mapSource = MapSource.Load;
+          // if you're loading, then we want to process the args from that directory.
+          //outputDir = System.IO.Path.GetDirectoryName(s);
+          string argspath = System.IO.Path.Combine(outputDir, "args.txt");
+          var lines = System.IO.File.ReadAllLines(argspath)
+            .Select(l => l.Split('#')[0]) // remove comments
+            .Where(l => !string.IsNullOrWhiteSpace(l)); // remove empty lines
+          args = lines.Concat(args).ToArray();
+        });
+
+        if (mapSource == MapSource.Create)
+        {
+          string infopath = System.IO.Path.Combine(outputDir, "args.txt");
+          using (var infoFile = new StreamWriter(infopath))
           {
-            infoFile.WriteLine(arg);
+            foreach (var arg in args)
+            {
+              infoFile.WriteLine(arg);
+            }
           }
         }
 
-
-
-
         Timings t = new Timings();
-        t.EnterTask("--- MAP GENERATION");
 
         string mapFullPath = System.IO.Path.Combine(outputDir, string.Format("mapfull_{0}.png", configTag));
         string mapRefPath = System.IO.Path.Combine(outputDir, string.Format("mapref_{0}.png", configTag));
@@ -585,14 +602,18 @@ namespace PetsciiMapgen
         switch (mapSource)
         {
           case MapSource.Create:
+            t.EnterTask("--- MAP GENERATION");
             map = new HybridMap2(fontProvider, partitionManager, pixelFormat,
               mapFullPath,
               mapRefPath,
               mapFontPath,
               coresToUtilize);
+            t.EndTask();
             break;
           case MapSource.Load:
+            t.EnterTask("--- MAP LOAD");
             map = HybridMap2.LoadFromDisk(outputDir, fontProvider, pixelFormat);
+            t.EndTask();
             break;
         }
 
@@ -602,7 +623,6 @@ namespace PetsciiMapgen
           fontFamilyProvider.SaveFontImage(fontImgPath);
         }
 
-        t.EndTask();
 
         t.EnterTask("processing images");
 

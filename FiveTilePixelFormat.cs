@@ -82,6 +82,7 @@ namespace PetsciiMapgen
     public static FiveTilePixelFormat ProcessArgs(string[] args, IFontProvider font)
     {
       FiveTilePixelFormat ret = new FiveTilePixelFormat();
+      ret.Rotation = 0.5f;
       int valuesPerComponent = 255;
       args.ProcessArg("-pfargs", s =>
       {
@@ -101,6 +102,7 @@ namespace PetsciiMapgen
 
       // OUTput a visual of the tiling
       Log.WriteLine("Luma tiling breakdown for charsize {0}:", font.CharSizeNoPadding);
+      Log.WriteLine(" Rotation: {0}", ret.Rotation);
       int[] pixelCounts = new int[ret.LumaComponentCount];
       for (int py = 0; py < font.CharSizeNoPadding.Height; ++py)
       {
