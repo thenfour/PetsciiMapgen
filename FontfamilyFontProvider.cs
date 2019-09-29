@@ -17,15 +17,22 @@ namespace PetsciiMapgen
   public class FontFamilyFontProvider : IFontProvider
   {
     public Size CharSizeNoPadding { get; private set; }
-    public Bitmap Bitmap { get { return charMap.bmp; } }
+    public Bitmap Bitmap
+    {
+      get
+      {
+        throw new NotImplementedException();
+        //return charMap.bmp;
+      }
+    }
     public int CharCount { get { return charMap.AllCells.Length; } }
 
     EmojiTest.Utils.GenerateEmojiBitmapResults charMap;
 
     public string FontFamily { get; private set; }
     public string UnicodeGlyphTextFile { get; private set; }
-    public Color BackgroundColor { get; private set; }
-    public Color ForegroundColor { get; private set; }
+    public Color[] BackgroundPalette { get; private set; }
+    public Color[] ForegroundPalette { get; private set; }
     public float Scale { get; private set; }
     public Size Shift { get; private set; }
     public float? AspectTolerance { get; private set; }
@@ -34,35 +41,35 @@ namespace PetsciiMapgen
     public bool TryToFit { get; private set; }
     public string CharListTextFile { get; private set; }
 
-    public virtual void WriteConfig(StringBuilder sb)
-    {
-      sb.AppendLine("fontType=FontFamily");
-      sb.AppendLine(string.Format("charWidth={0}", this.CharSizeNoPadding.Width));
-      sb.AppendLine(string.Format("charHeight={0}", this.CharSizeNoPadding.Height));
+    //public virtual void WriteConfig(StringBuilder sb)
+    //{
+    //  sb.AppendLine("fontType=FontFamily");
+    //  sb.AppendLine(string.Format("charWidth={0}", this.CharSizeNoPadding.Width));
+    //  sb.AppendLine(string.Format("charHeight={0}", this.CharSizeNoPadding.Height));
 
-      sb.AppendLine(string.Format("FontFamily={0}", this.FontFamily));
-      sb.AppendLine(string.Format("UnicodeGlyphTextFile={0}", this.UnicodeGlyphTextFile));
-      sb.AppendLine(string.Format("BackgroundColor={0}", this.BackgroundColor));
-      sb.AppendLine(string.Format("ForegroundColor={0}", this.ForegroundColor));
-      sb.AppendLine(string.Format("Scale={0}", this.Scale));
-      sb.AppendLine(string.Format("Shift={0}", this.Shift));
-      sb.AppendLine(string.Format("AspectTolerance={0}", this.AspectTolerance));
-      sb.AppendLine(string.Format("FontName={0}", this.FontName));
-      sb.AppendLine(string.Format("FontFile={0}", this.FontFile));
-      sb.AppendLine(string.Format("TryToFit={0}", this.TryToFit));
-      sb.AppendLine(string.Format("CharListTextFile={0}", this.CharListTextFile));
-      sb.AppendLine(string.Format("CharCount={0}", this.CharCount));
-    }
+    //  sb.AppendLine(string.Format("FontFamily={0}", this.FontFamily));
+    //  sb.AppendLine(string.Format("UnicodeGlyphTextFile={0}", this.UnicodeGlyphTextFile));
+    //  sb.AppendLine(string.Format("BackgroundColor={0}", this.BackgroundColor));
+    //  sb.AppendLine(string.Format("ForegroundColor={0}", this.ForegroundColor));
+    //  sb.AppendLine(string.Format("Scale={0}", this.Scale));
+    //  sb.AppendLine(string.Format("Shift={0}", this.Shift));
+    //  sb.AppendLine(string.Format("AspectTolerance={0}", this.AspectTolerance));
+    //  sb.AppendLine(string.Format("FontName={0}", this.FontName));
+    //  sb.AppendLine(string.Format("FontFile={0}", this.FontFile));
+    //  sb.AppendLine(string.Format("TryToFit={0}", this.TryToFit));
+    //  sb.AppendLine(string.Format("CharListTextFile={0}", this.CharListTextFile));
+    //  sb.AppendLine(string.Format("CharCount={0}", this.CharCount));
+    //}
 
     public FontFamilyFontProvider(string fontFamily, string fontFile, Size charSize, string unicodeGlyphTextFile,
-      Color bgColor, Color fgColor, float scale, Size shift, float? aspectTolerance, string fontName, bool tryToFit, string charListTextFile)
+      Color[] bgPalette, Color[] fgPalette, float scale, Size shift, float? aspectTolerance, string fontName, bool tryToFit, string charListTextFile)
     {
       this.CharSizeNoPadding = charSize;
       this.FontFamily = fontFamily;
       this.FontFile = fontFile;
       this.UnicodeGlyphTextFile = unicodeGlyphTextFile;
-      this.BackgroundColor = bgColor;
-      this.ForegroundColor = fgColor;
+      this.BackgroundPalette = bgPalette;
+      this.ForegroundPalette = fgPalette;
       this.Scale = scale;
       this.Shift = shift;
       this.AspectTolerance = aspectTolerance;
@@ -110,7 +117,7 @@ namespace PetsciiMapgen
 
       this.charMap = EmojiTest.Utils.GenerateEmojiBitmap(FontFamily,
         this.CharSizeNoPadding.Width, this.CharSizeNoPadding.Height,
-        Scale, Shift.Width, Shift.Height, cps, BackgroundColor, ForegroundColor, AspectTolerance, tryToFit);
+        Scale, Shift.Width, Shift.Height, cps, BackgroundPalette, ForegroundPalette, AspectTolerance, tryToFit);
 
     }
 
@@ -139,8 +146,8 @@ namespace PetsciiMapgen
       string fontFile = "";
       Size charSize = new Size(8, 8);
       string unicodeGlyphTextFile = "";
-      Color bgColor = Color.White;
-      Color fgColor = Color.Black;
+      Color[] bgPalette = new Color[] { Color.White };
+      Color[] fgPalette = new Color[] { Color.Black };
       float scale = 1.0f;
       Size shift = new Size(0, 0);
       string fontName = "";
@@ -174,11 +181,19 @@ namespace PetsciiMapgen
       });
       args.ProcessArg("-bgcolor", s =>
       {
-        bgColor = System.Drawing.ColorTranslator.FromHtml(s);
+        bgPalette = new Color[] { System.Drawing.ColorTranslator.FromHtml(s) };
       });
       args.ProcessArg("-fgcolor", s =>
       {
-        fgColor = System.Drawing.ColorTranslator.FromHtml(s);
+        fgPalette = new Color[] { System.Drawing.ColorTranslator.FromHtml(s) };
+      });
+      args.ProcessArg("-bgpalette", s =>
+      {
+        bgPalette = Utils.GetNamedPalette(s);
+      });
+      args.ProcessArg("-fgpalette", s =>
+      {
+        fgPalette = Utils.GetNamedPalette(s);
       });
       args.ProcessArg("-scale", s =>
       {
@@ -201,7 +216,7 @@ namespace PetsciiMapgen
       });
 
       return new FontFamilyFontProvider(fontFamily, fontFile, charSize, unicodeGlyphTextFile,
-        bgColor, fgColor, scale, shift, aspectTolerance, fontName,
+        bgPalette, fgPalette, scale, shift, aspectTolerance, fontName,
         tryToFit, charListTextFile);
     }
 
@@ -211,52 +226,66 @@ namespace PetsciiMapgen
     {
     }
 
-    public void SaveFontImage(string path)
-    {
-      this.charMap.bmp.Save(path);
-    }
+    //public void SaveFontImage(string path)
+    //{
+    //  this.charMap.bmp.Save(path);
+    //}
 
     public Point GetCharPosInChars(int ichar)
     {
-      int y = ichar / this.charMap.columns;
-      int x = ichar % this.charMap.columns;
-      return new Point(x, y);
+      throw new NotImplementedException();
+      //  int y = ichar / this.charMap.columns;
+      //  int x = ichar % this.charMap.columns;
+      //  return new Point(x, y);
     }
 
     public Point GetCharOriginInPixels(int ichar)
     {
-      var p = GetCharPosInChars(ichar);
-      p = Utils.Mul(p, CharSizeNoPadding);
-      return p;
+      throw new NotImplementedException();
+      //  var p = GetCharPosInChars(ichar);
+      //  p = Utils.Mul(p, CharSizeNoPadding);
+      //  return p;
     }
 
     public int GetCharIndexAtPixelPos(Point charPixPosWUT)
     {
-      int chx = charPixPosWUT.X / CharSizeNoPadding.Width;
-      int chy = charPixPosWUT.Y / CharSizeNoPadding.Height;
-      return chx + (this.charMap.columns * chy);
+      throw new NotImplementedException();
+
+      //  int chx = charPixPosWUT.X / CharSizeNoPadding.Width;
+      //  int chy = charPixPosWUT.Y / CharSizeNoPadding.Height;
+      //  return chx + (this.charMap.columns * chy);
+      //}
     }
 
     public ColorF GetPixel(int ichar, int px, int py)
     {
-      Point o = GetCharOriginInPixels(ichar);
-      var c = ColorF.From(this.Bitmap.GetPixel(o.X + px, o.Y + py));
-      return c;
+      var e = charMap.AllCells[ichar];
+      px += e.blitSourcRect.Left;
+      py += e.blitSourcRect.Top;
+      if (px < 0 || py < 0)
+        return ColorF.From(e.bgColor);
+      if (px >= e.bmp.Width || py >= e.bmp.Height)
+        return ColorF.From(e.bgColor);
+      var c = e.bmp.GetPixel(px, py);
+      //Point o = GetCharOriginInPixels(ichar);
+      //var c = ColorF.From(this.Bitmap.GetPixel(o.X + px, o.Y + py));
+      return ColorF.From(c);
     }
 
     public ColorF GetRegionColor(int ichar, Point topLeft, Size size, Size cellsPerChar, int cellOffsetX, int cellOffsetY)
     {
-      Point oc = GetCharPosInChars(ichar);
-      Point o = GetCharOriginInPixels(ichar);
-      o = Utils.Add(o, topLeft);
+      //Point oc = GetCharPosInChars(ichar);
+      //Point o = GetCharOriginInPixels(ichar);
+      //o = Utils.Add(o, topLeft);
       int tilePixelCount = 0;
       ColorF tileC = ColorF.Init;
       for (int py = 0; py < size.Height; ++py)
       {
         for (int px = 0; px < size.Width; ++px)
         {
-          var c = this.Bitmap.GetPixel(o.X + px, o.Y + py);
-          tileC = tileC.Add(ColorF.From(c));
+          //var c = this.Bitmap.GetPixel(o.X + px, o.Y + py);
+          var c = GetPixel(ichar, topLeft.X + px, topLeft.Y + py);
+          tileC = tileC.Add(c);
           tilePixelCount++;
         }
       }
@@ -265,13 +294,14 @@ namespace PetsciiMapgen
 
     public void BlitCharacter(int ichar, BitmapData data, long destX, long destY)
     {
-      Point o = GetCharOriginInPixels(ichar);
+      //Point o = GetCharOriginInPixels(ichar);
       for (int y = 0; y < CharSizeNoPadding.Height; ++y)
       {
         for (int x = 0; x < CharSizeNoPadding.Width; ++x)
         {
-          Color rgb = this.Bitmap.GetPixel(o.X + x, o.Y + y);
-          data.SetPixel(destX + x, destY + y, rgb);
+          //Color rgb = this.Bitmap.GetPixel(o.X + x, o.Y + y);
+          var c = GetPixel(ichar, x, y);
+          data.SetPixel(destX + x, destY + y, c);
         }
       }
     }
@@ -290,11 +320,11 @@ namespace PetsciiMapgen
       int rows = cellsMapped.Max(o => o.Key.Y) + 1;
 
       //cellsMapped = cellsMapped.OrderBy(c => c.Key.X + c.Key.Y * columns);
-      for (int y = 0; y < rows; ++ y)
+      for (int y = 0; y < rows; ++y)
       {
-        for (int x = 0; x < columns; ++ x)
+        for (int x = 0; x < columns; ++x)
         {
-          if (!cellsMapped.TryGetValue(new Point(x,y), out int ichar))
+          if (!cellsMapped.TryGetValue(new Point(x, y), out int ichar))
           {
             sb.Append(' ');
             continue;

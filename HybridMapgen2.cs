@@ -90,8 +90,8 @@ namespace PetsciiMapgen
         {
           srcIndex = ichar,
 #if DEBUG
-          fontImageCellPos = FontProvider.GetCharPosInChars(ichar),
-          fontImagePixelPos = FontProvider.GetCharOriginInPixels(ichar),
+          //fontImageCellPos = FontProvider.GetCharPosInChars(ichar),
+          //fontImagePixelPos = FontProvider.GetCharOriginInPixels(ichar),
 #endif
         };
         pixelFormatProvider.PopulateCharColorData(ci, fontProvider);

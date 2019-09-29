@@ -119,53 +119,72 @@ namespace EmojiTest
     //  return rv;
     //}
 
-    public struct GlyphData
+    public class GlyphData
     {
+      public GlyphData()
+      {
+      }
+      public GlyphData(GlyphData rhs)
+      {
+        info = rhs.info;
+        width = rhs.width;
+        height = rhs.height;
+        scaleNeeded = rhs.scaleNeeded;
+        // don't support copying bitmap stuff yet.
+        System.Diagnostics.Debug.Assert(rhs.bmp == null);
+      }
       //public int cp;
       //public string str;
       public EmojiInfo info;
       public float width;
       public float height;
       public float scaleNeeded;
+
+      public System.Drawing.Bitmap bmp = null;
+      public SharpDX.Size2F bmpSize;
+      public System.Drawing.Rectangle blitSourcRect;
+      public System.Drawing.Color bgColor;
+      public System.Drawing.Color textColor;
     }
-    public struct GenerateEmojiBitmapResults
+    public class GenerateEmojiBitmapResults
     {
-      public System.Drawing.Bitmap bmp;
+      //public System.Drawing.Bitmap bmp;
       public int columns;
       public int rows;
       public GlyphData[] AllCells;
     }
+
     public static GenerateEmojiBitmapResults GenerateEmojiBitmap(string fontName, int cellWidth, int cellHeight,
       float additionalScale, int shiftX, int shiftY, IEnumerable<EmojiInfo> codepointsToInclude,
-      System.Drawing.Color backgroundColor, System.Drawing.Color textColor, float? aspectToleranceFromTarget, bool tryToFit)
+      System.Drawing.Color[] backgroundPalette, System.Drawing.Color[] textPalette, float? aspectToleranceFromTarget, bool tryToFit)
     {
-      EmojiTest.Direct2DText dt = new EmojiTest.Direct2DText();
-      RawColor4 bg = new RawColor4(backgroundColor.R / 255.0f, backgroundColor.G / 255.0f, backgroundColor.B / 255.0f, 1);
-      int targetWidth = cellWidth;
-      int targetHeight = cellHeight;
-      float targetAspect = (float)targetWidth / targetHeight;
-      //float scaleCorrection = 2;// 1.088f;
-      dt.SetFont(fontName, targetHeight);
       System.Windows.Media.Typeface tf = new System.Windows.Media.Typeface(fontName);
+      PetsciiMapgen.ProgressReporter pr = new PetsciiMapgen.ProgressReporter((ulong)codepointsToInclude.Count() * (ulong)backgroundPalette.Length * (ulong)textPalette.Length);
       if (!tf.TryGetGlyphTypeface(out System.Windows.Media.GlyphTypeface gtf))
       {
         PetsciiMapgen.Log.WriteLine("!!!!!!!!!! FONT FAMILY HAS NO GLYPH MAP; you will end up with unsupported glyphs in the map.");
-       // throw new Exception();
+        // throw new Exception();
       }
 
-      dt.SetColor(textColor);
-
-      PetsciiMapgen.ProgressReporter pr = new PetsciiMapgen.ProgressReporter((ulong)codepointsToInclude.Count());
+      // select codepoints to actually use
       PetsciiMapgen.Utils.ValueRangeInspector rangeX = new PetsciiMapgen.Utils.ValueRangeInspector();
       PetsciiMapgen.Utils.ValueRangeInspector rangeY = new PetsciiMapgen.Utils.ValueRangeInspector();
       PetsciiMapgen.Utils.ValueRangeInspector allAspects = new PetsciiMapgen.Utils.ValueRangeInspector();
       PetsciiMapgen.Utils.ValueRangeInspector selectedAspects = new PetsciiMapgen.Utils.ValueRangeInspector();
       int rejectedBecauseNotInTypeface = 0;
       int rejectedBecauseAspect = 0;
+
+      int targetWidth = cellWidth;
+      int targetHeight = cellHeight;
+      float targetAspect = (float)targetWidth / targetHeight;
+
+      EmojiTest.Direct2DText dt = new EmojiTest.Direct2DText();
+      dt.SetFont(fontName, targetHeight);
+
       var emoji = codepointsToInclude.Select(e =>
       {
         pr.Visit();
-        GlyphData ret;
+        GlyphData ret = new GlyphData();
         ret.info = e;
         //ret.str = char.ConvertFromUtf32(cp);
         var sz = dt.GetTextSize(ret.info.str);
@@ -194,10 +213,11 @@ namespace EmojiTest
       {
         if (o.info.forceInclude)
           return true;
-        if (gtf != null) {
+        if (gtf != null)
+        {
           if (!gtf.CharacterToGlyphMap.ContainsKey(o.info.cps[0]))
           { // is this good enough of a check? 
-            rejectedBecauseNotInTypeface++;
+                rejectedBecauseNotInTypeface++;
             return false;
           }
         }
@@ -222,57 +242,78 @@ namespace EmojiTest
         PetsciiMapgen.Log.WriteLine("EMOJI font allowed aspect ratios between {0}", selectedAspects);
       }
 
-      int count = emoji.Count();
-      int columns = (int)Math.Ceiling(Math.Sqrt(count));
+      int totalCharCount = emoji.Count() * backgroundPalette.Length * textPalette.Length;
+      int scaleChanges = 0;
+
+      int columns = (int)Math.Ceiling(Math.Sqrt(totalCharCount));
       int rows = columns;// we're aiming for square bitmap.
       int imgWidth = columns * targetWidth;
       int imgHeight = rows * targetHeight;
 
-      var bmp = new System.Drawing.Bitmap(imgWidth, imgHeight);
-      int scaleChanges = 0;
-      using (System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(bmp))
+      List<GlyphData> fullEmoji = new List<GlyphData>(totalCharCount);
+
+      foreach (var backgroundColor in backgroundPalette)
       {
-        float lastScale = 0;
-        int iemoji = 0;
-        var pr2 = new PetsciiMapgen.ProgressReporter((ulong)emoji.Count());
-        foreach (var e in emoji)
+        foreach (var textColor in textPalette)
         {
-          pr2.Visit();
-          if (e.scaleNeeded <= 0)
-            continue;
-          if (Math.Abs(lastScale - e.scaleNeeded) > 0.001)
+          RawColor4 bg = new RawColor4(backgroundColor.R / 255.0f, backgroundColor.G / 255.0f, backgroundColor.B / 255.0f, 1);
+          dt.SetColor(textColor);
+
+          var bmp = new System.Drawing.Bitmap(imgWidth, imgHeight);
+          using (System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(bmp))
           {
-            scaleChanges++;
-            dt.SetFont(fontName, targetHeight * e.scaleNeeded * additionalScale);
+            float lastScale = 0;
+            //int iemoji = 0;
+            var pr2 = new PetsciiMapgen.ProgressReporter((ulong)emoji.Count());
+            //foreach (var e in emoji)
+            for (int iemoji = 0; iemoji < emoji.Length; ++ iemoji)
+            {
+              var e = emoji[iemoji];
+              pr2.Visit();
+              if (e.scaleNeeded <= 0)
+                continue;
+              if (Math.Abs(lastScale - e.scaleNeeded) > 0.001)
+              {
+                scaleChanges++;
+                dt.SetFont(fontName, targetHeight * e.scaleNeeded * additionalScale);
+              }
+
+              //SharpDX.Size2F sz;
+              var n = new GlyphData(e);
+              fullEmoji.Add(n);
+
+              n.bmp = dt.TextToBitmap(n.info.str, out n.bmpSize, bg);
+
+              // offset where to blit from, so it's centered.
+              int ox = (int)((n.bmpSize.Width - targetWidth) / 2);
+              int oy = (int)((n.bmpSize.Height - targetHeight) / 2);
+              n.blitSourcRect = new System.Drawing.Rectangle(ox - shiftX, oy - shiftY, targetWidth, targetHeight);
+              n.bgColor = backgroundColor;
+              n.textColor = textColor;
+
+              //int y = iemoji / columns;
+              //int x = iemoji % columns;
+              //g.DrawImage(bmpChar,
+              //  new System.Drawing.Rectangle(x * targetWidth, y * targetHeight, targetWidth, targetHeight),
+              //  new System.Drawing.Rectangle(ox - shiftX, oy - shiftY, targetWidth, targetHeight), System.Drawing.GraphicsUnit.Pixel
+              //  );
+
+              //bmpChar.Dispose();
+              //iemoji++;
+            }
           }
-
-          SharpDX.Size2F sz;
-          System.Drawing.Bitmap bmpChar = dt.TextToBitmap(e.info.str, out sz, bg);
-
-          // offset where to blit from, so it's centered.
-          int ox = (int)((sz.Width - targetWidth) / 2);
-          int oy = (int)((sz.Height - targetHeight) / 2);
-
-          int y = iemoji / columns;
-          int x = iemoji % columns;
-          g.DrawImage(bmpChar,
-            new System.Drawing.Rectangle(x * targetWidth, y * targetHeight, targetWidth, targetHeight),
-            new System.Drawing.Rectangle(ox - shiftX, oy - shiftY, targetWidth, targetHeight), System.Drawing.GraphicsUnit.Pixel
-            );
-
-          bmpChar.Dispose();
-          iemoji++;
         }
       }
-      PetsciiMapgen.Log.WriteLine("Scale changes: {0}", scaleChanges);
-      PetsciiMapgen.Log.WriteLine("Emoji count: {0}", emoji.Length);
-      PetsciiMapgen.Log.WriteLine("Image size: {0}, {1}", imgWidth, imgHeight);
 
-      GenerateEmojiBitmapResults rv;
-      rv.bmp = bmp;
+      PetsciiMapgen.Log.WriteLine("Scale changes: {0}", scaleChanges);
+      PetsciiMapgen.Log.WriteLine("Total char count: {0}", fullEmoji.Count);
+      PetsciiMapgen.Log.WriteLine("Image size to hold entire colored charset: {0}, {1}", imgWidth, imgHeight);
+
+      GenerateEmojiBitmapResults rv = new GenerateEmojiBitmapResults();
+      //rv.bmp = bmp;
       rv.columns = columns;
       rv.rows = rows;
-      rv.AllCells = emoji.ToArray();
+      rv.AllCells = fullEmoji.ToArray();
       return rv;
     }
   }

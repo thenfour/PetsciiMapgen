@@ -67,7 +67,32 @@ namespace PetsciiMapgen
       //  var d = s.ColorDistance(s1, s2, 1, 2);
       //}
 
-      //args = new string[] { "-batchrun", "c64", "grayscale", "c64color ", "example", "lab", "v5" };
+      ////args = new string[] { "-batchrun", "c64", "grayscale", "c64color ", "example", "lab", "v5" };
+      //args = new string[] {
+      //  "-outdir", @"f:\maps",
+      //  "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testimages",
+      //  "-testpalette", "ThreeBit",
+
+      //  "-pf", "square",
+      //  "-pfargs", "16v2x2+0",
+      //  "-cs", "JPEG",
+      //  "-partitions", "6x3",
+
+      //  "-fonttype", "fontfamily",
+      //  "-charsize", "24x24",
+      //  //"-fontfamily", @"Comic Sans MS",
+      //  "-fontfamily", @"Arial Unicode MS",
+      //  "-fontName", "hangul24",
+      //  "-charListTextFile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\UnicodeHangul.txt",
+      //  "-bgcolor", "#ffffff",
+      //  "-fgcolor", "#000000",
+      //  //"-fgpalette", "ThreeBit",
+      //  "-scale", "1",
+      //  //"-shift", "0x0",
+      //  //"-trytofit", "1",
+      //  // aspecttolerance
+      //};
+
 
       using (var stayon = new StayOn())
       {
@@ -602,9 +627,6 @@ namespace PetsciiMapgen
           //return;
         }
 
-        string logPath = System.IO.Path.Combine(outputDir, "log.txt");
-        Log.SetLogFile(logPath);
-
         args.ProcessArg("-loadmap", _ =>
         {
           mapSource = MapSource.Load;
@@ -621,6 +643,9 @@ namespace PetsciiMapgen
         outputDir = System.IO.Path.Combine(outputDir, configTag);
         Log.WriteLine("Ensuring directory exists: {0}", outputDir);
         System.IO.Directory.CreateDirectory(outputDir);
+
+        string logPath = System.IO.Path.Combine(outputDir, "log.txt");
+        Log.SetLogFile(logPath);
 
         string infopath = System.IO.Path.Combine(outputDir, "args.txt");
         string mapFullPath = System.IO.Path.Combine(outputDir, string.Format("mapfull_{0}.png", configTag));
@@ -675,8 +700,8 @@ namespace PetsciiMapgen
 
         if (fontFamilyProvider != null)
         {
-          string fontImgPath = System.IO.Path.Combine(outputDir, "font.png");
-          fontFamilyProvider.SaveFontImage(fontImgPath);
+          //string fontImgPath = System.IO.Path.Combine(outputDir, "font.png");
+          //fontFamilyProvider.SaveFontImage(fontImgPath);
         }
 
 

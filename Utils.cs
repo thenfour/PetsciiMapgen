@@ -269,8 +269,8 @@ namespace PetsciiMapgen
                             //public int masterIdx;// index into the charInfo list
 
 #if DEBUG
-    public Point fontImagePixelPos;
-    public Point fontImageCellPos;
+    //public Point fontImagePixelPos;
+    //public Point fontImageCellPos;
 #endif
 
     public CharInfo(int dimensionsPerCharacter)
@@ -281,9 +281,9 @@ namespace PetsciiMapgen
     public override string ToString()
     {
 #if DEBUG
-      return string.Format("ID:{0} src:{1}, usages:{2}, pixelpos:{3}, cellpos:{4}",
+      return string.Format("ID:{0} src:{1}, usages:{2}",
         srcIndex, actualValues,// masterIdx,
-        usages, fontImagePixelPos, fontImageCellPos);
+        usages/*, fontImagePixelPos, fontImageCellPos*/);
 #else
       return string.Format("ID:{0} src:{1}, usages:{2}",
         srcIndex, actualValues,// masterIdx,
@@ -973,6 +973,12 @@ namespace PetsciiMapgen
         throw new Exception("Colorspace not specified");
       }
       return ret;
+    }
+
+    public static Color[] GetNamedPalette(string s)
+    {
+      var ti = typeof(Palettes).GetProperty(s).GetValue(null);
+      return (Color[])ti;
     }
   }
 }

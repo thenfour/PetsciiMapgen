@@ -28,7 +28,7 @@ Command options:
                           *Specify -maxmem as well.
 
 -testcolor #ff00ff        outputs an image and log testing matching a certain color
--testpalette              same as -testcolor but over a whole named palette
+-testpalette paletteName  same as -testcolor but over a whole named palette
 
 -partitions NxN           optional; default 1 flat partition
 -outdir path              required to do any output
@@ -90,6 +90,8 @@ This is unique in that it produces a text file along with images.
                            at https://unicode.org/Public/emoji/12.0/emoji-test.txt
   -bgcolor
   -fgcolor
+  -bgpalette
+  -fgpalette
   -scale
   -shift XxY
   -aspectTolerance         Optional. Discards glyphs whose natural aspect ratio
