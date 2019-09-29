@@ -9,10 +9,20 @@ Command options:
 -batchlist [keywords...]  List built-in batches containing the specified keywords
 -batchrun [keywords...]   Runs built-in batches containing the specified keywords.
 -batchaddarg s            Adds the specified string to args when running batch.
+-batchfontdir path        base font directory
+-batchbasedir path        base output directory for batch
 
 -argsfile path            path to text file of args. each line = 1 arg, for clarity
 -loadmap                  loads an existing map from the specified output
                           directory. use with -processImages* or -test* etc.
+                          this will load args from the directory, and further
+                          args you specify will override them.
+-loadOrCreateMap          loads or creates the map. by default the map is
+                          re-created even if it already exists. this will load
+                          the map if it exists, create it if not.
+                          Big difference between this and -loadmap is that this
+                          will not load args from the target dir. it requires
+                          that you specify the args yourself on the command line.
 -calcn maxkeys            calculates maximum values per colorant. use
                           -pfargs and -partitions to specify other parameters.
                           *Specify -maxmem as well.

@@ -321,15 +321,19 @@ namespace PetsciiMapgen
   }
   class ArgSet
   {
-    public string[] args;
+    public IEnumerable<string> args;
     public ArgSet(params string[] a)
+    {
+      args = a;
+    }
+    public ArgSet(IEnumerable<string> a)
     {
       args = a;
     }
     public static ArgSet operator +(ArgSet a, ArgSet b)
     {
       ArgSet n = new ArgSet();
-      n.args = a.args.Concat(b.args).ToArray();
+      n.args = a.args.Concat(b.args);
       return n;
     }
     public override string ToString()
@@ -340,7 +344,7 @@ namespace PetsciiMapgen
 
   class ArgSetList
   {
-    public ArgSet[] argSets;
+    public IEnumerable<ArgSet> argSets;
 
     public IEnumerable<ArgSet> Filter(params string[] tokens)
     {
@@ -366,7 +370,7 @@ namespace PetsciiMapgen
     public static ArgSetList operator +(ArgSetList a, ArgSetList b)
     {
       ArgSetList ret = new ArgSetList();
-      List<ArgSet> x = new List<ArgSet>();
+      List<ArgSet> x = new List<ArgSet>(a.argSets.Count() * b.argSets.Count());
       foreach (var ao in a.argSets)
       {
         foreach (var bo in b.argSets)
@@ -378,7 +382,7 @@ namespace PetsciiMapgen
           x.Add(n);
         }
       }
-      ret.argSets = x.ToArray();
+      ret.argSets = x;
       return ret;
     }
     public static ArgSetList operator +(ArgSetList a, ArgSet b)
@@ -390,7 +394,7 @@ namespace PetsciiMapgen
       {
         x.Add(ao + b);
       }
-      ret.argSets = x.ToArray();
+      ret.argSets = x;
       return ret;
     }
     public static ArgSetList operator +(ArgSet a, ArgSetList b)
@@ -402,7 +406,7 @@ namespace PetsciiMapgen
       {
         x.Add(a + bo);
       }
-      ret.argSets = x.ToArray();
+      ret.argSets = x;
       return ret;
     }
   }
@@ -440,49 +444,49 @@ namespace PetsciiMapgen
     }
   }
 
-  public class Timings
-  {
-    public struct Task
-    {
-      public Stopwatch sw;
-      public string name;
-    }
-    Stack<Task> tasks = new Stack<Task>();
-    public void EnterTask(string s, params object[] o)
-    {
-      EnterTask(string.Format(s, o));
-    }
-    public void EnterTask(string s)
-    {
-      Log.WriteLine("==> Enter task {0}", s);
-      Log.IncreaseIndent();
-      Task n;
-      if (!tasks.Any())
-      {
-        n = new Task {
-          name = "root",
-          sw = new Stopwatch()
-        };
-        n.sw.Start();
-        tasks.Push(n);
-      }
-      n = new Task
-      {
-        name = s,
-        sw = new Stopwatch()
-      };
-      n.sw.Start();
-      tasks.Push(n);
-    }
-    public void EndTask()
-    {
-      Debug.Assert(this.tasks.Count > 0);
-      Task n = this.tasks.Pop();
-      TimeSpan ts = n.sw.Elapsed;
-      Log.DecreaseIndent();
-      Log.WriteLine("<== {1} (end {0})", n.name, ts);
-    }
-  }
+  //public class Timings
+  //{
+  //  public struct Task
+  //  {
+  //    public Stopwatch sw;
+  //    public string name;
+  //  }
+  //  Stack<Task> tasks = new Stack<Task>();
+  //  public void EnterTask(string s, params object[] o)
+  //  {
+  //    EnterTask(string.Format(s, o));
+  //  }
+  //  public void EnterTask(string s)
+  //  {
+  //    Log.WriteLine("==> Enter task {0}", s);
+  //    Log.IncreaseIndent();
+  //    Task n;
+  //    if (!tasks.Any())
+  //    {
+  //      n = new Task {
+  //        name = "root",
+  //        sw = new Stopwatch()
+  //      };
+  //      n.sw.Start();
+  //      tasks.Push(n);
+  //    }
+  //    n = new Task
+  //    {
+  //      name = s,
+  //      sw = new Stopwatch()
+  //    };
+  //    n.sw.Start();
+  //    tasks.Push(n);
+  //  }
+  //  public void EndTask()
+  //  {
+  //    Debug.Assert(this.tasks.Count > 0);
+  //    Task n = this.tasks.Pop();
+  //    TimeSpan ts = n.sw.Elapsed;
+  //    Log.DecreaseIndent();
+  //    Log.WriteLine("<== {1} (end {0})", n.name, ts);
+  //  }
+  //}
 
   public static class Utils
   {

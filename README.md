@@ -18,4 +18,13 @@ features
 - outputting text
 - font colorkeying
 
-
+topics
+- exisitng works
+- what works and what sucks
+- characteristics of parameters
+  - partitioning
+  - value quantization
+  - subsampling
+  - color vs grayscale
+  - colorspace
+  - src palette

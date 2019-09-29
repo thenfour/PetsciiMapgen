@@ -220,9 +220,11 @@ namespace PetsciiMapgen
       if (chromaComponents == 2)
       {
         // C1 (HUE)
-        double dh1 = Math.Abs(lhs[lumaComponents + 1] - rhs[lumaComponents + 1]);
-        double dh2 = Math.Abs((360 - lhs[lumaComponents + 1]) - rhs[lumaComponents + 1]);
-        double dh3 = Math.Abs(lhs[lumaComponents + 1] - (360 - rhs[lumaComponents + 1]));
+        double h1 = lhs[lumaComponents];
+        double h2 = rhs[lumaComponents];
+        double dh1 = Math.Abs(h1 - h2);
+        double dh2 = Math.Abs((360 + h1) - h2);
+        double dh3 = Math.Abs(h1 - (360 + h2));
         double dh = Math.Min(Math.Min(dh1, dh2), dh3);
         acc += dh * dh;
 

@@ -1,11 +1,4 @@
-﻿// NB:
-// partitioning does cause issues at high partitions. it shows when you start seeing good ref images but the converted images have noisy black & white.
-// choosing partition size is important.
-// you want partition boundaries to fall on discrete value boundaries as well. with 2 discrete values, [0,1], then the midpoint is .5,
-// where you want the partition seam. thus, 2 partitions.
-// that's a tempting approach but distances then are more like taxicab distances. you will still get plenty of error because of
-// distance in other dimensions. so at least make it a divisor of discrete values.
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -61,18 +54,26 @@ namespace PetsciiMapgen
 
     static void Main(string[] args)
     {
-      string rootDir = @"f:\maps";
-      string batchLogPath = rootDir + @"\batchLog.txt";
+      //{
+      //  HSLColorspace s = new HSLColorspace();
+      //  var s1 = ValueSet.New(3, 0);
+      //  var s2 = ValueSet.New(3, 0);
+      //  s1[0] = 100;
+      //  s1[1] = 190;
+      //  s1[2] = 100;
+      //  s2[0] = 100;
+      //  s2[1] = 360;
+      //  s2[2] = 100;
+      //  var d = s.ColorDistance(s1, s2, 1, 2);
+      //}
 
-      //args = new string[] { "-batchaddarg", "-batchrun",
-      //  "apple", "16x16", "grayscale", "example", "LAB", };
+      //args = new string[] { "-batchrun", "c64", "grayscale", "c64color ", "example", "lab", "v5" };
 
       using (var stayon = new StayOn())
       {
         string[] batchKeywords = new string[] { };
         List<string> batchAddArgs = new List<string>();
         BatchCommand batchCommand = BatchCommand.None;
-        Log.SetLogFile(batchLogPath);
 
         args.ProcessArg2(new string[] { "-batchrun", "-batchlist" }, (thisArg, remainingArgs) => 
         {
@@ -98,6 +99,31 @@ namespace PetsciiMapgen
           return;
         }
 
+        string batchBaseDir = @"f:\maps";
+        string batchFontDir = @"C:\root\git\thenfour\PetsciiMapgen\img\fonts";
+        LogCore batchLog = new LogCore();
+
+        args.ProcessArg("-batchfontdir", s =>
+        {
+          batchFontDir = s;
+          batchLog.WriteLine("Setting font dir: {0}", batchFontDir);
+        });
+        args.ProcessArg("-batchbasedir", s =>
+        {
+          batchBaseDir = s;
+          batchLog.WriteLine("Setting base dir: {0}", batchBaseDir);
+        });
+
+        batchLog.WriteLine("Batch font dir: {0}", batchFontDir);
+        batchLog.WriteLine("Batch base dir: {0}", batchBaseDir);
+
+        string batchLogPath = System.IO.Path.Combine(batchBaseDir, @"batchLog.txt");
+        batchLog.SetLogFile(batchLogPath);
+        Func<string, string> batchFontPath = delegate (string s)
+        {
+          return System.IO.Path.Combine(batchFontDir, s);
+        };
+
         args.ProcessArg("-batchaddarg", s =>
         {
           batchAddArgs.Add(s);
@@ -105,28 +131,29 @@ namespace PetsciiMapgen
 
         foreach (var arg in batchKeywords)
         {
-          Log.WriteLine("Using batch keyword: {0}", arg);
+          batchLog.WriteLine("Using batch keyword: {0}", arg);
         }
 
         foreach (var arg in batchAddArgs)
         {
-          Log.WriteLine("Adding additional batch argument: {0}", arg);
+          batchLog.WriteLine("Adding additional batch argument: {0}", arg);
         }
 
-
         var common = Args(
-          "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-          "-testpalette", "ThreeBit");
+          //"-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+          "-testpalette", "ThreeBit",
+          "-loadOrCreateMap"
+          );
 
         // heavy: aiming for 16384x16384 = map size 268435456
-        var grayscalePixelFormatsHeavy = Args("pftag:heavy,pftag:grayscale") + Or(
+        var grayscalePixelFormatsHeavy = Args("pftag:Heavy Grayscale") + Or(
           Args("-pf", "square", "-pfargs", "4096v1x1+0", "-partitions", "1x1"),//1
           Args("-pf", "square", "-pfargs", "128v2x2+0", "-partitions", "2x3"),//4
           Args("-pf", "square", "-pfargs", "8v3x3+0", "-partitions", "2x3"),//9
           Args("-pf", "fivetile", "-pfargs", "48v5+0", "-partitions", "2x3")//5
           );
 
-        var colorPixelFormatsHeavy = Args("pftag:heavy,pftag:color") + Or(
+        var colorPixelFormatsHeavy = Args("pftag:Heavy Color") + Or(
           Args("-pf", "square", "-pfargs", "645v1x1+2", "-partitions", "1x1"),//3
           Args("-pf", "square", "-pfargs", "24v2x2+2", "-partitions", "2x3"),//6
           Args("-pf", "square", "-pfargs", "6v3x3+2", "-partitions", "1x1"),//11
@@ -134,14 +161,14 @@ namespace PetsciiMapgen
           );
 
         // medium: aiming for 8192x8192 = map size 67108864
-        var grayscalePixelFormatsMedium = Args("pftag:medium,pftag:grayscale") + Or(
+        var grayscalePixelFormatsMedium = Args("pftag:Medium Grayscale") + Or(
           Args("-pf", "square", "-pfargs", "2048v1x1+0", "-partitions", "1x1"),
           Args("-pf", "square", "-pfargs", "90v2x2+0", "-partitions", "2x3"),
           Args("-pf", "square", "-pfargs", "7v3x3+0", "-partitions", "2x3"),
           Args("-pf", "fivetile", "-pfargs", "36v5+0", "-partitions", "2x3")
           );
 
-        var colorPixelFormatsMedium = Args("pftag:medium,pftag:color") + Or(
+        var colorPixelFormatsMedium = Args("pftag:Medium Color") + Or(
           Args("-pf", "square", "-pfargs", "406v1x1+2", "-partitions", "1x1"),
           Args("-pf", "square", "-pfargs", "20v2x2+2", "-partitions", "2x3"),
           Args("-pf", "square", "-pfargs", "5v3x3+2", "-partitions", "1x1"),
@@ -149,26 +176,26 @@ namespace PetsciiMapgen
           );
 
         // budget versions (512x512 = 262144 map size)
-        var grayscalePixelFormatsBudget = Args("pftag:budget,pftag:grayscale") + Or(
+        var grayscalePixelFormatsBudget = Args("pftag:Budget Grayscale") + Or(
           Args("-pf", "square", "-pfargs", "1024v1x1+0", "-partitions", "1x1"),
           Args("-pf", "square", "-pfargs", "22v2x2+0", "-partitions", "2x3"),
           Args("-pf", "fivetile", "-pfargs", "12v5+0", "-partitions", "2x3")
           );
 
-        var colorPixelFormatsBudget = Args("pftag:budget,pftag:color") + Or(
+        var colorPixelFormatsBudget = Args("pftag:Budget Color") + Or(
           Args("-pf", "square", "-pfargs", "64v1x1+2", "-partitions", "1x1"),
           Args("-pf", "square", "-pfargs", "8v2x2+2", "-partitions", "2x3"),
           Args("-pf", "fivetile", "-pfargs", "6v5+2", "-partitions", "2x3")
           );
 
         // "Example" pixel formats to show the same N but with chroma subsampling
-        var grayscaleExamplePixelFormats = Args("pftag:example,pftag:grayscale") + Or(
+        var grayscaleExamplePixelFormats = Args("pftag:Example Grayscale") + Or(
           Args("-pf", "square", "-pfargs", "36v1x1+0", "-partitions", "2x3"),
           Args("-pf", "square", "-pfargs", "36v2x2+0", "-partitions", "2x3"),
           Args("-pf", "fivetile", "-pfargs", "36v5+0", "-partitions", "2x3")
           );
 
-        var colorPixelExampleFormats = Args("pftag:example,pftag:color") + Or(
+        var colorPixelExampleFormats = Args("pftag:Example Color") + Or(
           Args("-pf", "square", "-pfargs", "14v1x1+2", "-partitions", "2x3"),
           Args("-pf", "square", "-pfargs", "14v2x2+2", "-partitions", "2x3"),
           Args("-pf", "fivetile", "-pfargs", "14v5+2", "-partitions", "2x3")
@@ -177,7 +204,9 @@ namespace PetsciiMapgen
         var allLCCColorspaces = Or(
           Args("-cs", "jpeg"),
           Args("-cs", "nyuv"),
-          Args("-cs", "lab"));
+          Args("-cs", "lab"),
+          Args("-cs", "hsl")
+          );
 
         var grayscalePixelFormats = allLCCColorspaces + Or(
           grayscalePixelFormatsHeavy,
@@ -193,8 +222,9 @@ namespace PetsciiMapgen
 
         // C64 ============================
         var C64Font = Args(
+          "fonttag:C64",
           "-fonttype", "mono",
-          "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\c64opt160.png",
+          "-fontImage", batchFontPath(@"c64opt160.png"),
           "-charsize", "8x8");
 
         var c64fontAndPalettes_Color = C64Font + Args("-palette", "C64Color");
@@ -207,13 +237,14 @@ namespace PetsciiMapgen
             Args("-palette", "C64Color")
             );
 
-        var C64Color = Args("-outdir", rootDir + @"\C64 color") + c64fontAndPalettes_Color + colorPixelFormats;
-        var C64Grayscale = Args("-outdir", rootDir + @"\C64 grayscale") + c64fontAndPalettes_Grayscale + grayscalePixelFormats;
+        var C64Color = c64fontAndPalettes_Color + colorPixelFormats;
+        var C64Grayscale = c64fontAndPalettes_Grayscale + grayscalePixelFormats;
 
         // mz700 ============================
         var mz700font = Args(
+          "fonttag:MZ700",
           "-fonttype", "mono",
-          "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\mz700.png",
+          "-fontImage", batchFontPath(@"mz700.png"),
           "-charsize", "8x8");
 
         var mz700ColorPalettes = Or(
@@ -228,14 +259,15 @@ namespace PetsciiMapgen
           Args("-palette", "Gray8")
           );
 
-        var mz700color = Args("-outdir", rootDir + @"\MZ700 color") + mz700font + mz700ColorPalettes + colorPixelFormats;
-        var mz700grayscale = Args("-outdir", rootDir + @"\MZ700 grayscale") + mz700font + mz700GrayPalettes + grayscalePixelFormats;
+        var mz700color = mz700font + mz700ColorPalettes + colorPixelFormats;
+        var mz700grayscale = mz700font + mz700GrayPalettes + grayscalePixelFormats;
 
 
         // topaz ============================
         var topazFont = Args(
+          "fonttag:Topaz",
           "-fonttype", "mono",
-          "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\topaz96.gif",
+          "-fontImage", batchFontPath(@"topaz96.gif"),
           "-charsize", "8x16");
 
         var topazPalettes = Or(
@@ -243,13 +275,14 @@ namespace PetsciiMapgen
           Args("-palette", "Workbench314")
           );
 
-        var topazGrayscale = Args("-outdir", rootDir + @"\Topaz grayscale") + topazFont + topazPalettes + grayscalePixelFormats;
+        var topazGrayscale = topazFont + topazPalettes + grayscalePixelFormats;
 
         // DOS ============================
         var dosFont = Args(
-    "-fonttype", "mono",
-    "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\VGA240.png",
-    "-charsize", "8x16");
+          "fonttag:VGA",
+          "-fonttype", "mono",
+          "-fontImage", batchFontPath(@"VGA240.png"),
+          "-charsize", "8x16");
 
         var dosColorPalettes = Or(
           Args("-palette", "RGBPrimariesHalftone16"),
@@ -263,44 +296,48 @@ namespace PetsciiMapgen
           Args("-palette", "Gray8")
           );
 
-        var dosColor = Args("-outdir", rootDir + @"\Dos color") + dosFont + dosColorPalettes + colorPixelFormats;
-        var dosGrayscale = Args("-outdir", rootDir + @"\Dos grayscale") + dosFont + dosGrayPalettes + grayscalePixelFormats;
+        var dosColor = dosFont + dosColorPalettes + colorPixelFormats;
+        var dosGrayscale = dosFont + dosGrayPalettes + grayscalePixelFormats;
 
         // VGAboxonly45.png ============================
         var dosBoxFont = Args(
-  "-fonttype", "mono",
-  "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\VGAboxonly45.png",
-  "-charsize", "8x16");
+          "fonttag:VGABox",
+          "-fonttype", "mono",
+          "-fontImage", batchFontPath(@"VGAboxonly45.png"),
+          "-charsize", "8x16");
 
-        var dosBoxColor = Args("-outdir", rootDir + @"\Dos box color") + dosBoxFont + dosColorPalettes + colorPixelFormats;
-        var dosBoxGrayscale = Args("-outdir", rootDir + @"\Dos box grayscale") + dosBoxFont + dosGrayPalettes + grayscalePixelFormats;
+        var dosBoxColor = dosBoxFont + dosColorPalettes + colorPixelFormats;
+        var dosBoxGrayscale = dosBoxFont + dosGrayPalettes + grayscalePixelFormats;
 
         // emoji ============================
         Func<string, int, ArgSetList> emoji = delegate (string pngimagenamewoext, int dimsq)
         {
           var font = Args(
-    "-fonttype", "normal",
-    "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\" + pngimagenamewoext + ".png",
-    "-charsize", string.Format("{0}x{0}", dimsq));
+          "fonttag:" + pngimagenamewoext,
+          "-fonttype", "normal",
+          "-fontImage", batchFontPath(pngimagenamewoext + ".png"),
+          "-charsize", string.Format("{0}x{0}", dimsq));
 
-          var col = Args("-outdir", rootDir + @"\" + pngimagenamewoext + " Color") + font + colorPixelFormats;
-          var gray = Args("-outdir", rootDir + @"\" + pngimagenamewoext + " Grayscale") + font + grayscalePixelFormats;
+          var col = font + colorPixelFormats;
+          var gray = font + grayscalePixelFormats;
           return Or(col, gray);
         };
 
         // mario tiles ============================
         var marioTilesFont = Args(
+          "fonttag:MarioTiles",
           "-fonttype", "colorkey",
-          "-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\mariotiles4.png",
+          "-fontImage", batchFontPath(@"mariotiles4.png"),
           "-colorkey", "#04c1aa",
           "-palette", "MarioBg",
           "-lefttoppadding", "1",
           "-charsize", "16x16");
 
-        var marioTiles = Args("-outdir", rootDir + @"\mariotiles Color") + marioTilesFont + colorPixelFormats;
-        marioTiles += Args("-outdir", rootDir + @"\mariotiles Grayscale") + marioTilesFont + grayscalePixelFormats;
+        var marioTiles = marioTilesFont + colorPixelFormats;
+        marioTiles += marioTilesFont + grayscalePixelFormats;
 
         // All ============================
+        // fonttag pftag
         var All = Or(
           C64Color,
           C64Grayscale,
@@ -335,22 +372,28 @@ namespace PetsciiMapgen
             int ibatch = 0;
             foreach (var argset in filtered)
             {
-              Log.WriteLine("  {0}: {1}", ibatch, argset);
+              batchLog.WriteLine("  {0}: {1}", ibatch, argset);
               ibatch++;
             }
-            Log.WriteLine("Batch contains {0} runs", filtered.Length);
+            batchLog.WriteLine("Batch contains {0} runs", filtered.Length);
             break;
           case BatchCommand.Run:
             ibatch = 0;
-            Timings t = new Timings();
+            batchLog.WriteLine("Batch contains {0} runs", filtered.Length);
             foreach (var argset in filtered)
             {
-              Log.SetLogFile(batchLogPath);
-              t.EnterTask("Running batch #{0}", ibatch);
-              Log.WriteLine("Args: {0}", argset);
-              Main2(argset.args);
-              Log.SetLogFile(batchLogPath);
-              t.EndTask();
+              batchLog.EnterTask("Running batch #{0} of keywords", ibatch, string.Join(", ", batchKeywords));
+              batchLog.WriteLine("Args: {0}", argset);
+              // generate an output directory.
+              // use pftag and fonttag
+              var pftags = argset.args.Where(a => a.StartsWith("pftag:")).Select(a => a.Split(':')[1]);
+              var fonttags = argset.args.Where(a => a.StartsWith("fonttag:")).Select(a => a.Split(':')[1]);
+              var dirName = string.Join(" ", fonttags) + " " + string.Join(" ", pftags);
+              var outDir = System.IO.Path.Combine(batchBaseDir, dirName);
+              batchLog.WriteLine("Output directory: {0}", outDir);
+              var realArgs = argset + Args("-outdir", outDir);
+              Main2(realArgs.args.ToArray());
+              batchLog.EndTask();
               ibatch++;
             }
             break;
@@ -559,11 +602,6 @@ namespace PetsciiMapgen
           //return;
         }
 
-        string configTag = string.Format("{0}_{1}_{2}", fontProvider.DisplayName, pixelFormat.PixelFormatString, partitionManager);
-        outputDir = System.IO.Path.Combine(outputDir, configTag);
-        Log.WriteLine("Ensuring directory exists: {0}", outputDir);
-        System.IO.Directory.CreateDirectory(outputDir);
-
         string logPath = System.IO.Path.Combine(outputDir, "log.txt");
         Log.SetLogFile(logPath);
 
@@ -579,9 +617,32 @@ namespace PetsciiMapgen
           args = lines.Concat(args).ToArray();
         });
 
+        string configTag = string.Format("{0}_{1}_{2}", fontProvider.DisplayName, pixelFormat.PixelFormatString, partitionManager);
+        outputDir = System.IO.Path.Combine(outputDir, configTag);
+        Log.WriteLine("Ensuring directory exists: {0}", outputDir);
+        System.IO.Directory.CreateDirectory(outputDir);
+
+        string infopath = System.IO.Path.Combine(outputDir, "args.txt");
+        string mapFullPath = System.IO.Path.Combine(outputDir, string.Format("mapfull_{0}.png", configTag));
+        string mapRefPath = System.IO.Path.Combine(outputDir, string.Format("mapref_{0}.png", configTag));
+        string mapFontPath = System.IO.Path.Combine(outputDir, string.Format("mapfont_{0}.png", configTag));
+
+        args.ProcessArg("-loadOrCreateMap", _ =>
+        {
+          if (System.IO.File.Exists(mapRefPath) && System.IO.File.Exists(mapFontPath))
+          {
+            Log.WriteLine("-loadOrCreateMap: Loading existing map.");
+            mapSource = MapSource.Load;
+          }
+          else
+          {
+            Log.WriteLine("-loadOrCreateMap: Looks like we have to create the map.");
+            mapSource = MapSource.Create;
+          }
+        });
+
         if (mapSource == MapSource.Create)
         {
-          string infopath = System.IO.Path.Combine(outputDir, "args.txt");
           using (var infoFile = new StreamWriter(infopath))
           {
             foreach (var arg in args)
@@ -591,29 +652,24 @@ namespace PetsciiMapgen
           }
         }
 
-        Timings t = new Timings();
-
-        string mapFullPath = System.IO.Path.Combine(outputDir, string.Format("mapfull_{0}.png", configTag));
-        string mapRefPath = System.IO.Path.Combine(outputDir, string.Format("mapref_{0}.png", configTag));
-        string mapFontPath = System.IO.Path.Combine(outputDir, string.Format("mapfont_{0}.png", configTag));
 
         HybridMap2 map = null;
 
         switch (mapSource)
         {
           case MapSource.Create:
-            t.EnterTask("--- MAP GENERATION");
+            Log.EnterTask("--- MAP GENERATION");
             map = new HybridMap2(fontProvider, partitionManager, pixelFormat,
               mapFullPath,
               mapRefPath,
               mapFontPath,
               coresToUtilize);
-            t.EndTask();
+            Log.EndTask();
             break;
           case MapSource.Load:
-            t.EnterTask("--- MAP LOAD");
+            Log.EnterTask("--- MAP LOAD");
             map = HybridMap2.LoadFromDisk(outputDir, fontProvider, pixelFormat);
-            t.EndTask();
+            Log.EndTask();
             break;
         }
 
@@ -624,7 +680,7 @@ namespace PetsciiMapgen
         }
 
 
-        t.EnterTask("processing images");
+        Log.EnterTask("processing images");
 
         foreach (var c in testColors)
         {
@@ -652,7 +708,7 @@ namespace PetsciiMapgen
             }
           }
         }
-        t.EndTask();
+        Log.EndTask();
 
 #if !DEBUG
       }

@@ -14,23 +14,94 @@ using System.Threading;
 
 namespace PetsciiMapgen
 {
-  public class Log
+  public static class Log
   {
-    static int indentLevel = 0;
-    static readonly object fileLock = new object();
-    static string logFilePath = null;
-    static List<string> lines = new List<string>();
+    static LogCore _log = new LogCore();
+    public static void WriteLine(string msg)
+    {
+      _log.WriteLine(msg);
+    }
+    public static void WriteLine(string fmt, params object[] args)
+    {
+      _log.WriteLine(fmt, args);
+    }
+    public static void SetLogFile(string path)
+    {
+      _log.SetLogFile(path);
+    }
+    public static void EnterTask(string s, params object[] o)
+    {
+      _log.EnterTask(s, o);
+    }
+    public static void EnterTask(string s)
+    {
+      _log.EnterTask(s);
+    }
+    public static void EndTask()
+    {
+      _log.EndTask();
+    }
+  }
 
-    public static void IncreaseIndent()
+  public class LogCore
+  {
+    int indentLevel = 0;
+    readonly object fileLock = new object();
+    string logFilePath = null;
+    List<string> lines = new List<string>();
+
+    public struct Task
+    {
+      public Stopwatch sw;
+      public string name;
+    }
+    Stack<Task> tasks = new Stack<Task>();
+    public void EnterTask(string s, params object[] o)
+    {
+      EnterTask(string.Format(s, o));
+    }
+    public void EnterTask(string s)
+    {
+      WriteLine("==> Enter task {0}", s);
+      IncreaseIndent();
+      Task n;
+      if (!tasks.Any())
+      {
+        n = new Task
+        {
+          name = "root",
+          sw = new Stopwatch()
+        };
+        n.sw.Start();
+        tasks.Push(n);
+      }
+      n = new Task
+      {
+        name = s,
+        sw = new Stopwatch()
+      };
+      n.sw.Start();
+      tasks.Push(n);
+    }
+    public void EndTask()
+    {
+      Debug.Assert(this.tasks.Count > 0);
+      Task n = this.tasks.Pop();
+      TimeSpan ts = n.sw.Elapsed;
+      DecreaseIndent();
+      WriteLine("<== {1} (end {0})", n.name, ts);
+    }
+
+    public void IncreaseIndent()
     {
       Interlocked.Increment(ref indentLevel);
     }
-    public static void DecreaseIndent()
+    public void DecreaseIndent()
     {
       Interlocked.Decrement(ref indentLevel);
     }
 
-    public static void WriteLine(string msg)
+    public void WriteLine(string msg)
     {
       int indent = indentLevel;
 
@@ -52,12 +123,12 @@ namespace PetsciiMapgen
         }
       }
     }
-    public static void WriteLine(string fmt, params object[] args)
+    public void WriteLine(string fmt, params object[] args)
     {
       WriteLine(string.Format(fmt, args));
     }
 
-    public static void SetLogFile(string path)
+    public void SetLogFile(string path)
     {
       if (path == logFilePath)
         return;
@@ -74,7 +145,7 @@ namespace PetsciiMapgen
 
       logFilePath = path;
 
-      Log.WriteLine("Log path set to {0}", path);
+      WriteLine("Log path set to {0}", path);
     }
   }
 }

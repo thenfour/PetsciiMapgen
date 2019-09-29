@@ -49,8 +49,6 @@ namespace PetsciiMapgen
       string fullMapPath, string refMapPath, string refFontPath,
       int coreCount)
     {
-      Timings timings = new Timings();
-
       if (coreCount < 1)
         coreCount = System.Environment.ProcessorCount - coreCount;
 
@@ -83,7 +81,7 @@ namespace PetsciiMapgen
       Log.WriteLine("Resulting map will be about: [" + mapdimpix.ToString("N0") + ", " + mapdimpix.ToString("N0") + "]");
 
       // fill in char source info (actual tile values)
-      timings.EnterTask("Analyze incoming font");
+      Log.EnterTask("Analyze incoming font");
       this.CharInfo = new List<CharInfo>();
 
       for (int ichar = 0; ichar < FontProvider.CharCount; ++ichar)
@@ -103,12 +101,12 @@ namespace PetsciiMapgen
       Log.WriteLine("Number of source chars: " + this.CharInfo.Count);
 
       // create list of all mapkeys
-      timings.EnterTask("Generating {0:N0} map key indices", pixelFormatProvider.MapEntryCount);
+      Log.EnterTask("Generating {0:N0} map key indices", pixelFormatProvider.MapEntryCount);
       this.Keys = Utils.Permutate(PixelFormatProvider.DimensionCount, pixelFormatProvider.DiscreteNormalizedValues); // returns sorted.
 
       // examine keys.
 
-      timings.EndTask();
+      Log.EndTask();
 
       Log.WriteLine("Key count: " + this.Keys.Length);
 
@@ -117,8 +115,8 @@ namespace PetsciiMapgen
         pm.AddItem(ci, false);
       }
 
-      timings.EndTask();
-      timings.EnterTask("Calculate all mappings");
+      Log.EndTask();
+      Log.EnterTask("Calculate all mappings");
 
       // - generate a list of mappings and their distances
       ulong theoreticalMappings = (ulong)this.CharInfo.Count * (ulong)pixelFormatProvider.MapEntryCount;
@@ -147,7 +145,7 @@ namespace PetsciiMapgen
         }));
       }
       Task.WaitAll(comparisonBatches.ToArray());
-      timings.EndTask();
+      Log.EndTask();
 
       int numCharsUsed = 0;
       int numCharsUsedOnce = 0;
