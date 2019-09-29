@@ -440,7 +440,7 @@ namespace PetsciiMapgen
       double elapsedSec = (double)swtotal.ElapsedMilliseconds / 1000.0;
       double totalEst = elapsedSec / p;
       double estRemaining = totalEst - elapsedSec;
-      Log.WriteLine("  Progress: {0}% (est remaining: {1} sec)", (p*100).ToString("0.00"), estRemaining.ToString("0.00"));
+      Log.WriteLine("  Progress: {0}% (est remaining: {1:N0} sec ({2:N0} hours))", (p*100).ToString("0.00"), estRemaining.ToString("0.00"), (estRemaining / 3600).ToString("0.00"));
     }
   }
 

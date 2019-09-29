@@ -147,14 +147,14 @@ namespace PetsciiMapgen
 
         // heavy: aiming for 16384x16384 = map size 268435456
         var grayscalePixelFormatsHeavy = Args("pftag:Heavy Grayscale") + Or(
-          Args("-pf", "square", "-pfargs", "4096v1x1+0", "-partitions", "1x1"),//1
-          Args("-pf", "square", "-pfargs", "128v2x2+0", "-partitions", "2x3"),//4
+          Args("-pf", "square", "-pfargs", "4096v1x1+0", "-partitions", "64x2"),//1
+          Args("-pf", "square", "-pfargs", "128v2x2+0", "-partitions", "4x3"),//4
           Args("-pf", "square", "-pfargs", "8v3x3+0", "-partitions", "2x3"),//9
-          Args("-pf", "fivetile", "-pfargs", "48v5+0", "-partitions", "2x3")//5
+          Args("-pf", "fivetile", "-pfargs", "48v5+0", "-partitions", "4x3")//5
           );
 
         var colorPixelFormatsHeavy = Args("pftag:Heavy Color") + Or(
-          Args("-pf", "square", "-pfargs", "645v1x1+2", "-partitions", "1x1"),//3
+          Args("-pf", "square", "-pfargs", "645v1x1+2", "-partitions", "15x2"),//3
           Args("-pf", "square", "-pfargs", "24v2x2+2", "-partitions", "2x3"),//6
           Args("-pf", "square", "-pfargs", "6v3x3+2", "-partitions", "1x1"),//11
           Args("-pf", "fivetile", "-pfargs", "16v5+2", "-partitions", "2x3")//7
@@ -162,14 +162,14 @@ namespace PetsciiMapgen
 
         // medium: aiming for 8192x8192 = map size 67108864
         var grayscalePixelFormatsMedium = Args("pftag:Medium Grayscale") + Or(
-          Args("-pf", "square", "-pfargs", "2048v1x1+0", "-partitions", "1x1"),
+          Args("-pf", "square", "-pfargs", "2048v1x1+0", "-partitions", "32x2"),
           Args("-pf", "square", "-pfargs", "90v2x2+0", "-partitions", "2x3"),
           Args("-pf", "square", "-pfargs", "7v3x3+0", "-partitions", "2x3"),
           Args("-pf", "fivetile", "-pfargs", "36v5+0", "-partitions", "2x3")
           );
 
         var colorPixelFormatsMedium = Args("pftag:Medium Color") + Or(
-          Args("-pf", "square", "-pfargs", "406v1x1+2", "-partitions", "1x1"),
+          Args("-pf", "square", "-pfargs", "406v1x1+2", "-partitions", "7x2"),
           Args("-pf", "square", "-pfargs", "20v2x2+2", "-partitions", "2x3"),
           Args("-pf", "square", "-pfargs", "5v3x3+2", "-partitions", "1x1"),
           Args("-pf", "fivetile", "-pfargs", "14v5+2", "-partitions", "2x3")
@@ -177,13 +177,13 @@ namespace PetsciiMapgen
 
         // budget versions (512x512 = 262144 map size)
         var grayscalePixelFormatsBudget = Args("pftag:Budget Grayscale") + Or(
-          Args("-pf", "square", "-pfargs", "1024v1x1+0", "-partitions", "1x1"),
+          Args("-pf", "square", "-pfargs", "1024v1x1+0", "-partitions", "32x2"),
           Args("-pf", "square", "-pfargs", "22v2x2+0", "-partitions", "2x3"),
           Args("-pf", "fivetile", "-pfargs", "12v5+0", "-partitions", "2x3")
           );
 
         var colorPixelFormatsBudget = Args("pftag:Budget Color") + Or(
-          Args("-pf", "square", "-pfargs", "64v1x1+2", "-partitions", "1x1"),
+          Args("-pf", "square", "-pfargs", "64v1x1+2", "-partitions", "8x1"),
           Args("-pf", "square", "-pfargs", "8v2x2+2", "-partitions", "2x3"),
           Args("-pf", "fivetile", "-pfargs", "6v5+2", "-partitions", "2x3")
           );
