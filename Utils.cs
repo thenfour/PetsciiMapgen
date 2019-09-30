@@ -363,6 +363,11 @@ namespace PetsciiMapgen
       }
     }
 
+    public string ToCSString()
+    {
+      return "new string[] {" + string.Join(", ", Args.Select(s => string.Format("@\"{0}\"", s))) + "};";
+    }
+
     public override string ToString()
     {
       return string.Join(" ", Args);

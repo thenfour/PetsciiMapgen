@@ -31,135 +31,6 @@ namespace PetsciiMapgen
       None
     }
 
-    // https://stackoverflow.com/questions/9080231/how-to-save-geometry-as-image
-    private static void GenerateFontMap2(string fontName, int WidthAndHeight, string outputFileName)
-    {
-      GlyphTypeface font;
-      if (File.Exists(fontName))
-      {
-        font = new GlyphTypeface(new Uri(fontName));
-      } else
-      {
-        Typeface face = new Typeface(fontName);
-        face.TryGetGlyphTypeface(out font);
-      }
-
-      //int ColumnCount = 10;
-      //int MaxDrawCount = 30; // use int.MaxValue to draw them all            
-      double fontSize = WidthAndHeight;
-      // the height of each cell has to include over/underhanging glyphs
-      SizeF cellSize = new SizeF((float)fontSize, (float)(fontSize * font.Height));
-
-      var Glyphs = from glyphIndex in font.CharacterToGlyphMap.Values
-                   select font.GetGlyphOutline(glyphIndex, fontSize, 1d);
-
-      int ColumnCount = (int)Math.Ceiling(Math.Sqrt(Glyphs.Count()));
-
-      // now create the visual we'll draw them to
-      DrawingVisual viz = new DrawingVisual();
-      int drawCount = -1;
-      using (DrawingContext dc = viz.RenderOpen())
-      {
-        foreach (var g in Glyphs)
-        {
-          drawCount++;
-          if (g.IsEmpty()) continue; // don't draw the blank ones
-                                     // center horizontally in the cell
-          double xOffset = (drawCount % ColumnCount) * cellSize.Width + cellSize.Width / 2d - g.Bounds.Width / 2d;
-          // place the character on the baseline of the cell
-          double yOffset = (drawCount / ColumnCount) * cellSize.Height + fontSize * font.Baseline;
-          dc.PushTransform(new TranslateTransform(xOffset, yOffset));
-          dc.DrawGeometry(System.Windows.Media.Brushes.Red, null, g);
-          dc.Pop(); // get rid of the transform
-        }
-      }
-
-      int RowCount = drawCount / ColumnCount;
-      if (drawCount % ColumnCount != 0)
-        RowCount++; // to include partial rows
-      int bitWidth = (int)Math.Ceiling((double)(cellSize.Width * ColumnCount));
-      int bitHeight = (int)Math.Ceiling((double)(cellSize.Height * RowCount));
-      RenderTargetBitmap bmp = new RenderTargetBitmap(
-                                                      bitWidth, bitHeight,
-                                                      96, 96,
-                                                      PixelFormats.Pbgra32);
-      bmp.Render(viz);
-
-      PngBitmapEncoder encoder = new PngBitmapEncoder();
-      encoder.Frames.Add(BitmapFrame.Create(bmp));
-      using (FileStream file = new FileStream(outputFileName, FileMode.Create))
-        encoder.Save(file);
-    }
-
-
-    //private static void GenerateFontMap(string fontName, int WidthAndHeight, string fileName)
-    //{
-    //  GlyphTypeface font;
-    //  if (File.Exists(fontName))
-    //  {
-    //    font = new GlyphTypeface(new Uri(fontName));
-    //  }
-    //  else
-    //  {
-    //    Typeface face = new Typeface(fontName);
-    //    face.TryGetGlyphTypeface(out font);
-    //  }
-
-    //  List<ushort> fontNum = new List<ushort>();
-
-    //  foreach (KeyValuePair<int, ushort> kvp in font.CharacterToGlyphMap)
-    //  {
-    //    fontNum.Add(kvp.Value);
-    //  }
-
-    //  if (fontNum.Count < 1)
-    //    return;
-
-    //  int GlyphsPerRow = (int)Math.Ceiling(Math.Sqrt(fontNum.Count));
-
-    //  int mapWidth = WidthAndHeight * GlyphsPerRow;
-    //  int mapHeight = WidthAndHeight * ((fontNum.Count + 1) / GlyphsPerRow + 1);
-
-    //  Bitmap b = new Bitmap(mapWidth, mapHeight);
-    //  Graphics g = Graphics.FromImage(b);
-
-    //  System.Windows.Media.Pen glyphPen = new System.Windows.Media.Pen(System.Windows.Media.Brushes.Black, 1);
-    //  Geometry glyphGeometry;
-    //  GeometryDrawing glyphDrawing;
-    //  PngBitmapEncoder encoder;
-    //  RenderTargetBitmap bmp;
-    //  DrawingVisual viz;
-
-    //  for (int i = 0; i < fontNum.Count; i++)
-    //  {
-    //    glyphGeometry = font.GetGlyphOutline(fontNum[i], WidthAndHeight, 1);
-    //    glyphDrawing = new GeometryDrawing(System.Windows.Media.Brushes.Black, glyphPen, glyphGeometry);
-
-    //    DrawingImage geometryImage = new DrawingImage(glyphDrawing);
-    //    geometryImage.Freeze();
-
-    //    viz = new DrawingVisual();
-    //    DrawingContext dc = viz.RenderOpen();
-    //    dc.DrawImage(geometryImage, new System.Windows.Rect(0, 0, geometryImage.Width, geometryImage.Height));
-    //    dc.Close();
-
-    //    bmp = new RenderTargetBitmap(WidthAndHeight, WidthAndHeight, 96, 96, PixelFormats.Pbgra32);
-
-    //    bmp.Render(viz);
-
-    //    encoder = new PngBitmapEncoder();
-    //    encoder.Frames.Add(BitmapFrame.Create(bmp));
-
-    //    MemoryStream myStream = new MemoryStream();
-    //    encoder.Save(myStream);
-
-    //    g.DrawImage(System.Drawing.Bitmap.FromStream(myStream), new PointF((i - (i / GlyphsPerRow) * GlyphsPerRow) * WidthAndHeight, i / GlyphsPerRow * WidthAndHeight));
-    //  }
-    //  g.Dispose();
-    //  b.Save(fileName, ImageFormat.Png);
-    //  b.Dispose();
-    //}
-
     static void Main(string[] args)
     {
       //GenerateFontMap(@"C:\root\git\thenfour\PetsciiMapgen\img\fonts\EmojiOneColor.otf", 32, @"c:\temp\emojione.png");
@@ -167,6 +38,16 @@ namespace PetsciiMapgen
       //GenerateFontMap(@"Arial Unicode MS", 32, @"c:\temp\aunicod1.png");
       //GenerateFontMap2(@"Arial Unicode MS", 32, @"c:\temp\aunicod2.png");
       //args = new string[] { "-batchrun", "C64", "LAB", "budget", "C64color ", "2x2+2" };
+      //args = new string[] { @"-fonttype", @"mono", @"-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\c64opt160.png",
+      //  @"-charsize", @"8x8", @"-palette", @"C64Color", @"-cs", @"lab",
+      //  @"-pf", @"square",
+      //          @"-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      //  @"-testpalette", "ThreeBit",
+
+      //  @"-pfargs", @"9v2x2+2",
+      //  @"-partitions", @"5",
+
+      //  @"-outdir", @"f:\maps", "-cores", "1" };
 
       using (var stayon = new StayOn())
       {
@@ -262,7 +143,7 @@ namespace PetsciiMapgen
             foreach (var argset in filtered)
             {
               batchLog.EnterTask("Running batch #{0} of keywords", ibatch, string.Join(", ", batchKeywords));
-              batchLog.WriteLine("Args: {0}", argset);
+              batchLog.WriteLine("Args: {0}", argset.ToCSString());
               Main2(argset.Args.ToArray());
               batchLog.EndTask();
               ibatch++;
@@ -283,7 +164,9 @@ namespace PetsciiMapgen
 
         Log.WriteLine("----------------------------------------");
 
-        PartitionManager partitionManager = new PartitionManager(1, 1);
+        //PartitionManager partitionManager = null;// = new PartitionManager(1, 1, discreteValues);
+        int partitionsPerDimension = 1;
+        int? partitionDepth = null;
         IPixelFormatProvider pixelFormat = null;
         IFontProvider fontProvider = null;
         string outputDir = null;
@@ -345,7 +228,14 @@ namespace PetsciiMapgen
 
         args.ProcessArg("-partitions", s =>
         {
-          partitionManager = new PartitionManager(int.Parse(s.Split('x')[0]), int.Parse(s.Split('x')[1]));
+          if (s.Contains('x'))
+          {
+            partitionsPerDimension = int.Parse(s.Split('x')[0]);
+            partitionDepth = int.Parse(s.Split('x')[1]);
+          } else
+          {
+            partitionsPerDimension = int.Parse(s);
+          }
         });
 
         args.ProcessArg("-processImagesInDir", o =>
@@ -424,26 +314,21 @@ namespace PetsciiMapgen
           Log.WriteLine("Pixel format not specified.");
           return;
         }
-        if (partitionManager == null)
-        {
-          Log.WriteLine("Space partitioning unspecified");
-          return;
-        }
 
         args.ProcessArg("-calcn", s =>
         {
           ulong maxMapKeys = ulong.Parse(s);
 
-          partitionManager.Init();
+          //partitionManager.Init();
 
-          ulong partitionCount = (ulong)partitionManager.PartitionCount;
-          Log.WriteLine("Partition count: {0:N0}", partitionCount);
+          //ulong partitionCount = (ulong)partitionManager.PartitionCount;
+          //Log.WriteLine("Partition count: {0:N0}", partitionCount);
 
           // so the thing about partition count. You can't just divide by partition count,
           // because in deeper levels most partitions are simply unused / empty.
           // a decent conservative approximation is to take the first N levels
-          partitionCount = (ulong)Math.Pow(partitionManager.PartitionsPerDimension, 2.5);// n = 2.5
-          Log.WriteLine("Adjusted partition count: {0:N0}", partitionCount);
+          //partitionCount = (ulong)Math.Pow(partitionManager.PartitionsPerDimension, 2.5);// n = 2.5
+          //Log.WriteLine("Adjusted partition count: {0:N0}", partitionCount);
           Log.WriteLine("Charset count: {0:N0}", fontProvider.CharCount);
           Log.WriteLine("Cores to utilize: {0:N0}", coresToUtilize);
           Log.WriteLine("Luma + chroma components: {0:N0}", pixelFormat.DimensionCount);
@@ -482,7 +367,9 @@ namespace PetsciiMapgen
           args = lines.Concat(args).ToArray();
         });
 
-        string configTag = string.Format("{0}_{1}_{2}", fontProvider.DisplayName, pixelFormat.PixelFormatString, partitionManager);
+        string partitionConfigTag = string.Format("p{0}x{1}", partitionsPerDimension, partitionDepth.HasValue ? partitionDepth.ToString() : "N");
+
+        string configTag = string.Format("{0}_{1}_{2}", fontProvider.DisplayName, pixelFormat.PixelFormatString, partitionConfigTag);
         outputDir = System.IO.Path.Combine(outputDir, configTag);
         Log.WriteLine("Ensuring directory exists: {0}", outputDir);
         System.IO.Directory.CreateDirectory(outputDir);
@@ -526,11 +413,11 @@ namespace PetsciiMapgen
         {
           case MapSource.Create:
             Log.EnterTask("--- MAP GENERATION");
-            map = new HybridMap2(fontProvider, partitionManager, pixelFormat,
+            map = new HybridMap2(fontProvider, pixelFormat,
               mapFullPath,
               mapRefPath,
               mapFontPath,
-              coresToUtilize);
+              coresToUtilize, partitionsPerDimension, partitionDepth);
             Log.EndTask();
             break;
           case MapSource.Load:

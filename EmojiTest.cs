@@ -145,6 +145,7 @@ namespace EmojiTest
       public System.Drawing.Color bgColor;
       public System.Drawing.Color textColor;
     }
+
     public class GenerateEmojiBitmapResults
     {
       //public System.Drawing.Bitmap bmp;
@@ -152,6 +153,72 @@ namespace EmojiTest
       public int rows;
       public GlyphData[] AllCells;
     }
+
+    // todo: use this renderer; it's much better for monochrome fonts. for color there's still no better solution i know of.
+    //// https://stackoverflow.com/questions/9080231/how-to-save-geometry-as-image
+    //public static GenerateEmojiBitmapResults GenerateFontMap2(string fontName, int WidthAndHeight, string outputFileName)
+    //{
+    //  GlyphTypeface font;
+    //  if (File.Exists(fontName))
+    //  {
+    //    font = new GlyphTypeface(new Uri(fontName));
+    //  }
+    //  else
+    //  {
+    //    Typeface face = new Typeface(fontName);
+    //    face.TryGetGlyphTypeface(out font);
+    //  }
+
+    //  //int ColumnCount = 10;
+    //  //int MaxDrawCount = 30; // use int.MaxValue to draw them all            
+    //  double fontSize = WidthAndHeight;
+    //  // the height of each cell has to include over/underhanging glyphs
+    //  SizeF cellSize = new SizeF((float)fontSize, (float)(fontSize * font.Height));
+
+    //  var Glyphs = from glyphIndex in font.CharacterToGlyphMap.Values
+    //               select font.GetGlyphOutline(glyphIndex, fontSize, 1d);
+
+    //  int ColumnCount = (int)Math.Ceiling(Math.Sqrt(Glyphs.Count()));
+
+    //  // now create the visual we'll draw them to
+    //  DrawingVisual viz = new DrawingVisual();
+    //  //int drawCount = -1;
+    //  using (DrawingContext dc = viz.RenderOpen())
+    //  {
+    //    foreach (var g in Glyphs)
+    //    {
+    //      drawCount++;
+    //      if (g.IsEmpty()) continue; // don't draw the blank ones
+    //                                 // center horizontally in the cell
+    //      double xOffset = (drawCount % ColumnCount) * cellSize.Width + cellSize.Width / 2d - g.Bounds.Width / 2d;
+    //      // place the character on the baseline of the cell
+    //      double yOffset = (drawCount / ColumnCount) * cellSize.Height + fontSize * font.Baseline;
+    //      dc.PushTransform(new TranslateTransform(xOffset, yOffset));
+    //      dc.DrawGeometry(System.Windows.Media.Brushes.Red, null, g);
+    //      dc.Pop(); // get rid of the transform
+    //    }
+    //  }
+
+    //  int RowCount = drawCount / ColumnCount;
+    //  if (drawCount % ColumnCount != 0)
+    //    RowCount++; // to include partial rows
+    //  int bitWidth = (int)Math.Ceiling((double)(cellSize.Width * ColumnCount));
+    //  int bitHeight = (int)Math.Ceiling((double)(cellSize.Height * RowCount));
+    //  RenderTargetBitmap bmp = new RenderTargetBitmap(
+    //                                                  bitWidth, bitHeight,
+    //                                                  96, 96,
+    //                                                  PixelFormats.Pbgra32);
+    //  bmp.Render(viz);
+
+    //  PngBitmapEncoder encoder = new PngBitmapEncoder();
+    //  encoder.Frames.Add(BitmapFrame.Create(bmp));
+    //  using (FileStream file = new FileStream(outputFileName, FileMode.Create))
+    //    encoder.Save(file);
+    //}
+
+
+
+
 
     public static GenerateEmojiBitmapResults GenerateEmojiBitmap(string fontName, int cellWidth, int cellHeight,
       float additionalScale, int shiftX, int shiftY, IEnumerable<EmojiInfo> codepointsToInclude,

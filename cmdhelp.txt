@@ -30,7 +30,10 @@ Command options:
 -testcolor #ff00ff        outputs an image and log testing matching a certain color
 -testpalette paletteName  same as -testcolor but over a whole named palette
 
--partitions NxN           optional; default 1 flat partition
+-partitions N or NxD      optional; default 1 flat partition.
+                          N means split each dimension in N parts. the partition
+                          bounds are strategically calculated.
+                          NxD means you only partition the first D dimensions.
 -outdir path              required to do any output
 -processImagesInDir path
 -processImage path

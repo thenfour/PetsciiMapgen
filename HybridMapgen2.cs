@@ -44,10 +44,8 @@ namespace PetsciiMapgen
       return ret;
     }
 
-    public unsafe HybridMap2(IFontProvider fontProvider,
-      PartitionManager pm, IPixelFormatProvider pixelFormatProvider,
-      string fullMapPath, string refMapPath, string refFontPath,
-      int coreCount)
+    public unsafe HybridMap2(IFontProvider fontProvider, IPixelFormatProvider pixelFormatProvider,
+      string fullMapPath, string refMapPath, string refFontPath, int coreCount, int partitionsPerDim, int? partitionDepth)
     {
       if (coreCount < 1)
         coreCount = System.Environment.ProcessorCount - coreCount;
@@ -55,9 +53,6 @@ namespace PetsciiMapgen
       this.FontProvider = fontProvider;
       this.PixelFormatProvider = pixelFormatProvider;
       this.FontProvider.Init(this.PixelFormatProvider.DiscreteNormalizedValues.Length);
-      pm.Init();
-
-
 
       Log.WriteLine("  DiscreteNormalizedValues:");
       for (int i = 0; i < PixelFormatProvider.DiscreteNormalizedValues.Length; ++i)
@@ -70,12 +65,9 @@ namespace PetsciiMapgen
         Log.WriteLine("    {0}: {1,10:0.00}", i, PixelFormatProvider.DiscreteNormalizedValues[i]);
       }
 
-
-
       Log.WriteLine("Number of source chars (1d): " + this.FontProvider.CharCount.ToString("N0"));
       Log.WriteLine("Chosen values per tile: " + pixelFormatProvider.DiscreteNormalizedValues.Length);
       Log.WriteLine("Dimensions: " + PixelFormatProvider.DimensionCount);
-      Log.WriteLine("Partition count: " + pm.PartitionCount.ToString("N0"));
       Log.WriteLine("Resulting map will have this many entries: " + pixelFormatProvider.MapEntryCount.ToString("N0"));
       long mapdimpix = (long)Math.Sqrt(pixelFormatProvider.MapEntryCount);
       Log.WriteLine("Resulting map will be about: [" + mapdimpix.ToString("N0") + ", " + mapdimpix.ToString("N0") + "]");
@@ -99,6 +91,8 @@ namespace PetsciiMapgen
       }
 
       Log.WriteLine("Number of source chars: " + this.CharInfo.Count);
+
+      PartitionManager pm = new PartitionManager(partitionsPerDim, partitionDepth.GetValueOrDefault(PixelFormatProvider.DimensionCount + 1), PixelFormatProvider.DiscreteNormalizedValues);
 
       // create list of all mapkeys
       Log.EnterTask("Generating {0:N0} map key indices", pixelFormatProvider.MapEntryCount);
