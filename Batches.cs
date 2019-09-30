@@ -43,8 +43,8 @@ namespace PetsciiMapgen
     public static ArgSetList GetAllBatches(string batchBaseDir, Func<string, string> batchFontPath, List<string> batchAddArgs)
     {
       var common = Args(
-        "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-        "-testpalette", "ThreeBit",
+        //"-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+        //"-testpalette", "ThreeBit",
         "-loadOrCreateMap"
         );
 
@@ -317,8 +317,8 @@ namespace PetsciiMapgen
       {
         // generate an output directory.
         // use pftag and fonttag
-        var pftags = s.Args.Where(a => a.StartsWith("pftag:")).Select(a => a.Split(':')[1]);
-        var fonttags = s.Args.Where(a => a.StartsWith("fonttag:")).Select(a => a.Split(':')[1]);
+        var pftags = s._args.Where(a => a.StartsWith("pftag:")).Select(a => a.Split(':')[1]);
+        var fonttags = s._args.Where(a => a.StartsWith("fonttag:")).Select(a => a.Split(':')[1]);
         var dirName = string.Join(" ", fonttags) + " " + string.Join(" ", pftags);
         var outDir = System.IO.Path.Combine(batchBaseDir, dirName);
         //batchLog.WriteLine("Output directory: {0}", outDir);
@@ -349,7 +349,7 @@ namespace PetsciiMapgen
         emoji("emojiappleblack64", 64),
         marioTiles,
         comicSans
-        ) + common + Args(batchAddArgs.ToArray());
+        ) + common + outputDir + Args(batchAddArgs.ToArray());
       return All;
     } // AllBatches
   } // class

@@ -27,63 +27,116 @@ namespace PetsciiMapgen
       r.Visited = true;
 
       r.ID = (long)d["ID"];
-      r.ValuesLength = Convert.ToInt32(d["ValuesLength"]);
-      for (int i = 0; i < r.ValuesLength; ++i)
-      {
-        r[i] = (float)Convert.ToDouble(d["v" + i.ToString("00")]);
-      }
+      r.NormalizedValues = ValueArray.Deserialize((Dictionary<string, object>)d["NormalizedValues"]);
+      r.DenormalizedValues = ValueArray.Deserialize((Dictionary<string, object>)d["DenormalizedValues"]);
       return r;
     }
 
     public override unsafe void WriteJson(JsonWriter writer, ValueSet value, JsonSerializer serializer)
     {
       Dictionary<string, object> d = new Dictionary<string, object>();
-      d["ValuesLength"] = value.ValuesLength;
       d["ID"] = value.ID;
-      for(int i = 0; i < value.ValuesLength; ++ i)
-      {
-        d["v" + i.ToString("00")] = value[i];
-      }
+      d["NormalizedValues"] = value.NormalizedValues.Serialize();
+      d["DenormalizedValues"] = value.DenormalizedValues.Serialize();
       serializer.Serialize(writer, d);
     }
     public override bool CanRead { get { return true; } }
     public override bool CanWrite { get { return true; } }
   }
 
-  [Newtonsoft.Json.JsonConverter(typeof(ValueSetJsonConverter))]
-  public unsafe struct ValueSet
+  public unsafe struct ValueArray
   {
-    public int ValuesLength;
+    const int MaxElements = 20;
+    private fixed float _data[MaxElements];
+
+    public int Length;
+
+    public static ValueArray Init(int len)
+    {
+      ValueArray ret;
+      ret.Length = len;
+#if DEBUG
+      for (int i = 0; i < len; ++i)
+      {
+        ret._data[i] = -420.0f;
+      }
+#endif
+      return ret;
+    }
+
+    public Dictionary<string, object> Serialize()
+    {
+      Dictionary<string, object> d = new Dictionary<string, object>();
+      d["Length"] = this.Length;
+      for (int i = 0; i < this.Length; ++i)
+      {
+        d["v" + i.ToString("00")] = this[i];
+      }
+      return d;
+    }
+    public static ValueArray Deserialize(Dictionary<string, object> d)
+    {
+      ValueArray ret;
+      ret.Length = Convert.ToInt32(d["Length"]);
+      for (int i = 0; i < ret.Length; ++i)
+      {
+        ret[i] = (float)Convert.ToDouble(d["v" + i.ToString("00")]);
+      }
+      return ret;
+    }
+
+    public unsafe float this[int n]
+    {
+      get { return this._data[n]; }
+      set { this._data[n] = value; }
+    }
+
+    public void Init(float[] vals, int len)
+    {
+      Debug.Assert(len <= MaxElements);
+      this.Length = len;
+      if (vals == null)
+      {
+        // leave uninitialized
+#if DEBUG
+        for (int i = 0; i < len; ++i)
+        {
+          this[i] = -420.0f;
+        }
+#endif
+        return;
+      }
+      for (int i = 0; i < vals.Length; ++i)
+      {
+        this[i] = vals[i];
+      }
+    }
+    public override string ToString()
+    {
+      List<string> items = new List<string>();
+      for (int i = 0; i < Length; ++i)
+      {
+        items.Add(string.Format("{0,6:0.00}", _data[i]));
+      }
+      return string.Format("[{0}]", string.Join(",", items));
+    }
+  }
+
+  [Newtonsoft.Json.JsonConverter(typeof(ValueSetJsonConverter))]
+  public struct ValueSet
+  {
     public long ID;
     public bool Mapped;
     public bool Visited;
     public double MinDistFound;
 
-    public unsafe float this[int n]
-    {
-      get { return this.ColorData[n]; }
-      set { this.ColorData[n] = value; }
-    }
-
     public override string ToString()
     {
-      List<string> items = new List<string>();
-      for (int i = 0; i < ValuesLength; ++i)
-      {
-        items.Add(string.Format("{0,6:0.00}", ColorData[i]));
-      }
-      return string.Format("[{0}]", string.Join(",", items));
+      return string.Format("norm:{0}, denorm:{1}", NormalizedValues.ToString(), DenormalizedValues.ToString());
     }
 
-    //#if DEBUG
-    // DONT DO THIS because it will cause issues with references vs. copies to this field.
-    //    public float[] ColorData;
-    //#else
-    //[Newtonsoft.Json.JsonArray()]
-    const int MaxDimensions = 20;
-    private fixed float ColorData[MaxDimensions];
-//#endif
-    //public fixed float NormValues[20];// values 0-1
+    public ValueArray NormalizedValues;
+    public ValueArray DenormalizedValues;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static ValueSet New(int dimensionsPerCharacter, long id)
@@ -96,39 +149,11 @@ namespace PetsciiMapgen
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void Init(ref ValueSet n, int dimensionsPerCharacter, long id, float[] normalizedValues)
     {
-      if (dimensionsPerCharacter > MaxDimensions)
-      {
-        throw new Exception("Maximum dimensions is established as " + MaxDimensions);
-      }
-#if DEBUG
-      // n.ColorData = new float[20];
-#endif
-      n.ValuesLength = dimensionsPerCharacter;
       n.ID = id;
       n.MinDistFound = double.MaxValue;
-      if (normalizedValues != null)
-      {
-        Debug.Assert(dimensionsPerCharacter == normalizedValues.Length);
-        for (int  i = 0; i < normalizedValues.Length; ++ i)
-        {
-          n.ColorData[i] = normalizedValues[i];
-        }
-      }
+      n.NormalizedValues.Init(normalizedValues, dimensionsPerCharacter);
+      n.DenormalizedValues.Init(null, dimensionsPerCharacter);
     }
-
-    public unsafe static int CompareTo(ValueSet a, ValueSet other)
-    {
-      int d = other.ValuesLength.CompareTo(a.ValuesLength);
-      if (d != 0)
-        return d;
-      for (int i = 0; i < a.ValuesLength; ++i)
-      {
-        d = other.ColorData[i].CompareTo(a.ColorData[i]);
-        if (d != 0)
-          return d;
-      }
-      return 0;
-    }
-
+    
   }
 }

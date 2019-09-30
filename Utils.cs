@@ -960,16 +960,16 @@ namespace PetsciiMapgen
       return ID;
     }
 
-    public static double EuclidianColorDist(ValueSet key /* DENORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, int lumaElements, int chromaElements)
+    public static double EuclidianColorDist(ValueSet key, ValueSet actual, int lumaElements, int chromaElements)
     {
       //double lumaMul = .8;
       //double chromaMul = .2;
-      Debug.Assert(key.ValuesLength == actual.ValuesLength);
-      Debug.Assert(key.ValuesLength == (lumaElements + chromaElements));
+      Debug.Assert(key.DenormalizedValues.Length == actual.DenormalizedValues.Length);
+      Debug.Assert(key.DenormalizedValues.Length == (lumaElements + chromaElements));
       double accLuma = 0;
       for (int i = 0; i < lumaElements; ++ i)
       {
-        double d = Math.Abs(key[i] - actual[i]);
+        double d = Math.Abs(key.DenormalizedValues[i] - actual.DenormalizedValues[i]);
         accLuma += d * d;
       }
       accLuma /= lumaElements;
@@ -978,7 +978,7 @@ namespace PetsciiMapgen
       double accChroma = 0;
       for (int i = 0; i < chromaElements; ++i)
       {
-        double d = Math.Abs(key[lumaElements + i] - actual[lumaElements + i]);
+        double d = Math.Abs(key.DenormalizedValues[lumaElements + i] - actual.DenormalizedValues[lumaElements + i]);
         accChroma += d * d;
       }
       //accChroma *= chromaMul;

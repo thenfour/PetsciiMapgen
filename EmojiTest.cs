@@ -23,8 +23,7 @@ namespace EmojiTest
   {
     public struct EmojiInfo
     {
-      public int[] cps;
-      //public int modifier;
+      public int[] cps; // codepoints contributing to this glyph. typically 1 codepoint, but there can be unicode modifiers after.
       public bool forceInclude;
       public string str;
       public string attribute;

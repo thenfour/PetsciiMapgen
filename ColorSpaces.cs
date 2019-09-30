@@ -120,29 +120,29 @@ namespace PetsciiMapgen
   {
     public LABColorspace()
     {
-      var lcc = RGBToLCC(ColorF.FromRGB(255, 255, 255));
-      ValueSet lhs;
-      ValueSet rhs;
-      lhs.ValuesLength = 3;
-      lhs.Mapped = false;
-      lhs.MinDistFound = 0;
-      lhs.Visited = false;
-      lhs.ID = 0;
-      lhs[0] = (float)lcc.L;
-      lhs[1] = (float)lcc.C1;
-      lhs[2] = (float)lcc.C2;
+      //var lcc = RGBToLCC(ColorF.FromRGB(255, 255, 255));
+      //ValueSet lhs;
+      //ValueSet rhs;
+      //lhs.ValuesLength = 3;
+      //lhs.Mapped = false;
+      //lhs.MinDistFound = 0;
+      //lhs.Visited = false;
+      //lhs.ID = 0;
+      //lhs[0] = (float)lcc.L;
+      //lhs[1] = (float)lcc.C1;
+      //lhs[2] = (float)lcc.C2;
 
-      var lcc2 = RGBToLCC(ColorF.FromRGB(0, 0, 0));
-      rhs.ValuesLength = 3;
-      rhs.Mapped = false;
-      rhs.MinDistFound = 0;
-      rhs.Visited = false;
-      rhs.ID = 0;
-      rhs[0] = (float)lcc2.L;
-      rhs[1] = (float)lcc2.C1;
-      rhs[2] = (float)lcc2.C2;
+      //var lcc2 = RGBToLCC(ColorF.FromRGB(0, 0, 0));
+      //rhs.ValuesLength = 3;
+      //rhs.Mapped = false;
+      //rhs.MinDistFound = 0;
+      //rhs.Visited = false;
+      //rhs.ID = 0;
+      //rhs[0] = (float)lcc2.L;
+      //rhs[1] = (float)lcc2.C1;
+      //rhs[2] = (float)lcc2.C2;
 
-      double d = ColorDistance(lhs, rhs, 1, 2);
+      //double d = ColorDistance(lhs, rhs, 1, 2);
     }
     public string FormatString { get { return "LAB"; } }
     public LCCColorDenorm RGBToLCC(ColorF c)
@@ -213,15 +213,15 @@ namespace PetsciiMapgen
       double acc = 0;
       for (int i = 0; i < lumaComponents; ++i)
       {
-        double d = Math.Abs(lhs[i] - rhs[i]);
+        double d = Math.Abs(lhs.DenormalizedValues[i] - rhs.DenormalizedValues[i]);
         acc += d * d;
       }
       acc /= lumaComponents;
       if (chromaComponents == 2)
       {
         // C1 (HUE)
-        double h1 = lhs[lumaComponents];
-        double h2 = rhs[lumaComponents];
+        double h1 = lhs.DenormalizedValues[lumaComponents];
+        double h2 = rhs.DenormalizedValues[lumaComponents];
         double dh1 = Math.Abs(h1 - h2);
         double dh2 = Math.Abs((360 + h1) - h2);
         double dh3 = Math.Abs(h1 - (360 + h2));
@@ -229,7 +229,7 @@ namespace PetsciiMapgen
         acc += dh * dh;
 
         // C2 (Saturation)
-        double ds = Math.Abs(lhs[lumaComponents + 1] - rhs[lumaComponents + 1]);
+        double ds = Math.Abs(lhs.DenormalizedValues[lumaComponents + 1] - rhs.DenormalizedValues[lumaComponents + 1]);
         acc += ds * ds;
       }
       return acc;

@@ -24,7 +24,8 @@ namespace PetsciiMapgen
     int MapEntryCount { get; }// pixel format will also determine how many entries are in the resulting map.
     double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, bool verboseDebugInfo = false);
     void PopulateCharColorData(CharInfo ci, IFontProvider font);
-    double NormalizeElement(ValueSet v, int elementToNormalize);
+    //double NormalizeElement(ValueSet v, int elementToNormalize);
+    ValueArray Denormalize(ValueArray va);
     int NormalizedValueSetToMapID(float[] vals);
     int DebugGetMapIndexOfColor(ColorF charRGB);
     int GetMapIndexOfRegion(Bitmap img, int x, int y, Size sz);
@@ -42,7 +43,7 @@ namespace PetsciiMapgen
     protected Size LumaTiles { get; private set; }
     protected bool UseChroma { get; private set; }
 
-    protected ILCCColorSpace Colorspace { get; private set; }
+    public ILCCColorSpace Colorspace { get; private set; }
 
     public string PixelFormatString
     {
@@ -56,9 +57,9 @@ namespace PetsciiMapgen
       }
     }
 
-    public double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, bool verboseDebugInfo = false)
+    public double CalcKeyToColorDist(ValueSet key, ValueSet actual, bool verboseDebugInfo = false)
     {
-      Denormalize(ref key);
+      //Denormalize(ref key);
       return this.Colorspace.ColorDistance(key, actual, LumaComponentCount, ChromaComponentCount);
     }
 
@@ -134,7 +135,8 @@ namespace PetsciiMapgen
 
           charRGB = charRGB.Add(tileRGB);
           LCCColorDenorm tileLAB = Colorspace.RGBToLCC(tileRGB);
-          ci.actualValues[GetValueLIndex(tx, ty)] = (float)tileLAB.L;
+          ci.actualValues.DenormalizedValues[GetValueLIndex(tx, ty)] = (float)tileLAB.L;
+          ci.actualValues.NormalizedValues[GetValueLIndex(tx, ty)] = (float)Colorspace.NormalizeL(ci.actualValues.DenormalizedValues[GetValueLIndex(tx, ty)]);
         }
       }
 
@@ -142,8 +144,10 @@ namespace PetsciiMapgen
       {
         charRGB = charRGB.Div(Utils.Product(LumaTiles));
         LCCColorDenorm charLAB = Colorspace.RGBToLCC(charRGB);
-        ci.actualValues[GetValueC1Index()] = (float)charLAB.C1;
-        ci.actualValues[GetValueC2Index()] = (float)charLAB.C2;
+        ci.actualValues.DenormalizedValues[GetValueC1Index()] = (float)charLAB.C1;
+        ci.actualValues.DenormalizedValues[GetValueC2Index()] = (float)charLAB.C2;
+        ci.actualValues.NormalizedValues[GetValueC1Index()] = (float)Colorspace.NormalizeC1(ci.actualValues.DenormalizedValues[GetValueC1Index()]);
+        ci.actualValues.NormalizedValues[GetValueC2Index()] = (float)Colorspace.NormalizeC2(ci.actualValues.DenormalizedValues[GetValueC2Index()]);
       }
     }
 
@@ -157,30 +161,44 @@ namespace PetsciiMapgen
       return ret;
     }
 
-    internal unsafe void Denormalize(ref ValueSet v)
+    public ValueArray Denormalize(ValueArray va)
     {
-      // changes normalized 0-1 values to YUV-ranged values. depends on value format and stuff.
+      ValueArray ret = ValueArray.Init(this.DimensionCount);
       if (UseChroma)
       {
-        v[GetValueC1Index()] = (float)Colorspace.DenormalizeC1(v[GetValueC1Index()]);
-        v[GetValueC2Index()] = (float)Colorspace.DenormalizeC2(v[GetValueC2Index()]);
+        ret[GetValueC1Index()] = (float)Colorspace.DenormalizeC1(va[GetValueC1Index()]);
+        ret[GetValueC2Index()] = (float)Colorspace.DenormalizeC2(va[GetValueC2Index()]);
       }
-      for (int i = 0; i < LumaComponentCount; ++ i)
+      for (int i = 0; i < LumaComponentCount; ++i)
       {
-        v[i] = (float)Colorspace.DenormalizeL(v[i]);
+        ret[i] = (float)Colorspace.DenormalizeL(va[i]);
       }
+      return ret;
     }
-    public unsafe double NormalizeElement(ValueSet v, int elementToNormalize)
-    {
-      if (UseChroma)
-      {
-        if (elementToNormalize == GetValueC1Index())
-          return Colorspace.NormalizeC1(v[elementToNormalize]);
-        if (elementToNormalize == GetValueC2Index())
-          return Colorspace.NormalizeC2(v[elementToNormalize]);
-      }
-      return Colorspace.NormalizeL(v[elementToNormalize]);
-    }
+    //internal unsafe void Denormalize(ref ValueSet v)
+    //{
+    //  // changes normalized 0-1 values to YUV-ranged values. depends on value format and stuff.
+    //  if (UseChroma)
+    //  {
+    //    v[GetValueC1Index()] = (float)Colorspace.DenormalizeC1(v[GetValueC1Index()]);
+    //    v[GetValueC2Index()] = (float)Colorspace.DenormalizeC2(v[GetValueC2Index()]);
+    //  }
+    //  for (int i = 0; i < LumaComponentCount; ++ i)
+    //  {
+    //    v[i] = (float)Colorspace.DenormalizeL(v[i]);
+    //  }
+    //}
+    //public unsafe double NormalizeElement(ValueSet v, int elementToNormalize)
+    //{
+    //  if (UseChroma)
+    //  {
+    //    if (elementToNormalize == GetValueC1Index())
+    //      return Colorspace.NormalizeC1(v[elementToNormalize]);
+    //    if (elementToNormalize == GetValueC2Index())
+    //      return Colorspace.NormalizeC2(v[elementToNormalize]);
+    //  }
+    //  return Colorspace.NormalizeL(v[elementToNormalize]);
+    //}
 
     public static Point GetTileOrigin(Size charSize, Size numTilesPerChar, int tx, int ty)
     {

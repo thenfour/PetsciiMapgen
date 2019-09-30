@@ -13,6 +13,7 @@ using System.Drawing.Text;
 using System.Runtime.InteropServices;
 using System.IO;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace PetsciiMapgen
 {
@@ -30,9 +31,142 @@ namespace PetsciiMapgen
       None
     }
 
+    // https://stackoverflow.com/questions/9080231/how-to-save-geometry-as-image
+    private static void GenerateFontMap2(string fontName, int WidthAndHeight, string outputFileName)
+    {
+      GlyphTypeface font;
+      if (File.Exists(fontName))
+      {
+        font = new GlyphTypeface(new Uri(fontName));
+      } else
+      {
+        Typeface face = new Typeface(fontName);
+        face.TryGetGlyphTypeface(out font);
+      }
+
+      //int ColumnCount = 10;
+      //int MaxDrawCount = 30; // use int.MaxValue to draw them all            
+      double fontSize = WidthAndHeight;
+      // the height of each cell has to include over/underhanging glyphs
+      SizeF cellSize = new SizeF((float)fontSize, (float)(fontSize * font.Height));
+
+      var Glyphs = from glyphIndex in font.CharacterToGlyphMap.Values
+                   select font.GetGlyphOutline(glyphIndex, fontSize, 1d);
+
+      int ColumnCount = (int)Math.Ceiling(Math.Sqrt(Glyphs.Count()));
+
+      // now create the visual we'll draw them to
+      DrawingVisual viz = new DrawingVisual();
+      int drawCount = -1;
+      using (DrawingContext dc = viz.RenderOpen())
+      {
+        foreach (var g in Glyphs)
+        {
+          drawCount++;
+          if (g.IsEmpty()) continue; // don't draw the blank ones
+                                     // center horizontally in the cell
+          double xOffset = (drawCount % ColumnCount) * cellSize.Width + cellSize.Width / 2d - g.Bounds.Width / 2d;
+          // place the character on the baseline of the cell
+          double yOffset = (drawCount / ColumnCount) * cellSize.Height + fontSize * font.Baseline;
+          dc.PushTransform(new TranslateTransform(xOffset, yOffset));
+          dc.DrawGeometry(System.Windows.Media.Brushes.Red, null, g);
+          dc.Pop(); // get rid of the transform
+        }
+      }
+
+      int RowCount = drawCount / ColumnCount;
+      if (drawCount % ColumnCount != 0)
+        RowCount++; // to include partial rows
+      int bitWidth = (int)Math.Ceiling((double)(cellSize.Width * ColumnCount));
+      int bitHeight = (int)Math.Ceiling((double)(cellSize.Height * RowCount));
+      RenderTargetBitmap bmp = new RenderTargetBitmap(
+                                                      bitWidth, bitHeight,
+                                                      96, 96,
+                                                      PixelFormats.Pbgra32);
+      bmp.Render(viz);
+
+      PngBitmapEncoder encoder = new PngBitmapEncoder();
+      encoder.Frames.Add(BitmapFrame.Create(bmp));
+      using (FileStream file = new FileStream(outputFileName, FileMode.Create))
+        encoder.Save(file);
+    }
+
+
+    //private static void GenerateFontMap(string fontName, int WidthAndHeight, string fileName)
+    //{
+    //  GlyphTypeface font;
+    //  if (File.Exists(fontName))
+    //  {
+    //    font = new GlyphTypeface(new Uri(fontName));
+    //  }
+    //  else
+    //  {
+    //    Typeface face = new Typeface(fontName);
+    //    face.TryGetGlyphTypeface(out font);
+    //  }
+
+    //  List<ushort> fontNum = new List<ushort>();
+
+    //  foreach (KeyValuePair<int, ushort> kvp in font.CharacterToGlyphMap)
+    //  {
+    //    fontNum.Add(kvp.Value);
+    //  }
+
+    //  if (fontNum.Count < 1)
+    //    return;
+
+    //  int GlyphsPerRow = (int)Math.Ceiling(Math.Sqrt(fontNum.Count));
+
+    //  int mapWidth = WidthAndHeight * GlyphsPerRow;
+    //  int mapHeight = WidthAndHeight * ((fontNum.Count + 1) / GlyphsPerRow + 1);
+
+    //  Bitmap b = new Bitmap(mapWidth, mapHeight);
+    //  Graphics g = Graphics.FromImage(b);
+
+    //  System.Windows.Media.Pen glyphPen = new System.Windows.Media.Pen(System.Windows.Media.Brushes.Black, 1);
+    //  Geometry glyphGeometry;
+    //  GeometryDrawing glyphDrawing;
+    //  PngBitmapEncoder encoder;
+    //  RenderTargetBitmap bmp;
+    //  DrawingVisual viz;
+
+    //  for (int i = 0; i < fontNum.Count; i++)
+    //  {
+    //    glyphGeometry = font.GetGlyphOutline(fontNum[i], WidthAndHeight, 1);
+    //    glyphDrawing = new GeometryDrawing(System.Windows.Media.Brushes.Black, glyphPen, glyphGeometry);
+
+    //    DrawingImage geometryImage = new DrawingImage(glyphDrawing);
+    //    geometryImage.Freeze();
+
+    //    viz = new DrawingVisual();
+    //    DrawingContext dc = viz.RenderOpen();
+    //    dc.DrawImage(geometryImage, new System.Windows.Rect(0, 0, geometryImage.Width, geometryImage.Height));
+    //    dc.Close();
+
+    //    bmp = new RenderTargetBitmap(WidthAndHeight, WidthAndHeight, 96, 96, PixelFormats.Pbgra32);
+
+    //    bmp.Render(viz);
+
+    //    encoder = new PngBitmapEncoder();
+    //    encoder.Frames.Add(BitmapFrame.Create(bmp));
+
+    //    MemoryStream myStream = new MemoryStream();
+    //    encoder.Save(myStream);
+
+    //    g.DrawImage(System.Drawing.Bitmap.FromStream(myStream), new PointF((i - (i / GlyphsPerRow) * GlyphsPerRow) * WidthAndHeight, i / GlyphsPerRow * WidthAndHeight));
+    //  }
+    //  g.Dispose();
+    //  b.Save(fileName, ImageFormat.Png);
+    //  b.Dispose();
+    //}
+
     static void Main(string[] args)
     {
-      //args = new string[] { "-batchrun", "Comic" };
+      //GenerateFontMap(@"C:\root\git\thenfour\PetsciiMapgen\img\fonts\EmojiOneColor.otf", 32, @"c:\temp\emojione.png");
+      //GenerateFontMap2(@"C:\root\git\thenfour\PetsciiMapgen\img\fonts\EmojiOneColor.otf", 32, @"c:\temp\comicsans.png");
+      //GenerateFontMap(@"Arial Unicode MS", 32, @"c:\temp\aunicod1.png");
+      //GenerateFontMap2(@"Arial Unicode MS", 32, @"c:\temp\aunicod2.png");
+      //args = new string[] { "-batchrun", "C64", "LAB", "budget", "C64color ", "2x2+2" };
 
       using (var stayon = new StayOn())
       {
@@ -300,7 +434,7 @@ namespace PetsciiMapgen
         {
           ulong maxMapKeys = ulong.Parse(s);
 
-          partitionManager.Init(pixelFormat);
+          partitionManager.Init();
 
           ulong partitionCount = (ulong)partitionManager.PartitionCount;
           Log.WriteLine("Partition count: {0:N0}", partitionCount);

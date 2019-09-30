@@ -11,6 +11,8 @@ using System.Runtime.CompilerServices;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 
+
+
 namespace PetsciiMapgen
 {
   public class Partition
@@ -18,18 +20,17 @@ namespace PetsciiMapgen
     public int Dimension { get; private set; } // which element of ValueSet is used to choose which this.Children to place it in.
     List<Partition> children;
     List<CharInfo> items = new List<CharInfo>();
-    public IPixelFormatProvider PixelFormatProvider { get; private set; }
+    CharInfo[] itemsArray = null;// null when dirty.
 
-    public Partition(int partsPerLevel, int depth, int dimension, IPixelFormatProvider pf)
+    public Partition(int partsPerLevel, int depth, int dimension)
     {
-      this.PixelFormatProvider = pf;
       this.Dimension = dimension;
       if (depth > 1)
       {
         children = new List<Partition>(partsPerLevel);
         for (int i = 0; i < partsPerLevel; ++ i)
         {
-          children.Add(new Partition(partsPerLevel, depth - 1, dimension + 1, pf));
+          children.Add(new Partition(partsPerLevel, depth - 1, dimension + 1));
         }
       }
     }
@@ -48,9 +49,10 @@ namespace PetsciiMapgen
       }
     }
 
-    public unsafe int GetChildIndex(ValueSet v, bool isNormalized)
+    public unsafe int GetChildIndex(ValueSet v)
     {
-      double f = isNormalized ? v[this.Dimension] : this.PixelFormatProvider.NormalizeElement(v, this.Dimension);
+      float f = v.NormalizedValues[this.Dimension];
+      //double f = isNormalized ? v[this.Dimension] : this.PixelFormatProvider.NormalizeElement(v, this.Dimension);
       Debug.Assert(f >= 0);
       Debug.Assert(f <= 1);
       int n = (int)Math.Floor(f * children.Count);// if children=3, 0=0, .3=.9, .35 = 1.05, 1.0 = 3
@@ -58,30 +60,35 @@ namespace PetsciiMapgen
       return n;
     }
 
-    public void AddItem(CharInfo ci, bool isNormalized)
+    public void AddItem(CharInfo ci)
     {
       items.Add(ci); // this means all partitions contain references to all child charinfo
+      itemsArray = null;
 
       if (children != null)
       {
-        int n = GetChildIndex(ci.actualValues, isNormalized);
-        children[n].AddItem(ci, isNormalized);
+        int n = GetChildIndex(ci.actualValues);
+        children[n].AddItem(ci);
       }
     }
 
     // returns a list of items that's guaranteed to be populated, either of a more specific child's itemss, or if there are no
     // child items, our own items.
     // assumes that v is already in this current partition.
-    public IEnumerable<CharInfo> GetItemsInSamePartition(ValueSet v, bool isNormalized)
+    public CharInfo[] GetItemsInSamePartition(ValueSet v)
     {
+      if (itemsArray == null)
+      {
+        itemsArray = items.ToArray();
+      }
       if (children == null)
-        return this.items;// possibly returns 0 items! (and parent calls need to respond to that)
-      int n = GetChildIndex(v, isNormalized);
-      var ret = children[n].GetItemsInSamePartition(v, isNormalized);
+        return this.itemsArray;// possibly returns 0 items! (and parent calls need to respond to that)
+      int n = GetChildIndex(v);
+      var ret = children[n].GetItemsInSamePartition(v);
       if (ret.Any())
         return ret;// there are some child (aka more specific) items; use it.
       // child didn't return any items. use own.
-      return this.items;
+      return this.itemsArray;
     }
   }
   public class PartitionManager
@@ -90,7 +97,6 @@ namespace PetsciiMapgen
     public int Depth { get; private set; }
 
     private Partition Root { get; set; }
-    public IPixelFormatProvider PixelFormatProvider { get; private set; }
 
     public int PartitionCount
     {
@@ -106,20 +112,19 @@ namespace PetsciiMapgen
       this.Depth = depth;
     }
 
-    public void Init(IPixelFormatProvider pf)
+    public void Init()
     {
-      this.PixelFormatProvider = pf;
-      this.Root = new Partition(PartitionsPerDimension, Depth, 0, this.PixelFormatProvider);
+      this.Root = new Partition(PartitionsPerDimension, Depth, 0);
     }
 
-    public void AddItem(CharInfo ci, bool isNormalized)
+    public void AddItem(CharInfo ci)
     {
-      this.Root.AddItem(ci, isNormalized);
+      this.Root.AddItem(ci);
     }
 
-    public IEnumerable<CharInfo> GetItemsInSamePartition(ValueSet v, bool isNormalized)
+    public CharInfo[] GetItemsInSamePartition(ValueSet v)
     {
-      return this.Root.GetItemsInSamePartition(v, isNormalized);
+      return this.Root.GetItemsInSamePartition(v);
     }
 
     public override string ToString()
@@ -127,10 +132,10 @@ namespace PetsciiMapgen
       return string.Format("p{0}x{1}", this.PartitionsPerDimension, this.Depth);
     }
 
-    internal void WriteConfig(StringBuilder sb)
-    {
-      sb.AppendLine(string.Format("partitionsPerDimension=" + this.PartitionsPerDimension));
-      sb.AppendLine(string.Format("partitionDepth=" + this.Depth));
-    }
+    //internal void WriteConfig(StringBuilder sb)
+    //{
+    //  sb.AppendLine(string.Format("partitionsPerDimension=" + this.PartitionsPerDimension));
+    //  sb.AppendLine(string.Format("partitionDepth=" + this.Depth));
+    //}
   }
 }

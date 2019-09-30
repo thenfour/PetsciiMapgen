@@ -11,7 +11,7 @@ using System.Runtime.CompilerServices;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Drawing.Text;
-using System.Windows;
+//using System.Windows;
 
 namespace PetsciiMapgen
 {

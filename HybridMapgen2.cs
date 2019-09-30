@@ -55,7 +55,7 @@ namespace PetsciiMapgen
       this.FontProvider = fontProvider;
       this.PixelFormatProvider = pixelFormatProvider;
       this.FontProvider.Init(this.PixelFormatProvider.DiscreteNormalizedValues.Length);
-      pm.Init(this.PixelFormatProvider);
+      pm.Init();
 
 
 
@@ -103,8 +103,11 @@ namespace PetsciiMapgen
       // create list of all mapkeys
       Log.EnterTask("Generating {0:N0} map key indices", pixelFormatProvider.MapEntryCount);
       this.Keys = Utils.Permutate(PixelFormatProvider.DimensionCount, pixelFormatProvider.DiscreteNormalizedValues); // returns sorted.
-
-      // examine keys.
+      // populate the denormalized values
+      for (int i = 0; i < this.Keys.Length; ++ i)
+      {
+        this.Keys[i].DenormalizedValues = this.PixelFormatProvider.Denormalize(this.Keys[i].NormalizedValues);
+      }
 
       Log.EndTask();
 
@@ -112,7 +115,7 @@ namespace PetsciiMapgen
 
       foreach (var ci in this.CharInfo)
       {
-        pm.AddItem(ci, false);
+        pm.AddItem(ci);
       }
 
       Log.EndTask();
@@ -207,15 +210,17 @@ namespace PetsciiMapgen
       for (int ikey = (int)keyBegin; ikey < (int)keyEnd; ++ikey)
       {
         pr?.Visit((ulong)ikey - keyBegin);
-        var chars = pm.GetItemsInSamePartition(this.Keys[ikey], true);
+        var chars = pm.GetItemsInSamePartition(this.Keys[ikey]);
         double p = ikey - (int)keyBegin;
         p /= keyEnd - keyBegin;
 
         CharInfo ciNearest = null;
         double closestDist = double.MaxValue;
 
-        foreach (var ci in chars)
+        //foreach (var ci in chars)
+        for (int ichar = 0; ichar < chars.Length; ++ ichar)
         {
+          var ci = chars[ichar];
           double fdist = this.PixelFormatProvider.CalcKeyToColorDist(this.Keys[ikey], ci.actualValues);
           if (fdist < closestDist)
           {
