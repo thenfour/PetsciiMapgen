@@ -42,6 +42,112 @@ using System.Runtime.InteropServices;
 
 namespace PetsciiMapgen
 {
+  public interface IFiveTileTessellator
+  {
+    string DisplayName { get; }
+    int GetLumaTileIndexOfPixelPosInCell(int x, int y, Size cellSize);
+  }
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////
+  //   ........########################
+  //   ..........######################
+  //   ..........######################
+  //   ............##    ##############
+  //   ............        ##########33
+  //   ..........            ####333333
+  //   ........                33333333
+  //   ......                    333333
+  //   ......                    333333
+  //   ........                33333333
+  //   ......////            3333333333
+  //   ..//////////        333333333333
+  //   //////////////    //333333333333
+  //   //////////////////////3333333333
+  //   //////////////////////3333333333
+  //   ////////////////////////33333333
+  public class FiveTileTesselatorA : IFiveTileTessellator
+  {
+    public string DisplayName { get { return "A"; } }
+    protected float Rotation { get; private set; } = 0.5f; // 0-1, default 0.5
+    // this defines the tiling
+    public virtual int GetLumaTileIndexOfPixelPosInCell(int x, int y, Size cellSize)
+    {
+      vec2 posInCell01 = vec2.Init(x, y)
+        .add(.5f)// center in the pixel
+        .dividedBy(cellSize);
+
+      vec2 skewAmt = posInCell01.minus(.5f).multipliedBy(this.Rotation);
+      skewAmt.y = -skewAmt.y;
+
+      vec2 tile = posInCell01.add(skewAmt.yx());// which tile are we in (x=0,1, y=0,1)
+      ivec2 itile = tile.step(.5f);
+      int tileIdx = itile.x + itile.y * 2;
+
+      posInCell01 = posInCell01.minus(.5f).abs();
+      float m = posInCell01.x + posInCell01.y;
+      if (m < 1.0 / 3.0)
+        tileIdx = 4;// arbitrary number that looks good perceptually.
+      return tileIdx;
+    }
+  }
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////
+  ///this has a more regular shape for the center.
+  //   ..........######################
+  //   ..........######################
+  //   ............####################
+  //   ............####################
+  //   ............    ################
+  //   ............        ########3333
+  //   ..........              33333333
+  //   ..........              33333333
+  //   ........              3333333333
+  //   ........              3333333333
+  //   ....////////        333333333333
+  //   ////////////////    333333333333
+  //   ////////////////////333333333333
+  //   ////////////////////333333333333
+  //   //////////////////////3333333333
+  //   //////////////////////3333333333
+
+  public class FiveTileTesselatorB : IFiveTileTessellator
+  {
+    public string DisplayName { get { return "B"; } }
+    protected float Rotation { get; private set; } = 0.4f; // 0-1, default 0.5
+    // this defines the tiling
+    public virtual int GetLumaTileIndexOfPixelPosInCell(int x, int y, Size cellSize)
+    {
+      vec2 posInCell01 = vec2.Init(x, y)
+        .add(.5f)// center in the pixel
+        .dividedBy(cellSize);
+
+      vec2 skewAmt = posInCell01.minus(.5f).multipliedBy(this.Rotation);
+      skewAmt.y = -skewAmt.y;
+
+      vec2 tile = posInCell01.add(skewAmt.yx());// which tile are we in (x=0,1, y=0,1)
+      ivec2 itile = tile.step(.5f);
+      int tileIdx = itile.x + itile.y * 2;
+
+      //vec2 c = posInCell01 + skewAmt.yx - .5;// which tile are we in (x=0,1, y=0,1)
+      vec2 c = posInCell01.add(skewAmt.yx()).add(-.5f);// which tile are we in (x=0,1, y=0,1)
+      //tileIdx = step(abs(c.x) + abs(c.y), .3) == 1. ? 4. : tileIdx;
+      if ((Math.Abs(c.x) + Math.Abs(c.y)) < .333)
+      {
+        tileIdx = 4;
+      }
+
+
+      //posInCell01 = posInCell01.minus(.5f).abs();
+      //float m = posInCell01.x + posInCell01.y;
+      //if (m < 1.0 / 3.0)
+      //  tileIdx = 4;// arbitrary number that looks good perceptually.
+      return tileIdx;
+    }
+  }
+
+
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////
   // base class for pixel formats using colorspace represented by separate luminance + 2 chroma-ish colorants
   public class FiveTilePixelFormat : IPixelFormatProvider
   {
@@ -57,42 +163,50 @@ namespace PetsciiMapgen
     protected int ChromaComponentCount { get; private set; }
 
     protected bool UseChroma { get; private set; }
-    protected float Rotation { get; private set; } // 0-1, default 0.5
 
     protected ILCCColorSpace Colorspace { get; private set; }
+    protected IFiveTileTessellator Tessellator { get; private set; } = null;
 
-    public string PixelFormatString
+    public virtual string PixelFormatString
     {
       get
       {
-        string rotstring = "";
-        if (this.Rotation != 0.5f)
-        {
-          rotstring = string.Format("r{0:0.00}", this.Rotation);
-        }
-        return string.Format("FiveTile{3}{0}v{1}+{2}{4}",
+        return string.Format("FiveTile{4}{3}{0}v{1}+{2}",
           DiscreteNormalizedValues.Length,
           LumaComponentCount,
           UseChroma ? 2 : 0,
           Colorspace.FormatString,
-          rotstring);
+          Tessellator.DisplayName);
       }
     }
 
     public static FiveTilePixelFormat ProcessArgs(string[] args, IFontProvider font)
     {
       FiveTilePixelFormat ret = new FiveTilePixelFormat();
-      ret.Rotation = 0.5f;
+      //ret.Rotation = 0.5f;
       int valuesPerComponent = 255;
       args.ProcessArg("-pfargs", s =>
       {
         valuesPerComponent = int.Parse(s.Split('v')[0]);
         ret.UseChroma = int.Parse(s.Split('+')[1]) > 1;
       });
-      args.ProcessArg("-yuv5rot", s => 
+      args.ProcessArg("-tessellator", s =>
       {
-        ret.Rotation = float.Parse(s);
+        switch(s.ToLowerInvariant())
+        {
+          case "a":
+            ret.Tessellator = new FiveTileTesselatorA();
+            break;
+          case "b":
+            ret.Tessellator = new FiveTileTesselatorB();
+            break;
+        }
       });
+
+      if (ret.Tessellator == null)
+      {
+        ret.Tessellator = new FiveTileTesselatorA();
+      }
 
       ret.Colorspace = Utils.ParseRequiredLCCColorSpaceArgs(args);
       ret.ChromaComponentCount = (ret.UseChroma ? 2 : 0);
@@ -102,14 +216,14 @@ namespace PetsciiMapgen
 
       // OUTput a visual of the tiling
       Log.WriteLine("Luma tiling breakdown for charsize {0}:", font.CharSizeNoPadding);
-      Log.WriteLine(" Rotation: {0}", ret.Rotation);
+      //Log.WriteLine(" Rotation: {0}", ret.Rotation);
       int[] pixelCounts = new int[ret.LumaComponentCount];
       for (int py = 0; py < font.CharSizeNoPadding.Height; ++py)
       {
         string l = "  ";
         for (int px = 0; px < font.CharSizeNoPadding.Width; ++px)
         {
-          int lumaIdx = ret.GetLumaTileIndexOfPixelPosInCell(px, py, font.CharSizeNoPadding);
+          int lumaIdx = ret.Tessellator.GetLumaTileIndexOfPixelPosInCell(px, py, font.CharSizeNoPadding);
           pixelCounts[lumaIdx]++;
           switch (lumaIdx)
           {
@@ -190,30 +304,7 @@ namespace PetsciiMapgen
         ret[i] = (float)Colorspace.DenormalizeL(va[i]);
       }
       return ret;
-    }    //internal unsafe void Denormalize(ref ValueSet v)
-    //{
-    //  // changes normalized 0-1 values to YUV-ranged values. depends on value format and stuff.
-    //  if (UseChroma)
-    //  {
-    //    v[GetValueC1Index()] = (float)Colorspace.DenormalizeC1(v[GetValueC1Index()]);
-    //    v[GetValueC2Index()] = (float)Colorspace.DenormalizeC2(v[GetValueC2Index()]);
-    //  }
-    //  for (int i = 0; i < LumaComponentCount; ++i)
-    //  {
-    //    v[i] = (float)Colorspace.DenormalizeL(v[i]);
-    //  }
-    //}
-    //public unsafe double NormalizeElement(ValueSet v, int elementToNormalize)
-    //{
-    //  if (UseChroma)
-    //  {
-    //    if (elementToNormalize == GetValueC1Index())
-    //      return Colorspace.NormalizeC1(v[elementToNormalize]);
-    //    if (elementToNormalize == GetValueC2Index())
-    //      return Colorspace.NormalizeC2(v[elementToNormalize]);
-    //  }
-    //  return Colorspace.NormalizeL(v[elementToNormalize]);
-    //}
+    }
 
     public int NormalizedValueSetToMapID(float[] vals)
     {
@@ -240,28 +331,6 @@ namespace PetsciiMapgen
       return ID;
     }
 
-    // this defines the tiling
-    public int GetLumaTileIndexOfPixelPosInCell(int x, int y, Size cellSize)
-    {
-      vec2 posInCell01 = vec2.Init(x, y)
-        .add(.5f)// center in the pixel
-        .dividedBy(cellSize);
-
-      vec2 skewAmt = posInCell01.minus(.5f).multipliedBy(this.Rotation);
-      skewAmt.y = -skewAmt.y;
-
-      vec2 tile = posInCell01.add(skewAmt.yx());// which tile are we in (x=0,1, y=0,1)
-      ivec2 itile = tile.step(.5f);
-      int tileIdx = itile.x + itile.y * 2;
-
-      posInCell01 = posInCell01.minus(.5f).abs();
-      float m = posInCell01.x + posInCell01.y;
-      if (m < 1.0/3.0)
-        tileIdx = 4;// arbitrary number that looks good perceptually.
-      return tileIdx;
-    }
-
-
     public unsafe void PopulateCharColorData(CharInfo ci, IFontProvider font)
     {
       ColorF charRGB = ColorF.Init;
@@ -279,7 +348,7 @@ namespace PetsciiMapgen
         {
           ColorF pc = font.GetPixel(ci.srcIndex, px, py);
           charRGB = charRGB.Add(pc);
-          int lumaIdx = GetLumaTileIndexOfPixelPosInCell(px, py, font.CharSizeNoPadding);
+          int lumaIdx = Tessellator.GetLumaTileIndexOfPixelPosInCell(px, py, font.CharSizeNoPadding);
           lumaRGB[lumaIdx] = lumaRGB[lumaIdx].Add(pc);
           pixelCounts[lumaIdx]++;
         }
@@ -335,7 +404,7 @@ namespace PetsciiMapgen
         {
           ColorF pc = ColorF.From(img.GetPixel(x + px, y + py));
           charRGB = charRGB.Add(pc);
-          int lumaIdx = GetLumaTileIndexOfPixelPosInCell(px, py, sz);
+          int lumaIdx = Tessellator.GetLumaTileIndexOfPixelPosInCell(px, py, sz);
           lumaRGB[lumaIdx] = lumaRGB[lumaIdx].Add(pc);
           pixelCounts[lumaIdx]++;
         }

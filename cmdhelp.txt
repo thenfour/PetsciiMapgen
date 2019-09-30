@@ -47,9 +47,7 @@ Command options:
                           X = number of Luma columns per cell
                           Y = number of Luma rows per cell
                           C = 0 or 2, to include chroma information
--yuv5rot 0.0-1.0          For the FiveTile pixelformat, specifies the amount of
-                          rotation of the tile grid. Default = .5.
-
+-tessellator A|B|C        specify the tesselator for five-tile pixel format
 -fonttype ID              normal, mono, colorkey, fontfamily
 
 NORMAL

@@ -319,7 +319,7 @@ namespace PetsciiMapgen
       SetThreadExecutionState(EXECUTION_STATE.ES_CONTINUOUS);
     }
   }
-  class ArgSet
+  public class ArgSet
   {
     public delegate IEnumerable<string> ArgGeneratorDelegate(ArgSet x);
 
@@ -374,7 +374,7 @@ namespace PetsciiMapgen
     }
   }
 
-  class ArgSetList
+  public class ArgSetList
   {
     public IEnumerable<ArgSet> argSets;
 

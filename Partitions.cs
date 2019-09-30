@@ -141,6 +141,7 @@ namespace PetsciiMapgen
       {
         midpoints[iv] = (discreteValues[iv + 1] + discreteValues[iv]) / 2;
       }
+      //midpoints = discreteValues; // this would demonstrate the huge amount of noise you get when worst-case boundaries.
 
       // select midpoints that are closest to theoretical even distribution
       int[] partitionBoundIdx = new int[partsPerLevel - 1];

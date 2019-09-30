@@ -38,19 +38,45 @@ namespace PetsciiMapgen
       //GenerateFontMap(@"Arial Unicode MS", 32, @"c:\temp\aunicod1.png");
       //GenerateFontMap2(@"Arial Unicode MS", 32, @"c:\temp\aunicod2.png");
       //args = new string[] { "-batchrun", "C64", "LAB", "budget", "C64color ", "2x2+2" };
-      //args = new string[] { @"-fonttype", @"mono", @"-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\c64opt160.png",
-      //  @"-charsize", @"8x8", @"-palette", @"C64Color", @"-cs", @"lab",
-      //  @"-pf", @"square",
-      //          @"-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      ArgSetList batchOverride = null; ;
+
+      //batchOverride = Batches.Args(
+      //  @"-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
       //  @"-testpalette", "ThreeBit",
+      //  @"-outdir", @"f:\maps",
+      //  @"-fonttype", @"normal",
+      //  @"-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark12.png",
+      //  @"-charsize", @"12x12",
+      //  @"-cs", @"lab",
 
-      //  @"-pfargs", @"9v2x2+2",
-      //  @"-partitions", @"5",
-
-      //  @"-outdir", @"f:\maps", "-cores", "1" };
+      //  @"-pf", @"fivetile",
+      //  @"-pfargs", @"16v5+0"
+      //) + Batches.Or(
+      //  //Batches.Args(@"-tessellator", "a"),
+      //  Batches.Args(@"-tessellator", "b")
+      //  ) + Batches.Or(
+      //  Batches.Args(@"-partitions", "13")
+      //  //Batches.Args(@"-partitions", "7"),
+      //  //Batches.Args(@"-partitions", "10")
+      //    );
 
       using (var stayon = new StayOn())
       {
+        if (batchOverride != null)
+        {
+          int ibatch = 0;
+          Log.WriteLine("Batch contains {0} runs", batchOverride.argSets.Count());
+          foreach (var argset in batchOverride.argSets)
+          {
+            Log.EnterTask("Running batch #{0}", ibatch);
+            Log.WriteLine("Args: {0}", argset.ToCSString());
+            Main2(argset.Args.ToArray());
+            Log.EndTask();
+            ibatch++;
+          }
+          return;
+        }
+
         string[] batchKeywords = new string[] { };
         List<string> batchAddArgs = new List<string>();
         BatchCommand batchCommand = BatchCommand.None;

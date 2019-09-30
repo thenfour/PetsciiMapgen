@@ -16,19 +16,19 @@ using System.Windows.Media;
 
 namespace PetsciiMapgen
 {
-  class Batches
+  public class Batches
   {
-    static ArgSet Args(params string[] a)
+    public static ArgSet Args(params string[] a)
     {
       return new ArgSet(a);
     }
-    static ArgSetList Or(params ArgSet[] argSets)
+    public static ArgSetList Or(params ArgSet[] argSets)
     {
       var ret = new ArgSetList();
       ret.argSets = argSets;
       return ret;
     }
-    static ArgSetList Or(params ArgSetList[] argsetLists)
+    public static ArgSetList Or(params ArgSetList[] argsetLists)
     {
       var ret = new ArgSetList();
       List<ArgSet> l = new List<ArgSet>();
