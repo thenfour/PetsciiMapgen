@@ -156,9 +156,12 @@ namespace EmojiTest
 
     public static GenerateEmojiBitmapResults GenerateEmojiBitmap(string fontName, int cellWidth, int cellHeight,
       float additionalScale, int shiftX, int shiftY, IEnumerable<EmojiInfo> codepointsToInclude,
-      System.Drawing.Color[] backgroundPalette, System.Drawing.Color[] textPalette, float? aspectToleranceFromTarget, bool tryToFit)
+      System.Drawing.Color[] backgroundPalette, System.Drawing.Color[] textPalette, float? aspectToleranceFromTarget, bool tryToFit,
+      System.Windows.FontStyle fontStyle, System.Windows.FontWeight fontWeight, System.Windows.FontStretch fontStretch,
+      bool strictGlyphChecking, d2.TextAntialiasMode aaMode)
     {
-      System.Windows.Media.Typeface tf = new System.Windows.Media.Typeface(fontName);
+      System.Windows.Media.FontFamily fm = new System.Windows.Media.FontFamily(fontName);
+      System.Windows.Media.Typeface tf = new System.Windows.Media.Typeface(fm, fontStyle, fontWeight, fontStretch);
       PetsciiMapgen.ProgressReporter pr = new PetsciiMapgen.ProgressReporter((ulong)codepointsToInclude.Count() * (ulong)backgroundPalette.Length * (ulong)textPalette.Length);
       if (!tf.TryGetGlyphTypeface(out System.Windows.Media.GlyphTypeface gtf))
       {
@@ -213,12 +216,15 @@ namespace EmojiTest
       {
         if (o.info.forceInclude)
           return true;
+        if (o.info.str == "\r" || o.info.str == "\n")
+          return false;
         if (gtf != null)
         {
           if (!gtf.CharacterToGlyphMap.ContainsKey(o.info.cps[0]))
-          { // is this good enough of a check? 
-                rejectedBecauseNotInTypeface++;
-            return false;
+          {
+            rejectedBecauseNotInTypeface++;
+            if (strictGlyphChecking)
+              return false;
           }
         }
         float aspect = o.width / o.height;
@@ -251,14 +257,15 @@ namespace EmojiTest
       int imgHeight = rows * targetHeight;
 
       List<GlyphData> fullEmoji = new List<GlyphData>(totalCharCount);
+      if (emoji.Length < 2)
+      {
+        throw new Exception("NOt enough glyphs to generate anything meaningful.");
+      }
 
       foreach (var backgroundColor in backgroundPalette)
       {
         foreach (var textColor in textPalette)
         {
-          RawColor4 bg = new RawColor4(backgroundColor.R / 255.0f, backgroundColor.G / 255.0f, backgroundColor.B / 255.0f, 1);
-          dt.SetColor(textColor);
-
           var bmp = new System.Drawing.Bitmap(imgWidth, imgHeight);
           using (System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(bmp))
           {
@@ -282,7 +289,9 @@ namespace EmojiTest
               var n = new GlyphData(e);
               fullEmoji.Add(n);
 
-              n.bmp = dt.TextToBitmap(n.info.str, out n.bmpSize, bg);
+              RawColor4 bg = new RawColor4(backgroundColor.R / 255.0f, backgroundColor.G / 255.0f, backgroundColor.B / 255.0f, 1);
+              dt.SetColor(textColor);
+              n.bmp = dt.TextToBitmap(n.info.str, out n.bmpSize, bg, aaMode);
 
               // offset where to blit from, so it's centered.
               int ox = (int)((n.bmpSize.Width - targetWidth) / 2);
@@ -393,7 +402,7 @@ namespace EmojiTest
     }
 
 
-    public System.Drawing.Bitmap TextToBitmap(string text, out Size2F size, RawColor4 bgcolor, int maxWidth= 1000, int maxHeight = 1000)
+    public System.Drawing.Bitmap TextToBitmap(string text, out Size2F size, RawColor4 bgcolor, d2.TextAntialiasMode aamode, int maxWidth = 1000, int maxHeight = 1000)
     {
       var sz = GetTextSize(text, maxWidth, maxHeight);
       int pixelWidth = (int)(sz.Width * 2);
@@ -408,6 +417,8 @@ namespace EmojiTest
 
       // Draw Text
       TextLayout textLayout = new TextLayout(dwFactory, text, textFormat, pixelWidth, pixelHeight);
+      //d2dContext.TextRenderingParams = new RenderingParams(dwFactory, 1, 0, 0, PixelGeometry.Flat, renderingMode);
+      d2dContext.TextAntialiasMode = aamode;
 
       d2dContext.BeginDraw();
       d2dContext.Clear(bgcolor);

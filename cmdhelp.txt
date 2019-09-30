@@ -97,5 +97,24 @@ This is unique in that it produces a text file along with images.
   -aspectTolerance         Optional. Discards glyphs whose natural aspect ratio
                            are too distant. This check isn't performed if
                            omitted or invalid.
+  -strictGlyphCheck 0|1    if 1, reject any glyphs that don't appear in the font
+  -fontweight X            0-999 OpenType weight value.
+                           100 = thin
+                           300 = Light
+                           400 = normal
+                           700 = bold
+                           900 = black/heavy
+                           https://docs.microsoft.com/en-us/typography/opentype/spec/os2#usweightclass
+  -fontstyle X             Normal|Italic
+  -fontstretch X           https://docs.microsoft.com/en-us/dotnet/api/system.windows.fontstretches?view=netframework-4.8
+                           1 = ultra condensed
+                           3 = condensed
+                           5 = normal
+                           7 = expanded
+                           9 = ultra exp
+  -fontsmoothing X         Aliased
+                           Cleartype
+                           Grayscale
+
   -fontname                Optional, for file naming because the calculated
                            font family name can be long.

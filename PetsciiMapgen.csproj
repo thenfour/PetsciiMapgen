@@ -83,6 +83,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Batches.cs" />
     <Compile Include="BigArray.cs" />
     <Compile Include="Color.cs" />
     <Compile Include="EmojiTest.cs" />

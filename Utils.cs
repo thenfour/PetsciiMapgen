@@ -321,24 +321,51 @@ namespace PetsciiMapgen
   }
   class ArgSet
   {
-    public IEnumerable<string> args;
+    public delegate IEnumerable<string> ArgGeneratorDelegate(ArgSet x);
+
+    public IEnumerable<string> _args = Enumerable.Empty<string>();
+    public IEnumerable<ArgGeneratorDelegate> _argGenerators = Enumerable.Empty<ArgGeneratorDelegate>();
+
     public ArgSet(params string[] a)
     {
-      args = a;
+      _args = a;
     }
     public ArgSet(IEnumerable<string> a)
     {
-      args = a;
+      _args = a;
     }
     public static ArgSet operator +(ArgSet a, ArgSet b)
     {
       ArgSet n = new ArgSet();
-      n.args = a.args.Concat(b.args);
+      n._args = a._args.Concat(b._args);
+      n._argGenerators = a._argGenerators.Concat(b._argGenerators);
       return n;
     }
+    public static ArgSet operator +(ArgSet a, ArgGeneratorDelegate b)
+    {
+      ArgSet n = new ArgSet();
+      n._args = a._args;
+      n._argGenerators = a._argGenerators.Append(b);
+      return n;
+    }
+
+    public IEnumerable<string> Args
+    {
+      get
+      {
+        var generatorRes = _argGenerators.Select(ag => ag(this));
+        var tr = _args;
+        foreach (var g in generatorRes)
+        {
+          tr = tr.Concat(g);
+        }
+        return tr;
+      }
+    }
+
     public override string ToString()
     {
-      return string.Join(" ", args);
+      return string.Join(" ", Args);
     }
   }
 
@@ -376,9 +403,9 @@ namespace PetsciiMapgen
         foreach (var bo in b.argSets)
         {
           ArgSet n = new ArgSet();
-          List<string> args = ao.args.ToList();
-          args.AddRange(bo.args);
-          n.args = args.ToArray();
+          List<string> args = ao._args.ToList();
+          args.AddRange(bo._args);
+          n._args = args.ToArray();
           x.Add(n);
         }
       }
@@ -405,6 +432,19 @@ namespace PetsciiMapgen
       foreach (var bo in b.argSets)
       {
         x.Add(a + bo);
+      }
+      ret.argSets = x;
+      return ret;
+    }
+
+    public static ArgSetList operator +(ArgSetList a, ArgSet.ArgGeneratorDelegate argGenerator)
+    {
+      // this just adds args to the end of all arglists
+      ArgSetList ret = new ArgSetList();
+      List<ArgSet> x = new List<ArgSet>();
+      foreach (var ao in a.argSets)
+      {
+        x.Add(ao + argGenerator);
       }
       ret.argSets = x;
       return ret;

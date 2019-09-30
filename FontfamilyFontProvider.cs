@@ -11,6 +11,7 @@ using System.Runtime.CompilerServices;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Drawing.Text;
+using System.Windows;
 
 namespace PetsciiMapgen
 {
@@ -41,28 +42,17 @@ namespace PetsciiMapgen
     public bool TryToFit { get; private set; }
     public string CharListTextFile { get; private set; }
 
-    //public virtual void WriteConfig(StringBuilder sb)
-    //{
-    //  sb.AppendLine("fontType=FontFamily");
-    //  sb.AppendLine(string.Format("charWidth={0}", this.CharSizeNoPadding.Width));
-    //  sb.AppendLine(string.Format("charHeight={0}", this.CharSizeNoPadding.Height));
-
-    //  sb.AppendLine(string.Format("FontFamily={0}", this.FontFamily));
-    //  sb.AppendLine(string.Format("UnicodeGlyphTextFile={0}", this.UnicodeGlyphTextFile));
-    //  sb.AppendLine(string.Format("BackgroundColor={0}", this.BackgroundColor));
-    //  sb.AppendLine(string.Format("ForegroundColor={0}", this.ForegroundColor));
-    //  sb.AppendLine(string.Format("Scale={0}", this.Scale));
-    //  sb.AppendLine(string.Format("Shift={0}", this.Shift));
-    //  sb.AppendLine(string.Format("AspectTolerance={0}", this.AspectTolerance));
-    //  sb.AppendLine(string.Format("FontName={0}", this.FontName));
-    //  sb.AppendLine(string.Format("FontFile={0}", this.FontFile));
-    //  sb.AppendLine(string.Format("TryToFit={0}", this.TryToFit));
-    //  sb.AppendLine(string.Format("CharListTextFile={0}", this.CharListTextFile));
-    //  sb.AppendLine(string.Format("CharCount={0}", this.CharCount));
-    //}
+    public bool StrictGlyphCheck { get; private set; }
+    public System.Windows.FontWeight FontWeight { get; private set; }
+    public System.Windows.FontStyle FontStyle { get; private set; }
+    public System.Windows.FontStretch FontStretch { get; private set; }
+    //public SharpDX.DirectWrite.RenderingMode RenderingMode { get; private set; }
+    public SharpDX.Direct2D1.TextAntialiasMode TextAAMode { get; private set; }
 
     public FontFamilyFontProvider(string fontFamily, string fontFile, Size charSize, string unicodeGlyphTextFile,
-      Color[] bgPalette, Color[] fgPalette, float scale, Size shift, float? aspectTolerance, string fontName, bool tryToFit, string charListTextFile)
+      Color[] bgPalette, Color[] fgPalette, float scale, Size shift, float? aspectTolerance, string fontName, bool tryToFit, string charListTextFile,
+      bool strictGlyphCheck, System.Windows.FontWeight fontWeight, System.Windows.FontStyle fontStyle, System.Windows.FontStretch fontStretch,
+      SharpDX.Direct2D1.TextAntialiasMode textAAMode)
     {
       this.CharSizeNoPadding = charSize;
       this.FontFamily = fontFamily;
@@ -76,6 +66,13 @@ namespace PetsciiMapgen
       this.FontName = fontName;
       this.TryToFit = tryToFit;
       this.CharListTextFile = charListTextFile;
+
+      this.StrictGlyphCheck = strictGlyphCheck;
+      this.FontWeight = fontWeight;
+      this.FontStyle = fontStyle;
+      this.FontStretch = fontStretch;
+      //this.RenderingMode = renderingMode;
+      this.TextAAMode = textAAMode;
 
       IEnumerable<EmojiTest.Utils.EmojiInfo> cps = null;
       if (!string.IsNullOrEmpty(UnicodeGlyphTextFile))
@@ -117,7 +114,8 @@ namespace PetsciiMapgen
 
       this.charMap = EmojiTest.Utils.GenerateEmojiBitmap(FontFamily,
         this.CharSizeNoPadding.Width, this.CharSizeNoPadding.Height,
-        Scale, Shift.Width, Shift.Height, cps, BackgroundPalette, ForegroundPalette, AspectTolerance, tryToFit);
+        Scale, Shift.Width, Shift.Height, cps, BackgroundPalette, ForegroundPalette, AspectTolerance, tryToFit,
+        this.FontStyle, this.FontWeight, this.FontStretch, this.StrictGlyphCheck, this.TextAAMode);
 
     }
 
@@ -154,6 +152,12 @@ namespace PetsciiMapgen
       float? aspectTolerance = null;
       bool tryToFit = false;
       string charListTextFile = "";
+      bool strictGlyphCheck = true;
+      System.Windows.FontWeight fontWeight = System.Windows.FontWeights.Normal;
+      System.Windows.FontStyle fontStyle = System.Windows.FontStyles.Normal;
+      System.Windows.FontStretch fontStretch = System.Windows.FontStretches.Normal;
+      //SharpDX.DirectWrite.RenderingMode renderingMode = SharpDX.DirectWrite.RenderingMode.Outline;
+      SharpDX.Direct2D1.TextAntialiasMode textAAMode = SharpDX.Direct2D1.TextAntialiasMode.Grayscale;
 
       args.ProcessArg("-fontfamily", s =>
       {
@@ -214,10 +218,46 @@ namespace PetsciiMapgen
       {
         fontName = s;
       });
+      args.ProcessArg("-strictGlyphCheck", s =>
+      {
+        strictGlyphCheck = Utils.ToBool(s);
+      });
+      args.ProcessArg("-fontWeight", s =>
+      {
+        fontWeight = System.Windows.FontWeight.FromOpenTypeWeight(int.Parse(s));
+      });
+      args.ProcessArg("-fontStyle", s =>
+      {
+        fontStyle = (s.ToLowerInvariant() == "italic") ? System.Windows.FontStyles.Italic : System.Windows.FontStyles.Normal;
+      });
+      args.ProcessArg("-fontStretch", s =>
+      {
+        fontStretch = System.Windows.FontStretch.FromOpenTypeStretch(int.Parse(s));
+      });
+      args.ProcessArg("-fontsmoothing", s =>
+      {
+        switch(s.ToLowerInvariant())
+        {
+          case "aliased":
+            textAAMode = SharpDX.Direct2D1.TextAntialiasMode.Aliased;
+            break;
+          case "cleartype":
+            textAAMode = SharpDX.Direct2D1.TextAntialiasMode.Cleartype;
+            break;
+          case "grayscale":
+            textAAMode = SharpDX.Direct2D1.TextAntialiasMode.Grayscale;
+            break;
+        }
+      });
+
+      if (string.IsNullOrEmpty(fontName))
+      {
+        fontName = fontFamily;
+      }
 
       return new FontFamilyFontProvider(fontFamily, fontFile, charSize, unicodeGlyphTextFile,
         bgPalette, fgPalette, scale, shift, aspectTolerance, fontName,
-        tryToFit, charListTextFile);
+        tryToFit, charListTextFile, strictGlyphCheck, fontWeight, fontStyle, fontStretch, textAAMode);
     }
 
     private PrivateFontCollection _fontCollection;
