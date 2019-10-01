@@ -1,4 +1,19 @@
-﻿using System;
+﻿/*
+ 
+we want to generate the following types of outputs:
+- usables for each font:
+  - high quality
+  - color, grayscale
+  - just use LAB fivetile B
+- demos of various parameters
+  - partitions
+  - colorspaces HSL LAB NYUV JPEG
+  - pixelformats 1x1 2x2 3x3 5tileA 5tileB 5tileC
+  - valuespertile 2 8 16 32 1024
+
+ 
+ */
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -43,85 +58,26 @@ namespace PetsciiMapgen
     public static ArgSetList GetAllBatches(string batchBaseDir, Func<string, string> batchFontPath, List<string> batchAddArgs)
     {
       var common = Args(
-        //"-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-        //"-testpalette", "ThreeBit",
+        "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+        "-testpalette", "ThreeBit",
         "-loadOrCreateMap"
         );
 
       // heavy: aiming for 16384x16384 = map size 268435456
-      var grayscalePixelFormatsHeavy = Args("pftag:Heavy Grayscale") + Or(
-        Args("-pf", "square", "-pfargs", "4096v1x1+0", "-partitions", "64"),//1
-        Args("-pf", "square", "-pfargs", "128v2x2+0", "-partitions", "4"),//4
-        Args("-pf", "square", "-pfargs", "8v3x3+0", "-partitions", "2"),//9
-        Args("-pf", "fivetile", "-pfargs", "48v5+0", "-partitions", "4")//5
-        );
-
-      var colorPixelFormatsHeavy = Args("pftag:Heavy Color") + Or(
-        Args("-pf", "square", "-pfargs", "645v1x1+2", "-partitions", "15"),//3
-        Args("-pf", "square", "-pfargs", "24v2x2+2", "-partitions", "2"),//6
-        Args("-pf", "square", "-pfargs", "6v3x3+2", "-partitions", "1"),//11
-        Args("-pf", "fivetile", "-pfargs", "16v5+2", "-partitions", "2")//7
-        );
-
-      // medium: aiming for 8192x8192 = map size 67108864
-      var grayscalePixelFormatsMedium = Args("pftag:Medium Grayscale") + Or(
-        Args("-pf", "square", "-pfargs", "2048v1x1+0", "-partitions", "32"),
-        Args("-pf", "square", "-pfargs", "90v2x2+0", "-partitions", "2"),
-        Args("-pf", "square", "-pfargs", "7v3x3+0", "-partitions", "2"),
-        Args("-pf", "fivetile", "-pfargs", "36v5+0", "-partitions", "2")
-        );
-
-      var colorPixelFormatsMedium = Args("pftag:Medium Color") + Or(
-        Args("-pf", "square", "-pfargs", "406v1x1+2", "-partitions", "7"),
-        Args("-pf", "square", "-pfargs", "20v2x2+2", "-partitions", "2"),
-        Args("-pf", "square", "-pfargs", "5v3x3+2", "-partitions", "1"),
-        Args("-pf", "fivetile", "-pfargs", "14v5+2", "-partitions", "2")
-        );
+      var grayscalePixelFormatsHeavy = Or(Args("pftag:Heavy Grayscale", "-cs", "lab", "-pf", "fivetile", "-pfargs", "48v5+0", "-partitions", "4"));
+      var colorPixelFormatsHeavy = Or(Args("pftag:Heavy Color", "-pf", "-cs", "lab", "fivetile", "-pfargs", "16v5+2", "-partitions", "2"));
 
       // budget versions (512x512 = 262144 map size)
-      var grayscalePixelFormatsBudget = Args("pftag:Budget Grayscale") + Or(
-        Args("-pf", "square", "-pfargs", "1024v1x1+0", "-partitions", "32"),
-        Args("-pf", "square", "-pfargs", "22v2x2+0", "-partitions", "2"),
-        Args("-pf", "fivetile", "-pfargs", "12v5+0", "-partitions", "2")
-        );
+      var grayscalePixelFormatsBudget = Or(Args("pftag:Budget Grayscale", "-cs", "lab", "-pf", "fivetile", "-pfargs", "12v5+0", "-partitions", "2"));
+      var colorPixelFormatsBudget = Or(Args("pftag:Budget Color", "-cs", "lab", "-pf", "fivetile", "-pfargs", "7v5+2", "-partitions", "2"));
 
-      var colorPixelFormatsBudget = Args("pftag:Budget Color") + Or(
-        Args("-pf", "square", "-pfargs", "64v1x1+2", "-partitions", "8"),
-        Args("-pf", "square", "-pfargs", "8v2x2+2", "-partitions", "2"),
-        Args("-pf", "fivetile", "-pfargs", "6v5+2", "-partitions", "2")
-        );
-
-      // "Example" pixel formats to show the same N but with chroma subsampling
-      var grayscaleExamplePixelFormats = Args("pftag:Example Grayscale") + Or(
-        Args("-pf", "square", "-pfargs", "36v1x1+0", "-partitions", "2"),
-        Args("-pf", "square", "-pfargs", "36v2x2+0", "-partitions", "2"),
-        Args("-pf", "fivetile", "-pfargs", "36v5+0", "-partitions", "2")
-        );
-
-      var colorPixelExampleFormats = Args("pftag:Example Color") + Or(
-        Args("-pf", "square", "-pfargs", "14v1x1+2", "-partitions", "2"),
-        Args("-pf", "square", "-pfargs", "14v2x2+2", "-partitions", "2"),
-        Args("-pf", "fivetile", "-pfargs", "14v5+2", "-partitions", "2")
-        );
-
-      var allLCCColorspaces = Or(
-        Args("-cs", "jpeg"),
-        Args("-cs", "nyuv"),
-        Args("-cs", "lab"),
-        Args("-cs", "hsl")
-        );
-
-      var grayscalePixelFormats = allLCCColorspaces + Or(
+      var grayscalePixelFormats = Or(
         grayscalePixelFormatsHeavy,
-        grayscalePixelFormatsMedium,
-        grayscalePixelFormatsBudget,
-        grayscaleExamplePixelFormats);
+        grayscalePixelFormatsBudget);
 
-      var colorPixelFormats = allLCCColorspaces + Or(
+      var colorPixelFormats = Or(
         colorPixelFormatsHeavy,
-        colorPixelFormatsMedium,
-        colorPixelFormatsBudget,
-        colorPixelExampleFormats);
+        colorPixelFormatsBudget);
 
       // C64 ============================
       var C64Font = Args(
@@ -130,9 +86,9 @@ namespace PetsciiMapgen
         "-fontImage", batchFontPath(@"c64opt160.png"),
         "-charsize", "8x8");
 
-      var c64fontAndPalettes_Color = C64Font + Args("-palette", "C64Color");
+      var c64ColorPalettes = Args("-palette", "C64Color");
 
-      var c64fontAndPalettes_Grayscale = C64Font + Or(
+      var c64GrayscalePalettes = Or(
           Args("-palette", "BlackAndWhite"),
           Args("-palette", "C64ColorGray8A"),
           Args("-palette", "C64Grays"),
@@ -140,8 +96,8 @@ namespace PetsciiMapgen
           Args("-palette", "C64Color")
           );
 
-      var C64Color = c64fontAndPalettes_Color + colorPixelFormats;
-      var C64Grayscale = c64fontAndPalettes_Grayscale + grayscalePixelFormats;
+      var C64Color = C64Font + c64ColorPalettes + colorPixelFormats;
+      var C64Grayscale = C64Font + c64GrayscalePalettes + grayscalePixelFormats;
 
       // mz700 ============================
       var mz700font = Args(
@@ -155,10 +111,11 @@ namespace PetsciiMapgen
         Args("-palette", "ThreeBit")
         );
       var mz700GrayPalettes = Or(
+        Args("-palette", "RGBPrimariesHalftone16"),
         Args("-palette", "BlackAndWhite"),
-        Args("-palette", "Gray3"),
-        Args("-palette", "Gray4"),
-        Args("-palette", "Gray5"),
+        //Args("-palette", "Gray3"),
+        //Args("-palette", "Gray4"),
+        //Args("-palette", "Gray5"),
         Args("-palette", "Gray8")
         );
 
@@ -193,9 +150,9 @@ namespace PetsciiMapgen
         );
       var dosGrayPalettes = Or(
         Args("-palette", "BlackAndWhite"),
-        Args("-palette", "Gray3"),
-        Args("-palette", "Gray4"),
-        Args("-palette", "Gray5"),
+        //Args("-palette", "Gray3"),
+        //Args("-palette", "Gray4"),
+        //Args("-palette", "Gray5"),
         Args("-palette", "Gray8")
         );
 
@@ -261,9 +218,7 @@ namespace PetsciiMapgen
 
       var fontPixelFormats = Args("-cs", "JPEG") + Or(
         grayscalePixelFormatsHeavy,
-        grayscalePixelFormatsMedium,
-        grayscalePixelFormatsBudget,
-        grayscaleExamplePixelFormats);
+        grayscalePixelFormatsBudget);
 
       var fontFamilyCharSources = Or(
         Args("-charListTextFile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\BasicAlphanum.txt"),
@@ -321,7 +276,6 @@ namespace PetsciiMapgen
         var fonttags = s._args.Where(a => a.StartsWith("fonttag:")).Select(a => a.Split(':')[1]);
         var dirName = string.Join(" ", fonttags) + " " + string.Join(" ", pftags);
         var outDir = System.IO.Path.Combine(batchBaseDir, dirName);
-        //batchLog.WriteLine("Output directory: {0}", outDir);
         return new string[] { "-outdir", outDir };
       });
 
@@ -347,8 +301,8 @@ namespace PetsciiMapgen
         emoji("emojiappleblack24", 24),
         emoji("emojiappleblack32", 32),
         emoji("emojiappleblack64", 64),
-        marioTiles,
-        comicSans
+        marioTiles//,
+        //comicSans
         ) + common + outputDir + Args(batchAddArgs.ToArray());
       return All;
     } // AllBatches

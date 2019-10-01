@@ -27,8 +27,8 @@ namespace PetsciiMapgen
       r.Visited = true;
 
       r.ID = (long)d["ID"];
-      r.NormalizedValues = ValueArray.Deserialize((Dictionary<string, object>)d["NormalizedValues"]);
-      r.DenormalizedValues = ValueArray.Deserialize((Dictionary<string, object>)d["DenormalizedValues"]);
+      r.NormalizedValues = ValueArray.Deserialize(((Newtonsoft.Json.Linq.JObject)d["NormalizedValues"]).ToObject< Dictionary<string, object>>());
+      r.DenormalizedValues = ValueArray.Deserialize(((Newtonsoft.Json.Linq.JObject)d["DenormalizedValues"]).ToObject<Dictionary<string, object>>());
       return r;
     }
 

@@ -24,7 +24,6 @@ namespace PetsciiMapgen
     int MapEntryCount { get; }// pixel format will also determine how many entries are in the resulting map.
     double CalcKeyToColorDist(ValueSet key /* NORMALIZED VALUES */, ValueSet actual /* DENORMALIZED VALUES */, bool verboseDebugInfo = false);
     void PopulateCharColorData(CharInfo ci, IFontProvider font);
-    //double NormalizeElement(ValueSet v, int elementToNormalize);
     ValueArray Denormalize(ValueArray va);
     int NormalizedValueSetToMapID(float[] vals);
     int DebugGetMapIndexOfColor(ColorF charRGB);
@@ -175,30 +174,6 @@ namespace PetsciiMapgen
       }
       return ret;
     }
-    //internal unsafe void Denormalize(ref ValueSet v)
-    //{
-    //  // changes normalized 0-1 values to YUV-ranged values. depends on value format and stuff.
-    //  if (UseChroma)
-    //  {
-    //    v[GetValueC1Index()] = (float)Colorspace.DenormalizeC1(v[GetValueC1Index()]);
-    //    v[GetValueC2Index()] = (float)Colorspace.DenormalizeC2(v[GetValueC2Index()]);
-    //  }
-    //  for (int i = 0; i < LumaComponentCount; ++ i)
-    //  {
-    //    v[i] = (float)Colorspace.DenormalizeL(v[i]);
-    //  }
-    //}
-    //public unsafe double NormalizeElement(ValueSet v, int elementToNormalize)
-    //{
-    //  if (UseChroma)
-    //  {
-    //    if (elementToNormalize == GetValueC1Index())
-    //      return Colorspace.NormalizeC1(v[elementToNormalize]);
-    //    if (elementToNormalize == GetValueC2Index())
-    //      return Colorspace.NormalizeC2(v[elementToNormalize]);
-    //  }
-    //  return Colorspace.NormalizeL(v[elementToNormalize]);
-    //}
 
     public static Point GetTileOrigin(Size charSize, Size numTilesPerChar, int tx, int ty)
     {

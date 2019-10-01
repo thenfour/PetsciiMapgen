@@ -18,7 +18,7 @@ namespace PetsciiMapgen
   {
     public CharInfo[] DistinctMappedChars { get; private set; }
     public ValueSet[] Keys { get; private set; }
-    public List<CharInfo> CharInfo { get; private set; }
+    public CharInfo[] CharInfo { get; private set; }
 
     public IFontProvider FontProvider { get; private set; }
     public IPixelFormatProvider PixelFormatProvider { get; private set; }
@@ -32,7 +32,7 @@ namespace PetsciiMapgen
       HybridMap2 ret = new HybridMap2();
       Log.WriteLine("Loading charinfo...");
       string sci = System.IO.File.ReadAllText(System.IO.Path.Combine(dir, "CharInfo.json"));
-      ret.CharInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<List<CharInfo>>(sci);
+      ret.CharInfo = Newtonsoft.Json.JsonConvert.DeserializeObject<CharInfo[]>(sci);
 
       Log.WriteLine("Loading DistinctMappedChars...");
       string sdmc = System.IO.File.ReadAllText(System.IO.Path.Combine(dir, "DistinctMappedChars.json"));
@@ -74,7 +74,7 @@ namespace PetsciiMapgen
 
       // fill in char source info (actual tile values)
       Log.EnterTask("Analyze incoming font");
-      this.CharInfo = new List<CharInfo>();
+      this.CharInfo = new CharInfo[FontProvider.CharCount];// new List<CharInfo>();
 
       for (int ichar = 0; ichar < FontProvider.CharCount; ++ichar)
       {
@@ -87,10 +87,10 @@ namespace PetsciiMapgen
 #endif
         };
         pixelFormatProvider.PopulateCharColorData(ci, fontProvider);
-        this.CharInfo.Add(ci);
+        this.CharInfo[ichar] = ci;
       }
 
-      Log.WriteLine("Number of source chars: " + this.CharInfo.Count);
+      Log.WriteLine("Number of source chars: " + this.CharInfo.Length);
 
       PartitionManager pm = new PartitionManager(partitionsPerDim, partitionDepth.GetValueOrDefault(PixelFormatProvider.DimensionCount + 1), PixelFormatProvider.DiscreteNormalizedValues);
 
@@ -116,7 +116,7 @@ namespace PetsciiMapgen
       Log.EnterTask("Calculate all mappings");
 
       // - generate a list of mappings and their distances
-      ulong theoreticalMappings = (ulong)this.CharInfo.Count * (ulong)pixelFormatProvider.MapEntryCount;
+      ulong theoreticalMappings = (ulong)this.CharInfo.Length * (ulong)pixelFormatProvider.MapEntryCount;
       Log.WriteLine("  Theoretical mapping count: " + theoreticalMappings.ToString("N0"));
 
       List<Task> comparisonBatches = new List<Task>();
@@ -190,7 +190,7 @@ namespace PetsciiMapgen
 
       Log.WriteLine("Post-map stats:");
       Log.WriteLine("  Used char count: " + numCharsUsed);
-      Log.WriteLine("  Number of unused char: " + (this.CharInfo.Count - numCharsUsed));
+      Log.WriteLine("  Number of unused char: " + (this.CharInfo.Length - numCharsUsed));
       Log.WriteLine("  Number of chars used exactly once: " + numCharsUsedOnce);
       Log.WriteLine("  Most-used char: " + mostUsedChar + " (" + mostUsedChar.usages + ") usages");
       Log.WriteLine("  Number of total char repetitions: " + numRepetitions);

@@ -1,30 +1,4 @@
 ﻿/*
- similar to naive YUV format, but using a fixed 5-tiling per cell.
-
-void mainImage( out vec4 o, vec2 C)
-{
-    vec2 R = iResolution.xy;
-    
-    vec2 cellSize = vec2(120.);
-    
-    vec2 cellOrigin = floor(C/cellSize)*cellSize;
-    vec2 posInCell01 = (C - cellOrigin) / cellSize;
-    vec2 skewAmt = (posInCell01-.5)*.5;
-    skewAmt.y = -skewAmt.y;
-    
-    //skewAmt = vec2(0);
-    
-    vec2 tile = posInCell01 + skewAmt.yx;// which tile are we in (x=0,1, y=0,1)
-    tile = step(tile, vec2(.5));
-    float tileIdx = tile.x + tile.y * 2.;
-
-    posInCell01 -= .5;
-    float m = abs(posInCell01.x) + abs(posInCell01.y);
-    if (m < .333) tileIdx = 4.;// arbitrary number that looks good perceptually.
-    
-    o = vec4(tileIdx / 4.);
-}
-
 */
 
 using System;

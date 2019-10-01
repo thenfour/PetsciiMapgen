@@ -37,12 +37,12 @@ namespace PetsciiMapgen
       //GenerateFontMap2(@"C:\root\git\thenfour\PetsciiMapgen\img\fonts\EmojiOneColor.otf", 32, @"c:\temp\comicsans.png");
       //GenerateFontMap(@"Arial Unicode MS", 32, @"c:\temp\aunicod1.png");
       //GenerateFontMap2(@"Arial Unicode MS", 32, @"c:\temp\aunicod2.png");
-      //args = new string[] { "-batchrun", "C64", "LAB", "budget", "C64color ", "2x2+2" };
-      ArgSetList batchOverride = null; ;
+      //args = new string[] { "-batchrun", "C64", "heavy", "+2" };
+      ArgSetList batchOverride = null;
 
       //batchOverride = Batches.Args(
-      //  @"-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
-      //  @"-testpalette", "ThreeBit",
+      //  //@"-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      //  //@"-testpalette", "ThreeBit",
       //  @"-outdir", @"f:\maps",
       //  @"-fonttype", @"mono",
       //  @"-palette", "C64Color",
@@ -51,7 +51,7 @@ namespace PetsciiMapgen
       //  @"-cs", @"lab",
 
       //  @"-pf", @"fivetile",
-      //  @"-pfargs", @"12v5+2"
+      //  @"-pfargs", @"9v5+2"
       //) + Batches.Or(
       //  //Batches.Args(@"-tessellator", "a"),
       //  //Batches.Args(@"-tessellator", "b"),
@@ -61,6 +61,25 @@ namespace PetsciiMapgen
       //    //Batches.Args(@"-partitions", "7"),
       //    //Batches.Args(@"-partitions", "10")
       //    );
+
+      //batchOverride = Batches.Or(
+      //  Batches.Args(
+      //    @"-fonttype", @"mono", @"-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\c64opt160.png", @"-charsize", @"8x8",
+      //  @"-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+      //  @"-testpalette", "ThreeBit",
+      //  @"-palette", @"C64Color",
+      //  @"-cs", @"lab",
+
+      //  @"-pf", @"fivetile",
+      //  @"-pfargs", @"14v5+0",
+      //  @"-partitions", @"2",
+
+      //  @"-loadOrCreateMap",
+      //  @"-outdir", @"f:\maps\C64 Budget Color")
+      //  );
+
+
+      //batchOverride = Batches.Or(Batches.Args("-batchrun", "C64", "heavy", "+2" ));
 
       using (var stayon = new StayOn())
       {
@@ -160,7 +179,7 @@ namespace PetsciiMapgen
             int ibatch = 0;
             foreach (var argset in filtered)
             {
-              batchLog.WriteLine("  {0}: {1}", ibatch, argset);
+              batchLog.WriteLine("  {0}: {1}", ibatch, argset.ToCSString());
               ibatch++;
             }
             batchLog.WriteLine("Batch contains {0} runs", filtered.Length);
