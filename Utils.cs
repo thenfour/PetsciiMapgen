@@ -42,6 +42,21 @@ namespace PetsciiMapgen
     {
       return string.Format("vec2({0:0.00},{1:0.00})", x, y);
     }
+
+    public vec2 floor()
+    {
+      return vec2.Init((float)Math.Floor(this.x), (float)Math.Floor(this.y));
+    }
+
+    public vec2 multipliedBy(Size cellSize)
+    {
+      return vec2.Init(this.x * cellSize.Width, this.y * cellSize.Height);
+    }
+
+    public vec2 minus(vec2 cellOrigin)
+    {
+      return vec2.Init(this.x - cellOrigin.x, this.y - cellOrigin.y);
+    }
   }
 
   public static class vec2Utils
@@ -485,7 +500,7 @@ namespace PetsciiMapgen
       double elapsedSec = (double)swtotal.ElapsedMilliseconds / 1000.0;
       double totalEst = elapsedSec / p;
       double estRemaining = totalEst - elapsedSec;
-      Log.WriteLine("  Progress: {0}% (est remaining: {1:N0} sec ({2:N0} hours))", (p*100).ToString("0.00"), estRemaining.ToString("0.00"), (estRemaining / 3600).ToString("0.00"));
+      Log.WriteLine("  Progress: {0}% (est remaining: {1:N0} sec ({2:N0} hours))", (p * 100).ToString("0.00"), estRemaining.ToString("0.00"), (estRemaining / 3600).ToString("0.00"));
     }
   }
 
@@ -972,7 +987,7 @@ namespace PetsciiMapgen
       Debug.Assert(key.DenormalizedValues.Length == actual.DenormalizedValues.Length);
       Debug.Assert(key.DenormalizedValues.Length == (lumaElements + chromaElements));
       double accLuma = 0;
-      for (int i = 0; i < lumaElements; ++ i)
+      for (int i = 0; i < lumaElements; ++i)
       {
         double d = Math.Abs(key.DenormalizedValues[i] - actual.DenormalizedValues[i]);
         accLuma += d * d;
@@ -1024,6 +1039,47 @@ namespace PetsciiMapgen
     {
       var ti = typeof(Palettes).GetProperty(s).GetValue(null);
       return (Color[])ti;
+    }
+
+    public static void DumpTessellation(IFiveTileTessellator tessellator, Size charSize)
+    {
+      // OUTput a visual of the tiling
+      Log.WriteLine("Luma tiling breakdown for charsize {0}:", charSize);
+      //Log.WriteLine(" Rotation: {0}", ret.Rotation);
+      int[] pixelCounts = new int[5];
+      for (int py = 0; py < charSize.Height; ++py)
+      {
+        string l = "  ";
+        for (int px = 0; px < charSize.Width; ++px)
+        {
+          int lumaIdx = tessellator.GetLumaTileIndexOfPixelPosInCell(px, py, charSize);
+          pixelCounts[lumaIdx]++;
+          switch (lumaIdx)
+          {
+            case 0:
+              l += "..";
+              break;
+            case 1:
+              l += "##";
+              break;
+            case 2:
+              l += "//";
+              break;
+            case 3:
+              l += "33";
+              break;
+            case 4:
+              l += "  ";
+              break;
+          }
+          //l += lumaIdx.ToString();
+        }
+        Log.WriteLine(l);
+      }
+      for (int i = 0; i < 5; ++i)
+      {
+        Log.WriteLine("Tile {0}: {1} pixels", i, pixelCounts[i]);
+      }
     }
   }
 }

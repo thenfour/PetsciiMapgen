@@ -92,7 +92,7 @@ namespace PetsciiMapgen
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////
-  ///this has a more regular shape for the center.
+  ///this has a more regular shape for the center, no jaggies. but still has a lot of angled edges.
   //   ..........######################
   //   ..........######################
   //   ............####################
@@ -145,6 +145,125 @@ namespace PetsciiMapgen
     }
   }
 
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////
+  // this one tries to improve by having more on-axis edges, and the center is just skewed.
+  // https://www.shadertoy.com/view/3dK3zm
+  // :           B<------|-A-->
+  // :   ................|.....###########  ^
+  // :   ................|.....###########  |
+  // :   ................|.....###########  |
+  // :   .......0........|.....##### 1 ###  - b
+  // :   ............... |      ##########
+  // :   .........       |      ##########
+  // : A /////////       |       #########
+  // : | //////////      |       #########
+  // :   ---------------------------------
+  // :   ///////////     |        ######## |
+  // :   ///////////     |        ######## A
+  // :   ///////////     |        33333333
+  // :   //// 2 /////    |  33333333333333
+  // : B ////////////3333|3333333333333333
+  // : ^ ////////////3333|3333333333333333
+  // : | ////////////3333|3333333333333333
+  // : | ////////////3333|3333333333333333
+  // :               a---|       B<-------
+  public class FiveTileTesselatorC : IFiveTileTessellator
+  {
+    public string DisplayName { get { return "C"; } }
+    Size CellSize;
+    int[] TileIdx = null;
+
+    // in theory these are between 0-.5
+    // but they must average to <=.25
+    float A;
+    float B;
+
+    public FiveTileTesselatorC(float a = .125f, float b = .2f)
+    {
+      A = a;
+      B = b;
+    }
+
+    public int GetIdxForCell(int x, int y)
+    {
+      vec2 C = vec2.Init(x, y);
+      vec2 cellOrigin = (C.dividedBy(CellSize)).floor().multipliedBy(CellSize);
+      vec2 celluv = (C.minus(cellOrigin)).dividedBy(CellSize);
+
+      // mirroring
+      int[] idxMap = new int[4] { 0, 2, 4, 0 };
+      if (celluv.x >= .5)
+      {
+        if (celluv.y >= .5)
+        {
+          celluv = vec2.Init(1f - celluv.x, 1f - celluv.y); //  bottom right quad
+          idxMap = new int[4] { 3, 1, 4, 3 };
+        }
+        else
+        {
+          celluv = vec2.Init(celluv.y, 1f - celluv.x);// top right
+          idxMap = new int[4] { 1, 0, 4, 1 };
+        }
+      }
+      else if (celluv.y >= .5)
+      {
+        celluv = vec2.Init(1f - celluv.y, celluv.x);// bottom left
+        idxMap = new int[4] { 2, 3, 4, 2 };
+      }
+
+      // calculate relevant points
+      vec2 ptA = vec2.Init(B, .5f - A); // pt in this quad
+      vec2 ptB = vec2.Init(.5f + A, B); // pt in right quad
+      vec2 ptC = vec2.Init(.5f - A, 1.0f - B); // pt in lower (um, upper) quad
+
+      float slopeAC = (ptA.x - ptC.x) / (ptA.y - ptC.y);
+      float slopeAB = (ptA.x - ptB.x) / (ptA.y - ptB.y);
+
+      float yAB = (ptA.x - celluv.x) * slopeAB;
+      float yAC = (ptA.x - celluv.x) * slopeAC;
+
+      int tileIdx = idxMap[0];
+      if (celluv.y - ptA.y > yAB && celluv.y > ptA.y)
+      {
+        tileIdx = idxMap[1];
+      }
+      else if (celluv.y - ptA.y > yAC)
+      {
+        tileIdx = idxMap[2];
+      }
+      else if (celluv.x > ptA.x)
+      {
+        tileIdx = idxMap[3];
+      }
+      return tileIdx;
+    }
+
+
+    private void Init(Size cellSize)
+    {
+      this.CellSize = cellSize;
+      this.TileIdx = new int[Utils.Product(this.CellSize)];
+      // calc all pixels in upper-left quadrant, mirror to others. well
+      // i'm really just going to copy this from a shader.
+      // https://www.shadertoy.com/view/3dK3zm
+      for (int y = 0; y < cellSize.Height; ++y)
+      {
+        for (int x = 0; x < cellSize.Width; ++x)
+        {
+          this.TileIdx[x + y * CellSize.Width] = GetIdxForCell(x, y);
+        }
+      }
+    }
+
+    public virtual int GetLumaTileIndexOfPixelPosInCell(int x, int y, Size cellSize)
+    {
+      if (TileIdx == null || !CellSize.Equals(cellSize))
+      {
+        Init(cellSize);
+      }
+      return TileIdx[x + y * cellSize.Width];
+    }
+  }
 
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -192,7 +311,7 @@ namespace PetsciiMapgen
       });
       args.ProcessArg("-tessellator", s =>
       {
-        switch(s.ToLowerInvariant())
+        switch (s.ToLowerInvariant())
         {
           case "a":
             ret.Tessellator = new FiveTileTesselatorA();
@@ -200,12 +319,15 @@ namespace PetsciiMapgen
           case "b":
             ret.Tessellator = new FiveTileTesselatorB();
             break;
+          case "c":
+            ret.Tessellator = new FiveTileTesselatorC();
+            break;
         }
       });
 
       if (ret.Tessellator == null)
       {
-        ret.Tessellator = new FiveTileTesselatorA();
+        ret.Tessellator = new FiveTileTesselatorC();
       }
 
       ret.Colorspace = Utils.ParseRequiredLCCColorSpaceArgs(args);
@@ -214,45 +336,7 @@ namespace PetsciiMapgen
 
       ret.DiscreteNormalizedValues = Utils.GetDiscreteNormalizedValues(valuesPerComponent);
 
-      // OUTput a visual of the tiling
-      Log.WriteLine("Luma tiling breakdown for charsize {0}:", font.CharSizeNoPadding);
-      //Log.WriteLine(" Rotation: {0}", ret.Rotation);
-      int[] pixelCounts = new int[ret.LumaComponentCount];
-      for (int py = 0; py < font.CharSizeNoPadding.Height; ++py)
-      {
-        string l = "  ";
-        for (int px = 0; px < font.CharSizeNoPadding.Width; ++px)
-        {
-          int lumaIdx = ret.Tessellator.GetLumaTileIndexOfPixelPosInCell(px, py, font.CharSizeNoPadding);
-          pixelCounts[lumaIdx]++;
-          switch (lumaIdx)
-          {
-            case 0:
-              l += "..";
-              break;
-            case 1:
-              l += "##";
-              break;
-            case 2:
-              l += "//";
-              break;
-            case 3:
-              l += "33";
-              break;
-            case 4:
-              l += "  ";
-              break;
-          }
-          //l += lumaIdx.ToString();
-        }
-        Log.WriteLine(l);
-      }
-
-      for (int i = 0; i < ret.LumaComponentCount; ++i)
-      {
-        Log.WriteLine("Tile {0}: {1} pixels", i, pixelCounts[i]);
-      }
-
+      Utils.DumpTessellation(ret.Tessellator, font.CharSizeNoPadding);
       return ret;
     }
 
@@ -336,7 +420,7 @@ namespace PetsciiMapgen
       ColorF charRGB = ColorF.Init;
       ColorF[] lumaRGB = new ColorF[LumaComponentCount];
       int[] pixelCounts = new int[LumaComponentCount];
-      for (int i = 0; i < LumaComponentCount; ++ i)
+      for (int i = 0; i < LumaComponentCount; ++i)
       {
         lumaRGB[i] = ColorF.Init;
         pixelCounts[i] = 0;
@@ -344,7 +428,7 @@ namespace PetsciiMapgen
 
       for (int py = 0; py < font.CharSizeNoPadding.Height; ++py)
       {
-        for (int px = 0; px < font.CharSizeNoPadding.Width; ++ px)
+        for (int px = 0; px < font.CharSizeNoPadding.Width; ++px)
         {
           ColorF pc = font.GetPixel(ci.srcIndex, px, py);
           charRGB = charRGB.Add(pc);

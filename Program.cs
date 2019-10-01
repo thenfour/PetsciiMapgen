@@ -44,20 +44,22 @@ namespace PetsciiMapgen
       //  @"-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
       //  @"-testpalette", "ThreeBit",
       //  @"-outdir", @"f:\maps",
-      //  @"-fonttype", @"normal",
-      //  @"-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark12.png",
-      //  @"-charsize", @"12x12",
+      //  @"-fonttype", @"mono",
+      //  @"-palette", "C64Color",
+      //  @"-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\c64opt160.png",
+      //  @"-charsize", @"8x8",
       //  @"-cs", @"lab",
 
       //  @"-pf", @"fivetile",
-      //  @"-pfargs", @"16v5+0"
+      //  @"-pfargs", @"12v5+2"
       //) + Batches.Or(
       //  //Batches.Args(@"-tessellator", "a"),
-      //  Batches.Args(@"-tessellator", "b")
+      //  //Batches.Args(@"-tessellator", "b"),
+      //  Batches.Args(@"-tessellator", "c")
       //  ) + Batches.Or(
-      //  Batches.Args(@"-partitions", "13")
-      //  //Batches.Args(@"-partitions", "7"),
-      //  //Batches.Args(@"-partitions", "10")
+      //    Batches.Args(@"-partitions", "2")
+      //    //Batches.Args(@"-partitions", "7"),
+      //    //Batches.Args(@"-partitions", "10")
       //    );
 
       using (var stayon = new StayOn())

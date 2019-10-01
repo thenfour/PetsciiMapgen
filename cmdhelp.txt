@@ -48,6 +48,7 @@ Command options:
                           Y = number of Luma rows per cell
                           C = 0 or 2, to include chroma information
 -tessellator A|B|C        specify the tesselator for five-tile pixel format
+-tessparam .125x.25       for the C tesselator, overrides A and B metrics. optional.
 -fonttype ID              normal, mono, colorkey, fontfamily
 
 NORMAL
