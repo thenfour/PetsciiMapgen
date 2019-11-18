@@ -40,6 +40,8 @@ namespace PetsciiMapgen
       //args = new string[] { "-batchrun", "C64", "heavy", "+2" };
       ArgSetList batchOverride = null;
 
+      //batchOverride = Batches.Or(Batches.Args(new string[] { @"fonttag:emojidark12", @"-fonttype", @"normal", @"-fontImage", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\emojidark12.png", @"-charsize", @"12x12", @"pftag:Heavy Grayscale", @"-cs", @"lab", @"-pf", @"fivetile", @"-pfargs", @"48v5+0", @"-partitions", @"4", @"-testpalette", @"ThreeBit", @"-loadOrCreateMap", @"-outdir", @"f:\maps\emojidark12 Heavy Grayscale" }));
+
       //batchOverride = Batches.Args(
       //  //@"-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
       //  //@"-testpalette", "ThreeBit",

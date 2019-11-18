@@ -58,26 +58,67 @@ namespace PetsciiMapgen
     public static ArgSetList GetAllBatches(string batchBaseDir, Func<string, string> batchFontPath, List<string> batchAddArgs)
     {
       var common = Args(
-        "-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
+        //"-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
         "-testpalette", "ThreeBit",
         "-loadOrCreateMap"
         );
 
-      // heavy: aiming for 16384x16384 = map size 268435456
-      var grayscalePixelFormatsHeavy = Or(Args("pftag:Heavy Grayscale", "-cs", "lab", "-pf", "fivetile", "-pfargs", "48v5+0", "-partitions", "4"));
-      var colorPixelFormatsHeavy = Or(Args("pftag:Heavy Color", "-pf", "-cs", "lab", "fivetile", "-pfargs", "16v5+2", "-partitions", "2"));
-
       // budget versions (512x512 = 262144 map size)
-      var grayscalePixelFormatsBudget = Or(Args("pftag:Budget Grayscale", "-cs", "lab", "-pf", "fivetile", "-pfargs", "12v5+0", "-partitions", "2"));
-      var colorPixelFormatsBudget = Or(Args("pftag:Budget Color", "-cs", "lab", "-pf", "fivetile", "-pfargs", "7v5+2", "-partitions", "2"));
+      var grayscalePixelFormatsBudget5 = Or(Args("pftag:Budget5 Grayscale", "-cs", "lab", "-pf", "fivetile", "-pfargs", "12v5+0", "-partitions", "2"));
+      var colorPixelFormatsBudget5 = Or(Args("pftag:Budget5 Color", "-cs", "lab", "-pf", "fivetile", "-pfargs", "7v5+2", "-partitions", "2"));
+
+      var grayscalePixelFormatsBudget22 = Or(Args("pftag:Budget22 Grayscale", "-cs", "lab", "-pf", "square", "-pfargs", "22v2x2+0", "-partitions", "2"));
+      var colorPixelFormatsBudget22 = Or(Args("pftag:Budget22 Color", "-cs", "lab", "-pf", "square", "-pfargs", "8v2x2+2", "-partitions", "2"));
+
+      var grayscalePixelFormatsBudget11 = Or(Args("pftag:Budget11 Grayscale", "-cs", "lab", "-pf", "square", "-pfargs", "256v1x1+0", "-partitions", "2"));
+      var colorPixelFormatsBudget11 = Or(Args("pftag:Budget11 Color", "-cs", "lab", "-pf", "square", "-pfargs", "64v1x1+2", "-partitions", "2"));
+
+      // heavy: aiming for 16384x16384 = map size 268,435,456
+      var grayscalePixelFormatsHeavy5 = Or(Args("pftag:Heavy5 Grayscale", "-cs", "lab", "-pf", "fivetile", "-pfargs", "48v5+0", "-partitions", "4"));
+      var colorPixelFormatsHeavy5 = Or(Args("pftag:Heavy5 Color", "-pf", "fivetile", "-cs", "lab", "fivetile", "-pfargs", "16v5+2", "-partitions", "2"));
+
+      var grayscalePixelFormatsHeavy22 = Or(Args("pftag:Heavy22 Grayscale", "-cs", "lab", "-pf", "square", "-pfargs", "128v2x2+0", "-partitions", "2"));
+      var colorPixelFormatsHeavy22 = Or(Args("pftag:Heavy22 Color", "-cs", "lab", "-pf", "square", "-pfargs", "25v2x2+2", "-partitions", "2"));
+
+      //var grayscalePixelFormatsHeavy11 = Or(Args("pftag:Heavy11 Grayscale", "-cs", "lab", "-pf", "square", "-pfargs", "256v1x1+0", "-partitions", "2"));
+      var colorPixelFormatsHeavy11 = Or(Args("pftag:Heavy11 Color", "-cs", "lab", "-pf", "square", "-pfargs", "256v1x1+2", "-partitions", "2"));
+
+      // extreme version. aim for 25,619 x 25,619 = map size 656,356,768
+      // tooll doesn't like this size of bitmap. let's stick with heavy.
+      //var grayscalePixelFormatsExtreme5 = Or(Args("pftag:Extreme5 Grayscale", "-cs", "lab", "-pf", "fivetile", "-pfargs", "58v5+0", "-partitions", "4"));
+      //var colorPixelFormatsExtreme5 = Or(Args("pftag:Extreme5 Color", "-pf", "fivetile", "-cs", "lab", "fivetile", "-pfargs", "18v5+2", "-partitions", "2"));
+
+      //var grayscalePixelFormatsExtreme22 = Or(Args("pftag:Extreme22 Grayscale", "-cs", "lab", "-pf", "square", "-pfargs", "160v2x2+0", "-partitions", "2"));
+      //var colorPixelFormatsExtreme22 = Or(Args("pftag:Extreme22 Color", "-cs", "lab", "-pf", "square", "-pfargs", "29v2x2+2", "-partitions", "2"));
 
       var grayscalePixelFormats = Or(
-        grayscalePixelFormatsHeavy,
-        grayscalePixelFormatsBudget);
+        //grayscalePixelFormatsExtreme5,
+        grayscalePixelFormatsHeavy5,
+        grayscalePixelFormatsBudget5,
+        //grayscalePixelFormatsExtreme22,
+        grayscalePixelFormatsHeavy22,
+        grayscalePixelFormatsBudget22,
+        //grayscalePixelFormatsExtreme11,
+        //grayscalePixelFormatsHeavy11,
+        grayscalePixelFormatsBudget11
+        );
 
       var colorPixelFormats = Or(
-        colorPixelFormatsHeavy,
-        colorPixelFormatsBudget);
+        //colorPixelFormatsExtreme5,
+        colorPixelFormatsHeavy5,
+        colorPixelFormatsBudget5,
+        //colorPixelFormatsExtreme22,
+        colorPixelFormatsHeavy22,
+        colorPixelFormatsBudget22,
+        //colorPixelFormatsExtreme11,
+        colorPixelFormatsHeavy11,
+        colorPixelFormatsBudget11
+        );
+
+      var fontPixelFormats = Args("-cs", "JPEG") + grayscalePixelFormats;/* Or(
+        grayscalePixelFormatsHeavy,
+        grayscalePixelFormatsBudget
+        );*/
 
       // C64 ============================
       var C64Font = Args(
@@ -193,8 +234,7 @@ namespace PetsciiMapgen
         "-lefttoppadding", "1",
         "-charsize", "16x16");
 
-      var marioTiles = marioTilesFont + colorPixelFormats;
-      marioTiles += marioTilesFont + grayscalePixelFormats;
+      var marioTiles = marioTilesFont + Or(colorPixelFormats, grayscalePixelFormats);
 
       // comic sans ================================
       var comicSansFont = Args(
@@ -215,10 +255,6 @@ namespace PetsciiMapgen
         "-trytofit", "1"
       // aspecttolerance
       );
-
-      var fontPixelFormats = Args("-cs", "JPEG") + Or(
-        grayscalePixelFormatsHeavy,
-        grayscalePixelFormatsBudget);
 
       var fontFamilyCharSources = Or(
         Args("-charListTextFile", @"C:\root\git\thenfour\PetsciiMapgen\img\fonts\BasicAlphanum.txt"),

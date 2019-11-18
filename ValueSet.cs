@@ -24,7 +24,7 @@ namespace PetsciiMapgen
 
       r.Mapped = false;
       r.MinDistFound = -1;
-      r.Visited = true;
+      //r.Visited = true;
 
       r.ID = (long)d["ID"];
       r.NormalizedValues = ValueArray.Deserialize(((Newtonsoft.Json.Linq.JObject)d["NormalizedValues"]).ToObject< Dictionary<string, object>>());
@@ -46,7 +46,7 @@ namespace PetsciiMapgen
 
   public unsafe struct ValueArray
   {
-    const int MaxElements = 20;
+    const int MaxElements = 11;
     private fixed float _data[MaxElements];
 
     public int Length;
@@ -127,7 +127,7 @@ namespace PetsciiMapgen
   {
     public long ID;
     public bool Mapped;
-    public bool Visited;
+    //public bool Visited;
     public double MinDistFound;
 
     public override string ToString()

@@ -765,6 +765,10 @@ namespace PetsciiMapgen
       }
       float[] normalizedValues = new float[numDimensions];
 
+      Log.WriteLine("Allocating {0:N0} valuesets. Valueset size = {1}, so {2:N0} bytes of memory", totalPermutations, sizeof(ValueSet),
+        (ulong)totalPermutations * (ulong)sizeof(ValueSet));
+
+
       ValueSet[] ret = new ValueSet[totalPermutations];
       for (ulong i = 0; i < totalPermutations; ++i)
       {

@@ -301,7 +301,7 @@ namespace PetsciiMapgen
 
       if (ret.Tessellator == null)
       {
-        ret.Tessellator = new FiveTileTesselatorC();
+        ret.Tessellator = new FiveTileTesselatorB();
       }
 
       ret.Colorspace = Utils.ParseRequiredLCCColorSpaceArgs(args);

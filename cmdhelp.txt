@@ -42,7 +42,7 @@ Command options:
 
 -pf [Square, FiveTile]    Pixel format: Square, FiveTile
 -cs [LAB, HSL, NYUV, JPEG] Colorspace which defines color matching and distribution
--pfargs NvXvY+C           defines the pixel format parameters
+-pfargs NvXxY+C           defines the pixel format parameters
                           N = number of discrete values per colorant
                           X = number of Luma columns per cell
                           Y = number of Luma rows per cell

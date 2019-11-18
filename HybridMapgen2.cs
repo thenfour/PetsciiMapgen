@@ -144,6 +144,7 @@ namespace PetsciiMapgen
       Task.WaitAll(comparisonBatches.ToArray());
       Log.EndTask();
 
+      // todo: a histogram would be more informative than this crap.
       int numCharsUsed = 0;
       int numCharsUsedOnce = 0;
       CharInfo mostUsedChar = null;
