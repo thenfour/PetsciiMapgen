@@ -1,4 +1,23 @@
-﻿
+﻿things to try:
+
+DCT:
+  all this would work better if we could do DCT and map in a similar way to JPEG.
+  but afaik, DCT is not practical in a fragshader. BUT, maybe it's not. OR, maybe
+  the DCT can be performed outside of the shader (done in C#, cells in parallel?)
+
+  the idea then is that instead of colorants, we look at cosine frequencies. i
+  imagine 5 cosine freqs would be more visually useful. so currently we default to
+  Nv5+2 (7 dimensions). 5 cosine variants.
+
+  needs a POC to do DCT in a shader, and to see how this looks otherwise.
+
+COLOR is still fucked; just looks pretty bad (albeit it seems to "work"). needs investigation.
+
+bitmap size is limited by memory usage
+it's also limited by tooll
+
+
+
 what it's meant to do
 - post-processing effect
 

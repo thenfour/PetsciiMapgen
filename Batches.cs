@@ -63,18 +63,18 @@ namespace PetsciiMapgen
         "-loadOrCreateMap"
         );
 
-      // budget versions (512x512 = 262144 map size)
-      var grayscalePixelFormatsBudget5 = Or(Args("pftag:Budget5 Grayscale", "-cs", "lab", "-pf", "fivetile", "-pfargs", "12v5+0", "-partitions", "2"));
-      var colorPixelFormatsBudget5 = Or(Args("pftag:Budget5 Color", "-cs", "lab", "-pf", "fivetile", "-pfargs", "7v5+2", "-partitions", "2"));
+      // budget versions (1600x1600 = 2560000 map size)
+      var grayscalePixelFormatsBudget5 = Or(Args("pftag:Budget5 Grayscale", "-cs", "lab", "-pf", "fivetile", "-pfargs", "19v5+0", "-partitions", "2"));
+      var colorPixelFormatsBudget5 = Or(Args("pftag:Budget5 Color", "-cs", "lab", "-pf", "fivetile", "-pfargs", "8v5+2", "-partitions", "2"));
 
-      var grayscalePixelFormatsBudget22 = Or(Args("pftag:Budget22 Grayscale", "-cs", "lab", "-pf", "square", "-pfargs", "22v2x2+0", "-partitions", "2"));
-      var colorPixelFormatsBudget22 = Or(Args("pftag:Budget22 Color", "-cs", "lab", "-pf", "square", "-pfargs", "8v2x2+2", "-partitions", "2"));
+      var grayscalePixelFormatsBudget22 = Or(Args("pftag:Budget22 Grayscale", "-cs", "lab", "-pf", "square", "-pfargs", "40v2x2+0", "-partitions", "2"));
+      var colorPixelFormatsBudget22 = Or(Args("pftag:Budget22 Color", "-cs", "lab", "-pf", "square", "-pfargs", "12v2x2+2", "-partitions", "2"));
 
       var grayscalePixelFormatsBudget11 = Or(Args("pftag:Budget11 Grayscale", "-cs", "lab", "-pf", "square", "-pfargs", "256v1x1+0", "-partitions", "2"));
-      var colorPixelFormatsBudget11 = Or(Args("pftag:Budget11 Color", "-cs", "lab", "-pf", "square", "-pfargs", "64v1x1+2", "-partitions", "2"));
+      var colorPixelFormatsBudget11 = Or(Args("pftag:Budget11 Color", "-cs", "lab", "-pf", "square", "-pfargs", "136v1x1+2", "-partitions", "2"));
 
       // heavy: aiming for 16384x16384 = map size 268,435,456
-      var grayscalePixelFormatsHeavy5 = Or(Args("pftag:Heavy5 Grayscale", "-cs", "lab", "-pf", "fivetile", "-pfargs", "48v5+0", "-partitions", "4"));
+      var grayscalePixelFormatsHeavy5 = Or(Args("pftag:Heavy5 Grayscale", "-cs", "lab", "-pf", "fivetile", "-pfargs", "48v5+0", "-partitions", "2"));
       var colorPixelFormatsHeavy5 = Or(Args("pftag:Heavy5 Color", "-pf", "fivetile", "-cs", "lab", "fivetile", "-pfargs", "16v5+2", "-partitions", "2"));
 
       var grayscalePixelFormatsHeavy22 = Or(Args("pftag:Heavy22 Grayscale", "-cs", "lab", "-pf", "square", "-pfargs", "128v2x2+0", "-partitions", "2"));
@@ -173,7 +173,8 @@ namespace PetsciiMapgen
 
       var topazPalettes = Or(
         Args("-palette", "Workbench134"),
-        Args("-palette", "Workbench314")
+        Args("-palette", "Workbench314"),
+        Args("-palette", "RGBPrimariesHalftone16")
         );
 
       var topazGrayscale = topazFont + topazPalettes + grayscalePixelFormats;
