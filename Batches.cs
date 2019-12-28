@@ -192,6 +192,8 @@ namespace PetsciiMapgen
         );
       var dosGrayPalettes = Or(
         Args("-palette", "BlackAndWhite"),
+        Args("-palette", "RGBPrimariesHalftone16"),
+        Args("-palette", "ThreeBit"),
         //Args("-palette", "Gray3"),
         //Args("-palette", "Gray4"),
         //Args("-palette", "Gray5"),
