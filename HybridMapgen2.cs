@@ -12,6 +12,8 @@ using System.Runtime.CompilerServices;
 using System.Drawing.Imaging;
 
 
+// -createlut -levels 32 -palette C64Color -cs LAB -o c:\temp\C64color.png -lcc
+
 namespace PetsciiMapgen
 {
   public class HybridMap2
@@ -163,7 +165,9 @@ namespace PetsciiMapgen
 
       Log.WriteLine("Process currently using {0:0.00} mb of memory)", Utils.BytesToMb(Utils.UsedMemoryBytes));
 
+#if false
       OutputFullMap(fullMapPath, Map);
+#endif
 
       DistinctMappedChars = Map.DistinctBy(o => o.icharInfo).Select(o => this.CharInfo[o.icharInfo]).ToArray();
       for (int ichar = 0; ichar < DistinctMappedChars.Length; ++ichar)

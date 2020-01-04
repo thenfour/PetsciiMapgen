@@ -31,6 +31,80 @@ namespace PetsciiMapgen
       None
     }
 
+    static void CreateLUT(string paletteName, System.Drawing.Color[] palette, string outfile, ILCCColorSpace cs, int levels, bool useChroma, bool neutral)
+    {
+      Log.WriteLine("Creating LUT...");
+      Log.WriteLine("  Palette: {0} ({1} colors)", paletteName, palette.Length);
+      Log.WriteLine("  Colorspace: {0}", cs.ToString());
+      Log.WriteLine("  Output file: {0}", outfile);
+      Log.WriteLine("  {0}", useChroma ? "COLOR" : "GREY");
+      int imageWidth = levels * levels;
+      int imageHeight = levels;
+      Log.WriteLine("  Image size: {0} x {1}", imageWidth, imageHeight);
+
+      Directory.CreateDirectory(Path.GetDirectoryName(outfile));
+
+      var bmp = new Bitmap(imageWidth, imageHeight, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+      BitmapData destFontData = bmp.LockBits(new Rectangle(0, 0, imageWidth, imageHeight), ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+
+      int chromaComponents = useChroma ? 2 : 0;
+
+      for (double ir = 0; ir < levels; ++ir)
+      {
+        for (double ig = 0; ig < levels; ++ig)
+        {
+          for (double ib = 0; ib < levels; ++ib)
+          {
+            // Y coord = green (top = 0, bottom = 1)
+            // X coord = red (left = 0; right = 1)
+            // X cell = blue (left = 0; right = 1)
+            ColorF srcColor = ColorF.FromRGB(ir / levels, ig / levels, ib / levels);
+            //srcColor = ColorF.FromRGB(.5,.3,.2);
+            int y = levels - (int)ig - 1;
+            int x = (int)ib * levels;
+            x += (int)ir;
+
+            if (neutral)
+            {
+              destFontData.SetPixel(x, y, srcColor);
+            }
+            else
+            {
+              // find the nearest color in the palette.
+              // a value set normally consists of multiple luma & chroma components for a char (for example 5 luma + 2 chroma)
+              // for this we just have the normal default. all our colorspaces are LCC (luma chroma chroma).
+              ValueSet srcValueSet = cs.GetValueSetForSinglePixel(srcColor, useChroma);
+              System.Drawing.Color closestColor = System.Drawing.Color.Black;
+              double closestDistance = 1e6;
+
+              foreach (var pc in palette)
+              {
+                ColorF paletteColor = pc.ToColorF();
+                ValueSet palValueSet = cs.GetValueSetForSinglePixel(paletteColor, useChroma);
+                double dist = cs.ColorDistance(srcValueSet, palValueSet, 1/*luma L*/, chromaComponents);
+                if (dist < closestDistance)
+                {
+                  closestDistance = dist;
+                  closestColor = pc;
+                }
+              }
+
+              //closestColor = srcColor;
+              destFontData.SetPixel(x, y, closestColor);
+              //destFontData.SetPixel(x, y, srcColor);
+
+            }
+          }
+        }
+      }
+
+      bmp.UnlockBits(destFontData);
+
+      bmp.Save(outfile);
+      bmp.Dispose();
+      bmp = null;
+    }
+
     static void Main(string[] args)
     {
       //GenerateFontMap(@"C:\root\git\thenfour\PetsciiMapgen\img\fonts\EmojiOneColor.otf", 32, @"c:\temp\emojione.png");
@@ -239,6 +313,33 @@ namespace PetsciiMapgen
             }
           }
         });
+
+        bool didluts = false;
+        args.ProcessArg("-createlut", s =>
+        {
+          var colorSpace = Utils.ParseRequiredLCCColorSpaceArgs(args, true);
+          string outfile = null;
+          args.ProcessArg("-o", s2 => { outfile = s2; });
+          List<System.Drawing.Color> palette = new List<System.Drawing.Color>();
+          string paletteName = null;
+          args.ProcessArg("-palette", s2 =>
+          {
+            paletteName = s2;
+            var t = (System.Drawing.Color[])typeof(Palettes).GetProperty(s2).GetValue(null);
+            palette.AddRange(t);
+          });
+          int levels = 32;
+          args.ProcessArg("-levels", s2 => { levels = int.Parse(s2); });
+          bool useChroma = false;
+          args.ProcessArg("-lcc", s2 => { useChroma = true; });
+          bool neutral = false;
+          args.ProcessArg("-neutral", s2 => { neutral = true; });
+          CreateLUT(paletteName, palette.ToArray(), outfile, colorSpace, levels, useChroma, neutral);
+          didluts = true;
+          return;
+        });
+        if (didluts)
+          return;
 
         args.ProcessArg("-listpalettes", s =>
         {

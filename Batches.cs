@@ -11,7 +11,15 @@ we want to generate the following types of outputs:
   - pixelformats 1x1 2x2 3x3 5tileA 5tileB 5tileC
   - valuespertile 2 8 16 32 1024
 
- 
+
+
+TODO:
+- add the new palettes for some charsets.
+ for example, TOPAZ can go well with PSYGNOSIA
+ mz700 probably goes with a lot, especially the 4 color palettes
+ vga as well. maybe windows oldschool?
+ there are probably some box drawing fonts that could be used with stylized palettes.
+
  */
 using System;
 using System.Collections.Generic;
@@ -61,6 +69,36 @@ namespace PetsciiMapgen
         //"-processImagesInDir", @"C:\root\git\thenfour\PetsciiMapgen\img\testImages",
         "-testpalette", "ThreeBit",
         "-loadOrCreateMap"
+        );
+
+      var LTE8ColorPalettes = Or(
+        Args("-palette", "EN4", "tag:newpalette"),
+        Args("-palette", "ARQ4", "tag:newpalette"),
+        Args("-palette", "FUZZY4", "tag:newpalette"),
+        Args("-palette", "NYX8", "tag:newpalette"),
+        Args("-palette", "SLSO8", "tag:newpalette"),
+        Args("-palette", "RABBIT8", "tag:newpalette"),
+        Args("-palette", "RKBV8", "tag:newpalette")
+        );
+
+      var StylizedPalettes16to64 = Or(
+        Args("-palette", "ENDESGA16", "tag:newpalette,stylized"),
+        Args("-palette", "ARQ16", "tag:newpalette,stylized"),
+        Args("-palette", "SWEETIE16", "tag:newpalette"),
+        Args("-palette", "NA16", "tag:newpalette"),
+        Args("-palette", "PSYGNOSIA", "tag:newpalette"),
+        Args("-palette", "STEAMLORDS", "tag:newpalette"),
+        Args("-palette", "GALAXYFLAME16", "tag:newpalette"),
+        Args("-palette", "FANTASY16", "tag:newpalette"),
+        Args("-palette", "AAP16", "tag:newpalette"),
+        Args("-palette", "SIMPLEJPC16_MSX_PC88", "tag:newpalette"),
+        Args("-palette", "CRIMSO11", "tag:newpalette"),
+        Args("-palette", "EUROPA16", "tag:newpalette"),
+
+        Args("-palette", "ENDESGA32", "tag:newpalette"),
+        Args("-palette", "ENDESGA64", "tag:newpalette"),
+        Args("-palette", "AAP64", "tag:newpalette"),
+        Args("-palette", "ENDESGA36", "tag:newpalette")
         );
 
       // budget versions (1600x1600 = 2560000 map size)
@@ -137,8 +175,8 @@ namespace PetsciiMapgen
           Args("-palette", "C64Color")
           );
 
-      var C64Color = C64Font + c64ColorPalettes + colorPixelFormats;
-      var C64Grayscale = C64Font + c64GrayscalePalettes + grayscalePixelFormats;
+      var C64Color = C64Font + Or(LTE8ColorPalettes, StylizedPalettes16to64, Or(c64ColorPalettes)) + colorPixelFormats;
+      var C64Grayscale = C64Font + Or(LTE8ColorPalettes, StylizedPalettes16to64, c64GrayscalePalettes) + grayscalePixelFormats;
 
       // mz700 ============================
       var mz700font = Args(
@@ -151,6 +189,7 @@ namespace PetsciiMapgen
         Args("-palette", "RGBPrimariesHalftone16"),
         Args("-palette", "ThreeBit")
         );
+
       var mz700GrayPalettes = Or(
         Args("-palette", "RGBPrimariesHalftone16"),
         Args("-palette", "BlackAndWhite"),
@@ -160,8 +199,8 @@ namespace PetsciiMapgen
         Args("-palette", "Gray8")
         );
 
-      var mz700color = mz700font + mz700ColorPalettes + colorPixelFormats;
-      var mz700grayscale = mz700font + mz700GrayPalettes + grayscalePixelFormats;
+      var mz700color = mz700font + Or(mz700ColorPalettes, LTE8ColorPalettes, StylizedPalettes16to64) + colorPixelFormats;
+      var mz700grayscale = mz700font + Or(mz700GrayPalettes, LTE8ColorPalettes, StylizedPalettes16to64) + grayscalePixelFormats;
 
 
       // topaz ============================
@@ -177,7 +216,8 @@ namespace PetsciiMapgen
         Args("-palette", "RGBPrimariesHalftone16")
         );
 
-      var topazGrayscale = topazFont + topazPalettes + grayscalePixelFormats;
+      var topazGrayscale = topazFont + Or(topazPalettes, LTE8ColorPalettes, StylizedPalettes16to64) + grayscalePixelFormats;
+      var topazColor = topazFont + Or(LTE8ColorPalettes, StylizedPalettes16to64) + colorPixelFormats;
 
       // DOS ============================
       var dosFont = Args(
@@ -188,20 +228,37 @@ namespace PetsciiMapgen
 
       var dosColorPalettes = Or(
         Args("-palette", "RGBPrimariesHalftone16"),
+
+        Args("-palette", "RGB6BIT", "tag:newpalette"),
+        Args("-palette", "Windows16", "tag:newpalette"),
+        Args("-palette", "Windows20", "tag:newpalette"),
+        Args("-palette", "CGA0LOW4", "tag:newpalette"),
+        Args("-palette", "CGA1HIGH4", "tag:newpalette"),
+        Args("-palette", "CGA2HIGH4", "tag:newpalette"),
+        Args("-palette", "CGA16", "tag:newpalette"),
+
         Args("-palette", "ThreeBit")
         );
       var dosGrayPalettes = Or(
         Args("-palette", "BlackAndWhite"),
         Args("-palette", "RGBPrimariesHalftone16"),
         Args("-palette", "ThreeBit"),
+
+        Args("-palette", "RGB6BIT", "tag:newpalette"),
+        Args("-palette", "Windows16", "tag:newpalette"),
+        Args("-palette", "Windows20", "tag:newpalette"),
+        Args("-palette", "CGA0LOW4", "tag:newpalette"),
+        Args("-palette", "CGA1HIGH4", "tag:newpalette"),
+        Args("-palette", "CGA2HIGH4", "tag:newpalette"),
+        Args("-palette", "CGA16", "tag:newpalette"),
         //Args("-palette", "Gray3"),
         //Args("-palette", "Gray4"),
         //Args("-palette", "Gray5"),
         Args("-palette", "Gray8")
         );
 
-      var dosColor = dosFont + dosColorPalettes + colorPixelFormats;
-      var dosGrayscale = dosFont + dosGrayPalettes + grayscalePixelFormats;
+      var dosColor = dosFont + Or(LTE8ColorPalettes, StylizedPalettes16to64, dosColorPalettes) + colorPixelFormats;
+      var dosGrayscale = dosFont + Or(LTE8ColorPalettes, StylizedPalettes16to64, dosGrayPalettes) + grayscalePixelFormats;
 
       // VGAboxonly45.png ============================
       var dosBoxFont = Args(
@@ -318,12 +375,27 @@ namespace PetsciiMapgen
         return new string[] { "-outdir", outDir };
       });
 
+      // createlut ================================
+      var createlutCommon = Args("-createlut", "-levels", "32", "-cs", "LAB");
+
+      ArgSetList palettes = new ArgSetList();
+      foreach (var p in typeof(Palettes).GetProperties())
+      {
+        var colors = (System.Drawing.Color[])p.GetValue(null);
+        var outPathColor = System.IO.Path.Combine(batchBaseDir, string.Format("LUTS\\Color\\{1:000}_LAB_color_{0}.png", p.Name, colors.Length));
+        var outPathGrey = System.IO.Path.Combine(batchBaseDir, string.Format("LUTS\\Grey\\{1:000}_LAB_grey_{0}.png", p.Name, colors.Length));
+        palettes = Or(palettes, Or(Args("-palette", p.Name, "-lcc", "-o", outPathColor)));
+        palettes = Or(palettes, Or(Args("-palette", p.Name, " - l", "-o", outPathGrey)));
+      }
+      var lutAll = createlutCommon + palettes;// Or(colorArgs, greyArgs);
+
       // All ============================
       // fonttag pftag
       var All = Or(
         C64Color,
         C64Grayscale,
         topazGrayscale,
+        topazColor,
         mz700color,
         mz700grayscale,
         dosColor,
@@ -343,7 +415,7 @@ namespace PetsciiMapgen
         marioTiles//,
         //comicSans
         ) + common + outputDir + Args(batchAddArgs.ToArray());
-      return All;
+      return Or(All, lutAll);
     } // AllBatches
   } // class
 } // namespace

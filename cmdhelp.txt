@@ -30,6 +30,14 @@ Command options:
 -testcolor #ff00ff        outputs an image and log testing matching a certain color
 -testpalette paletteName  same as -testcolor but over a whole named palette
 
+-createlut
+  -palette [paletteName]
+  -o output.png
+  -cs [colorspacename]
+  -levels [n]            number of levels per colorant mapping. typical is 32.
+  -lcc | -l              either use luma+chroma, or luma only.
+  -neutral               forget the other stuff and output a neutral lut
+
 -partitions N or NxD      optional; default 1 flat partition.
                           N means split each dimension in N parts. the partition
                           bounds are strategically calculated.

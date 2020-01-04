@@ -393,6 +393,11 @@ namespace PetsciiMapgen
   {
     public IEnumerable<ArgSet> argSets;
 
+    public ArgSetList()
+    {
+      argSets = (new List<ArgSet>());
+    }
+
     public IEnumerable<ArgSet> Filter(params string[] tokens)
     {
       foreach (var x in this.argSets)
@@ -569,9 +574,9 @@ namespace PetsciiMapgen
     public static unsafe void SetPixel(this BitmapData data, long x, long y, ColorF c)
     {
       byte* p = data.GetRGBPointer(x, y);
-      p[2] = (byte)c.R;
-      p[1] = (byte)c.G;
-      p[0] = (byte)c.B;
+      p[2] = (byte)(c.R * 255);
+      p[1] = (byte)(c.G * 255);
+      p[0] = (byte)(c.B * 255);
     }
     public static unsafe void SetPixel(this BitmapData data, long x, long y, Color c)
     {
@@ -1009,7 +1014,36 @@ namespace PetsciiMapgen
       return accChroma + accLuma;
     }
 
-    public static ILCCColorSpace ParseRequiredLCCColorSpaceArgs(string[] args)
+    public static ValueSet GetValueSetForSinglePixel(this ILCCColorSpace cs, ColorF color, bool useChroma)
+    {
+      // a value set normally consists of multiple luma & chroma components for a char (for example 5 luma + 2 chroma)
+      // for this we just have the normal default 3-component. all our colorspaces are LCC (luma chroma chroma).
+      LCCColorDenorm denorm = cs.RGBToLCC(color);
+      ValueSet src = new ValueSet();
+      float[] normArray = new float[]
+      {
+        (float)cs.NormalizeL(denorm.L),
+        (float)cs.NormalizeC1(denorm.C1),
+        (float)cs.NormalizeC2(denorm.C2),
+      };
+      ValueSet.Init(ref src, useChroma ? 3 : 1, 0, normArray);
+      src.DenormalizedValues[0] = (float)denorm.L;
+      src.DenormalizedValues[1] = (float)denorm.C1;
+      src.DenormalizedValues[2] = (float)denorm.C2;
+      return src;
+    }
+
+    public static ColorF ToColorF(this System.Drawing.Color col)
+    {
+      ColorF ret = ColorF.FromRGB(
+        (double)col.R / 255,
+        (double)col.G / 255,
+        (double)col.B / 255
+        );
+      return ret;
+    }
+
+    public static ILCCColorSpace ParseRequiredLCCColorSpaceArgs(string[] args, bool allowDefault = false)
     {
       ILCCColorSpace ret = null;
       args.ProcessArg("-cs", o =>
@@ -1034,7 +1068,14 @@ namespace PetsciiMapgen
       });
       if (ret == null)
       {
-        throw new Exception("Colorspace not specified");
+        if (allowDefault)
+        {
+          ret = new LABColorspace();
+        }
+        else
+        {
+          throw new Exception("Colorspace not specified");
+        }
       }
       return ret;
     }
