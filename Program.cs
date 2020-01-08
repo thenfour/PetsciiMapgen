@@ -325,8 +325,7 @@ namespace PetsciiMapgen
           args.ProcessArg("-palette", s2 =>
           {
             paletteName = s2;
-            var t = (System.Drawing.Color[])typeof(Palettes).GetProperty(s2).GetValue(null);
-            palette.AddRange(t);
+            palette.AddRange(Utils.GetNamedPalette(s2));
           });
           int levels = 32;
           args.ProcessArg("-levels", s2 => { levels = int.Parse(s2); });
@@ -350,6 +349,22 @@ namespace PetsciiMapgen
           }
         });
 
+        args.ProcessArg("-viewpalette", s =>
+        {
+          Log.WriteLine("Listing palette entries for palette:");
+          Log.WriteLine("{0}", s);
+          var p = Utils.GetNamedPalette(s);
+          Log.WriteLine("{0} entries", p.Length);
+          for (int i = 0; i < p.Length; ++ i)
+          {
+            var c = p[i];
+            Log.WriteLine("{0:000}: {1} {2}",
+              i,
+              ColorTranslator.ToHtml(c),
+              ColorMapper.GetNearestName(c));
+          }
+        });
+
         args.ProcessArg("-argsfile", s =>
         {
           Log.WriteLine("Reading args from file: {0}" + s);
@@ -368,8 +383,7 @@ namespace PetsciiMapgen
 
         args.ProcessArg("-testpalette", s =>
         {
-          var palette = (System.Drawing.Color[])typeof(Palettes).GetProperty(s).GetValue(null);
-          testColors.AddRange(palette);
+          testColors.AddRange(Utils.GetNamedPalette(s));
         });
         args.ProcessArg("-testcolor", s =>
         {

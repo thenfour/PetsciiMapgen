@@ -13,6 +13,51 @@ using System.Runtime.InteropServices;
 
 namespace PetsciiMapgen
 {
+
+  public class ColorMapper
+  {
+    public static IEnumerable<Color> GetKnownColors
+    {
+      get
+      {
+        return typeof(Color)
+               .GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+               .Select(f => (Color)f.GetValue(null, null))
+               .Where(c => c.IsNamedColor);
+      }
+    }
+
+    public static String GetNearestName(Color color)
+    {
+      if (color.IsNamedColor)
+        return color.Name;
+
+      color = Color.FromArgb(255, color);//.A = 255;
+
+      var namedColors = ColorMapper.GetKnownColors;
+
+      Color? nearestColor = null;
+      double nearestDistance = 1500;
+      foreach (var nc in namedColors)
+      {
+        double dr = Math.Abs(nc.R - color.R);
+        double dg = Math.Abs(nc.G - color.G);
+        double db = Math.Abs(nc.B - color.B);
+
+        double d = dr * dr + dg * dg + db * db;
+        if (d <= nearestDistance)// <= means we choose the last one. which just helps make "white" instead of "transparent" since it maps to both.
+        {
+          nearestDistance = d;
+          nearestColor = nc;
+        }
+      }
+      if (nearestColor.HasValue)
+        return nearestColor.Value.Name;
+      //return ColorTranslator.ToHtml(color);
+      return "";
+    }
+  }
+
   public struct vec2
   {
     public float x;
@@ -1082,6 +1127,25 @@ namespace PetsciiMapgen
 
     public static Color[] GetNamedPalette(string s)
     {
+      if (s.StartsWith("#"))
+      {
+        var colors = s.Split(',');
+        return colors.Select(html => ColorTranslator.FromHtml(html)).ToArray();
+      }
+
+      var tok = s.Split('[');
+      if (tok.Length == 2)
+      {
+        var pal = (Color[])typeof(Palettes).GetProperty(tok[0]).GetValue(null);
+        var si = tok[1];
+        if (si.EndsWith("]"))
+        {
+          si = si.Remove(si.Length - 1);
+        }
+        var colors = si.Split(',').Select(sidx => pal[int.Parse(sidx.Trim())]);
+        return colors.ToArray();
+      }
+
       var ti = typeof(Palettes).GetProperty(s).GetValue(null);
       return (Color[])ti;
     }

@@ -5,6 +5,7 @@ Command options:
 
 -help
 -listpalettes
+-viewpalette [namedpalette] Show info about the given palette.
 
 -batchlist [keywords...]  List built-in batches containing the specified keywords
 -batchrun [keywords...]   Runs built-in batches containing the specified keywords.
@@ -73,7 +74,9 @@ palette over background & foreground.
 ----------------
   -charSize XxY
   -fontImage
-  -palette
+  -palette         Sets both bg and fg palettes.
+  -fgpalette       sets the foreground palette
+  -bgpalette       sets the backgronud palette.
 
 COLORKEY
 Like mono, but allows you to specify a single colorkey which gets permutated
@@ -128,3 +131,17 @@ This is unique in that it produces a text file along with images.
 
   -fontname                Optional, for file naming because the calculated
                            font family name can be long.
+
+
+
+NAMED PALETTE SYNTAX
+note about this syntax: make sure it can be used as filenames.
+--------------------
+C64                    A named palette
+#ffff00                A single static color
+#ffff00,#fcfcfc        Multiple static colors
+C64[0]                 A single index into a named palette
+(todo: more selection stuff, but it's not needed for now)
+
+
+

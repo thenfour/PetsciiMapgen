@@ -199,9 +199,64 @@ namespace PetsciiMapgen
         Args("-palette", "Gray8")
         );
 
+      var mz700MonoBGPalettes = Or(
+        Args("-bgpalette", "BlackAndWhite[0]", "-fgpalette", "BlackAndWhite"),
+        Args("-bgpalette", "C64Color[0]", "-fgpalette", "C64Color"),
+        Args("-bgpalette", "ThreeBit[0]", "-fgpalette", "ThreeBit"),
+        Args("-bgpalette", "RGBPrimariesHalftone16[0]", "-fgpalette", "RGBPrimariesHalftone16"),
+        Args("-bgpalette", "Windows16[0]", "-fgpalette", "Windows16"),
+        Args("-bgpalette", "Windows20[0]", "-fgpalette", "Windows20"),
+        Args("-bgpalette", "Macintosh16[0]", "-fgpalette", "Macintosh16"),
+        Args("-bgpalette", "AcornRISC16[0]", "-fgpalette", "AcornRISC16"),
+        Args("-bgpalette", "Intellivision[0]", "-fgpalette", "Intellivision"),
+        Args("-bgpalette", "ENDESGA16[0]", "-fgpalette", "ENDESGA16"),
+        Args("-bgpalette", "EN4[0]", "-fgpalette", "EN4"),
+        Args("-bgpalette", "ENDESGASOFT16[0]", "-fgpalette", "ENDESGASOFT16"),
+        Args("-bgpalette", "ARQ4[0]", "-fgpalette", "ARQ4"),
+        Args("-bgpalette", "ARQ16[0]", "-fgpalette", "ARQ16"),
+        Args("-bgpalette", "SWEETIE16[0]", "-fgpalette", "SWEETIE16"),
+        Args("-bgpalette", "NYX8[0]", "-fgpalette", "NYX8"),
+        Args("-bgpalette", "SLSO8[0]", "-fgpalette", "SLSO8"),
+        Args("-bgpalette", "POLLEN8[0]", "-fgpalette", "POLLEN8"),
+        Args("-bgpalette", "DAWNBRINGER8[0]", "-fgpalette", "DAWNBRINGER8"),
+        Args("-bgpalette", "CGA1HIGH4[0]", "-fgpalette", "CGA1HIGH4"),
+        Args("-bgpalette", "FUZZY4[0]", "-fgpalette", "FUZZY4"),
+        Args("-bgpalette", "RABBIT8[0]", "-fgpalette", "RABBIT8"),
+        Args("-bgpalette", "RKBV8[0]", "-fgpalette", "RKBV8"),
+        Args("-bgpalette", "FUNKYFUTURE8[0]", "-fgpalette", "FUNKYFUTURE8"),
+        Args("-bgpalette", "CGA2HIGH[0]", "-fgpalette", "CGA2HIGH"),
+        Args("-bgpalette", "FANTASTIC8[0]", "-fgpalette", "FANTASTIC8"),
+        Args("-bgpalette", "CGA0LOW4[0]", "-fgpalette", "CGA0LOW4"),
+        Args("-bgpalette", "PICO8[0]", "-fgpalette", "PICO8"),
+        Args("-bgpalette", "NA16[0]", "-fgpalette", "NA16"),
+        Args("-bgpalette", "STEAMLORDS[0]", "-fgpalette", "STEAMLORDS"),
+        Args("-bgpalette", "LOSPEC_COM_COMMODORE64[0]", "-fgpalette", "LOSPEC_COM_COMMODORE64"),
+        Args("-bgpalette", "MSXJMP[0]", "-fgpalette", "MSXJMP"),
+        Args("-bgpalette", "PSYGNOSIA[0]", "-fgpalette", "PSYGNOSIA"),
+        Args("-bgpalette", "FANTASY16[0]", "-fgpalette", "FANTASY16"),
+        Args("-bgpalette", "CGA16[0]", "-fgpalette", "CGA16"),
+        Args("-bgpalette", "AAP16[0]", "-fgpalette", "AAP16"),
+        Args("-bgpalette", "SIMPLEJPC16_MSX_PC88[0]", "-fgpalette", "SIMPLEJPC16_MSX_PC88"),
+        Args("-bgpalette", "GALAXYFLAME16[0]", "-fgpalette", "GALAXYFLAME16"),
+        Args("-bgpalette", "CRIMSO11[0]", "-fgpalette", "CRIMSO11"),
+        Args("-bgpalette", "EUROPA16[0]", "-fgpalette", "EUROPA16"),
+        Args("-bgpalette", "NES_FULL[0]", "-fgpalette", "NES_FULL"),
+        Args("-bgpalette", "ENDESGA32[0]", "-fgpalette", "ENDESGA32"),
+        Args("-bgpalette", "ENDESGA64[0]", "-fgpalette", "ENDESGA64"),
+        Args("-bgpalette", "AAP64[0]", "-fgpalette", "AAP64"),
+        Args("-bgpalette", "ENDESGA36[0]", "-fgpalette", "ENDESGA36"),
+        Args("-bgpalette", "RGB6BIT_64[0]", "-fgpalette", "RGB6BIT_64"),
+        Args("-bgpalette", "MSX[0]", "-fgpalette", "MSX"),
+        Args("-bgpalette", "APPLEII[0]", "-fgpalette", "APPLEII"),
+        Args("-bgpalette", "ZXSPECTRUM[0]", "-fgpalette", "ZXSPECTRUM"),
+        Args("-bgpalette", "THOMSONM05_16[0]", "-fgpalette", "THOMSONM05_16"),
+        Args("-bgpalette", "AMSTRADCPC[0]", "-fgpalette", "AMSTRADCPC")
+        );
+
       var mz700color = mz700font + Or(mz700ColorPalettes, LTE8ColorPalettes, StylizedPalettes16to64) + colorPixelFormats;
       var mz700grayscale = mz700font + Or(mz700GrayPalettes, LTE8ColorPalettes, StylizedPalettes16to64) + grayscalePixelFormats;
 
+      var mz700bgpalettesGray = mz700font + Or(Args("tag:bgpalette")) + mz700MonoBGPalettes + grayscalePixelFormats;
 
       // topaz ============================
       var topazFont = Args(
@@ -398,6 +453,7 @@ namespace PetsciiMapgen
         topazColor,
         mz700color,
         mz700grayscale,
+        mz700bgpalettesGray,
         dosColor,
         dosGrayscale,
         dosBoxColor,

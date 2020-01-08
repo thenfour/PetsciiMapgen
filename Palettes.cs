@@ -977,7 +977,7 @@ ColorTranslator.FromHtml("#1f0e1c"),
       {
         return new Color[]
         {
-
+          // https://lospec.com/palette-list/steam-lords
 //STEAM LORDS PALETTE
 ColorTranslator.FromHtml("#213b25"),
 ColorTranslator.FromHtml("#3a604a"),

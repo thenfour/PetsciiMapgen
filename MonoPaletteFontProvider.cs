@@ -20,7 +20,9 @@ namespace PetsciiMapgen
     public Bitmap Bitmap { get; private set; }
     public Image Image { get; private set; }
     public int CharCount { get; private set; }
-    public Color[] Palette { get; private set; }
+
+    public Color[] FGPalette { get; private set; }
+    public Color[] BGPalette { get; private set; }
 
     public Size OrigSizeInChars { get; private set; }
     public int OrigCharCount { get; private set; }
@@ -39,30 +41,44 @@ namespace PetsciiMapgen
       sb.AppendLine(string.Format("charHeight={0}", this.CharSizeNoPadding.Height));
       sb.AppendLine(string.Format("CharCount={0}", this.CharCount));
       sb.AppendLine(string.Format("FontFileName={0}", this.FontFileName));
-      sb.AppendLine(string.Format("Palette={0}", this.Palette));
+      sb.AppendLine(string.Format("FGPalette={0}", this.FGPalette));
+      sb.AppendLine(string.Format("BGPalette={0}", this.BGPalette));
     }
 
     List<CharMapping> map = new List<CharMapping>();
 
-    public MonoPaletteFontProvider(string fontFileName, Size charSize, Color[] palette, string paletteName)
+    public MonoPaletteFontProvider(string fontFileName, Size charSize, Color[] fgpalette, string fgpaletteName, Color[] bgpalette, string bgpalettename)
     {
       this.FontFileName = fontFileName;
       this.Image = Image.FromFile(fontFileName);
       this.Bitmap = new Bitmap(this.Image);
       this.CharSizeNoPadding = charSize;
-      this.PaletteName = paletteName;
-      this.Palette = palette;
+      this.FGPaletteName = fgpaletteName;
+      this.FGPalette = fgpalette;
+      this.BGPaletteName = bgpalettename;
+      bool palettesEqual = (BGPaletteName == FGPaletteName);
+      bool basePaletteIsSame = palettesEqual || BGPaletteName.StartsWith(this.FGPaletteName);
+      if (!palettesEqual && basePaletteIsSame)
+      {
+        // this is the case like
+        // fgpalette: C64Color
+        // bgpalette: C64Color[1]
+        BGPaletteName = BGPaletteName.Substring(this.FGPaletteName.Length);
+      }
+      this.BGPalette = bgpalette;
 
       this.OrigSizeInChars = Utils.Div(this.Image.Size, this.CharSizeNoPadding);
       this.OrigCharCount = Utils.Product(this.OrigSizeInChars);
 
       int i = 0;
-      for (int fgidx = 0; fgidx < Palette.Length; ++ fgidx)
+      for (int fgidx = 0; fgidx < fgpalette.Length; ++ fgidx)
       {
-        for (int bgidx = 0; bgidx < Palette.Length; ++bgidx)
+        for (int bgidx = 0; bgidx < bgpalette.Length; ++bgidx)
         {
-          if (bgidx == fgidx)
+          if ((bgidx == fgidx) && basePaletteIsSame)
             continue;
+          if (BGPalette[bgidx] == FGPalette[fgidx])
+            continue;// even when base palette isn't the same, avoid same bg/fg colors
           for (int ch = 0; ch < OrigCharCount; ++ ch) // important that this is the bottom of the stack so the 1st CharCount indices are all unique chars. makes reverse lookup simpler.
           {
             CharMapping m;
@@ -78,23 +94,31 @@ namespace PetsciiMapgen
       this.CharCount = this.map.Count;
     }
 
-    public string DisplayName
+    public virtual string DisplayName
     {
       get
       {
-        return string.Format("{0}-{1}", System.IO.Path.GetFileNameWithoutExtension(FontFileName), PaletteName);
+        string pal = FGPaletteName;
+        if (FGPaletteName != BGPaletteName)
+        {
+          pal = string.Format("fg_{0}_bg_{1}", FGPaletteName, BGPaletteName);
+        }
+        return string.Format("{0}-{1}", System.IO.Path.GetFileNameWithoutExtension(FontFileName), pal);
       }
     }
 
-    public string PaletteName { get; private set; }
+    public string FGPaletteName { get; private set; }
+    public string BGPaletteName { get; private set; }
 
     public static MonoPaletteFontProvider ProcessArgs(string[] args)
     {
       //- fontImage "emojidark12.png"
       string fontImagePath = "";
       Size charSize = new Size(8,8);
-      string paletteName = "";
-      Color[] palette = Palettes.RGBPrimariesHalftone16;
+      string fgpaletteName = "";
+      Color[] fgpalette = Palettes.RGBPrimariesHalftone16;
+      string bgpaletteName = "";
+      Color[] bgpalette = Palettes.RGBPrimariesHalftone16;
       args.ProcessArg("-fontimage", s =>
       {
         fontImagePath = s;
@@ -105,16 +129,24 @@ namespace PetsciiMapgen
       });
       args.ProcessArg("-palette", s =>
       {
-        paletteName = s;
-        var ti = typeof(Palettes).GetProperty(s).GetValue(null);
-        palette = (Color[])ti;
+        fgpaletteName = bgpaletteName = s;
+        fgpalette = bgpalette = Utils.GetNamedPalette(s);
+      });
+      args.ProcessArg("-fgpalette", s =>
+      {
+        fgpaletteName = s;
+        fgpalette = Utils.GetNamedPalette(s);
+      });
+      args.ProcessArg("-bgpalette", s =>
+      {
+        bgpaletteName = s;
+        bgpalette = Utils.GetNamedPalette(s);
       });
 
-      return new MonoPaletteFontProvider(fontImagePath, charSize, palette, paletteName);
+      return new MonoPaletteFontProvider(fontImagePath, charSize, fgpalette, fgpaletteName, bgpalette, bgpaletteName);
     }
 
     public void Init(int DiscreteTargetValues) { }
-    //public void OnImageProcessed(IEnumerable<KeyValuePair<Point, int>> cellsMapped, string outputDir, string bitmapFilename) { }
 
     public Point GetCharPosInChars(int ichar)
     {
@@ -142,8 +174,8 @@ namespace PetsciiMapgen
     {
       var ch = this.map[ichar];
       if (c.R < 127)
-        return this.Palette[ch.bgIdx];
-      return this.Palette[ch.fgIdx];
+        return this.BGPalette[ch.bgIdx];
+      return this.FGPalette[ch.fgIdx];
     }
 
     public ColorF GetPixel(int ichar, int px, int py)

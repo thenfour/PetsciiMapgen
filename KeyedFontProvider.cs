@@ -118,8 +118,7 @@ namespace PetsciiMapgen
       args.ProcessArg("-palette", s =>
       {
         paletteName = s;
-        var ti = typeof(Palettes).GetProperty(s).GetValue(null);
-        palette = (Color[])ti;
+        palette = Utils.GetNamedPalette(s);//
       });
       args.ProcessArg("-colorkey", s =>
       {
